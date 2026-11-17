@@ -63,4 +63,4 @@ Paths below are relative to the `dsa-tutor` root.
 - The tutor has no tool that writes the solution, reads hidden data, or
   reaches the shell, files or network.
 - Its `docs/TASKS.md` worked well as one-ticket-per-agent; this repo keeps
-  that, with machine-readable status (`scripts/tasks.mjs`).
+  that, with a Progress table for status.

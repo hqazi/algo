@@ -1,29 +1,76 @@
 # Algorithm Tutor: tasks
 
-Work breakdown for [`SPEC.md`](SPEC.md). One ticket = one branch = one agent
-session. Pick the next one with the `next-ticket` skill
-(`.claude/skills/next-ticket/SKILL.md`) or `node scripts/tasks.mjs next`.
+Work breakdown for [`SPEC.md`](SPEC.md). One ticket per agent session.
+Status lives only in the **Progress** table below; edit it by hand.
+
+## How to work a ticket
+
+1. **Pick.** If the user named a ticket, take it. Otherwise take the first
+   `todo` ticket in the Progress table whose dependencies are all `done`,
+   preferring the critical path (T01 → T03 → T07 → T08 → T10) and the current
+   milestone. If a ticket is `in-progress`, ask before taking over. If none is
+   ready, say so and stop.
+2. **Claim.** Set it to `in-progress` in the table, commit `TNN: start`, push.
+3. **Read.** The ticket; the `SPEC.md` sections in its `Spec:` line;
+   `DECISIONS.md`; the `CONTEXT.md` rows for it. If it ports from
+   `dsa-tutor`, get a read-only checkout (`CONTEXT.md`, "Getting the source")
+   and read the old code **and its tests**: the old tests define the behaviour
+   to keep.
+4. **Build.** Stay inside the ticket's **Owns** paths (small wiring changes
+   elsewhere are fine; list them in the notes). The spec is the contract: if
+   the ticket needs it changed, change `SPEC.md` in the same branch and say so
+   in the commit message. Resolve every **VERIFY** the ticket touches from
+   current documentation, not memory; apply a **DECISION**'s default unless
+   evidence says otherwise. Record either in `DECISIONS.md`. Write tests with
+   the code; commit in small working steps prefixed `TNN:`.
+5. **Check.** `npm run typecheck`, `npm run lint`, `npm test`, and
+   `npm run validate:content` once it exists (T04), plus the ticket's own
+   checks. Tick an acceptance box only with evidence (a test, a command's
+   output, a manual check actually done).
+6. **Finish.** Fill the ticket's **Notes.**: what was built, decisions,
+   wiring outside **Owns**, and plainly what was *not* done or not tested. Set
+   the table to `done`, or `blocked` with the reason in Notes. Then merge into
+   `main` (rules below) and push.
 
 ## Rules for every ticket
 
-1. Read the ticket, then the spec sections it lists, `DECISIONS.md`, and the
-   parts of `CONTEXT.md` it points to. The spec is the contract: if a ticket
-   needs the spec changed (an interface, a schema, a setting), change
-   `SPEC.md` in the same branch and say so in the commit message.
-2. Stay inside the ticket's **Owns** paths. Touch anything else only for small
-   wiring changes, and list them in the done notes.
-3. `packages/core` never imports Electron or Node-only modules.
-4. Before finishing, run `npm run typecheck`, `npm run lint`, `npm test`, and
-   `npm run validate:content` once it exists (T04), plus the ticket's own
-   checks. Every acceptance criterion is checked, not assumed.
-5. No test calls a real AI provider. Never commit credentials, user data, or
-   recorded real AI responses.
-6. Resolve every **VERIFY** the ticket touches by reading current
-   documentation; record what you found in `DECISIONS.md` or the spec.
-7. Report honestly: the done notes list anything not done or not tested.
-8. Status lives in this file, in each ticket's `Status:` line:
-   `todo` → `in-progress` → `done` (or `blocked`, with the reason in Notes).
-   Update it with `node scripts/tasks.mjs set TNN <status>`.
+- Work on a branch `task/TNN-short-name` from the latest `main` (or the
+  session's assigned branch). When the checks pass, rebase on `main`, merge
+  into `main` fast-forward and push. No pull requests. Never force-push
+  `main`.
+- `packages/core` never imports Electron or Node-only modules.
+- No test calls a real AI provider. Never commit credentials, user data, or
+  recorded real AI responses.
+- Model-written code runs only in the Pyodide executor; hidden test data never
+  leaves the main process unredacted.
+- Report honestly: list anything not done or not tested.
+
+## Progress
+
+Statuses: `todo`, `in-progress`, `blocked`, `done`.
+
+| Ticket | Title | Milestone | Size | Depends on | Status |
+|---|---|---|---|---|---|
+| T01 | Repository scaffold | v1 | 2d | — | todo |
+| T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | todo |
+| T03 | Problem format v2 and neutral types | v1 | 2d | T01 | todo |
+| T04 | Port the curated problems and references | v1 | 2d | T03, T07 | todo |
+| T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
+| T06 | Port the core teaching logic | v1 | 3d | T05 | todo |
+| T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | todo |
+| T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | todo |
+| T09 | Onboarding and Settings | v1 | 2d | T08 | todo |
+| T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | todo |
+| T11 | Tutor: Claude Code backend | v1 | 2d | T10 | todo |
+| T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | todo |
+| T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | todo |
+| T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
+| T15 | Rust and Go harness generators | v2 | 5d | T04 | todo |
+| T16 | Local toolchain executor | v2 | 2d | T15 | todo |
+| T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | todo |
+| T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | todo |
+| T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
+| T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | todo |
 
 ## Order
 
@@ -49,7 +96,6 @@ after T08.
 
 ### T01 — Repository scaffold
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: —
@@ -79,7 +125,6 @@ React window.
 
 ### T02 — Electron security baseline and typed IPC
 
-- Status: todo
 - Milestone: v1
 - Size: 1d
 - Depends on: T01
@@ -103,7 +148,6 @@ React window.
 
 ### T03 — Problem format v2 and neutral types
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: T01
@@ -127,7 +171,6 @@ React window.
 
 ### T04 — Port the curated problems and references
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: T03, T07
@@ -152,7 +195,6 @@ verified.
 
 ### T05 — SQLite storage and migrations
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: T01
@@ -177,7 +219,6 @@ verified.
 
 ### T06 — Port the core teaching logic
 
-- Status: todo
 - Milestone: v1
 - Size: 3d
 - Depends on: T05
@@ -201,7 +242,6 @@ tool handlers, in TypeScript.
 
 ### T07 — Executor interface and Pyodide execution host
 
-- Status: todo
 - Milestone: v1
 - Size: 3d
 - Depends on: T03
@@ -227,7 +267,6 @@ tool handlers, in TypeScript.
 
 ### T08 — Port the UI shell and practice flow
 
-- Status: todo
 - Milestone: v1
 - Size: 4d
 - Depends on: T02, T06, T07
@@ -251,7 +290,6 @@ tool handlers, in TypeScript.
 
 ### T09 — Onboarding and Settings
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: T08
@@ -276,7 +314,6 @@ restart; the API key in the OS keychain.
 
 ### T10 — Tutor: Anthropic backend and chat
 
-- Status: todo
 - Milestone: v1
 - Size: 5d
 - Depends on: T06, T08
@@ -303,7 +340,6 @@ restart; the API key in the OS keychain.
 
 ### T11 — Tutor: Claude Code backend
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: T10
@@ -327,7 +363,6 @@ found.
 
 ### T12 — New problems: generate, paste, import
 
-- Status: todo
 - Milestone: v1
 - Size: 3d
 - Depends on: T07, T10
@@ -349,7 +384,6 @@ found.
 
 ### T13 — Packaging, auto-update and release workflow
 
-- Status: todo
 - Milestone: v1
 - Size: 3d
 - Depends on: T08
@@ -371,7 +405,6 @@ found.
 
 ### T14 — README, end-to-end test, v1 release check
 
-- Status: todo
 - Milestone: v1
 - Size: 2d
 - Depends on: T04, T09, T10, T11, T12, T13
@@ -397,7 +430,6 @@ found.
 
 ### T15 — Rust and Go harness generators
 
-- Status: todo
 - Milestone: v2
 - Size: 5d
 - Depends on: T04
@@ -420,7 +452,6 @@ and Go.
 
 ### T16 — Local toolchain executor
 
-- Status: todo
 - Milestone: v2
 - Size: 2d
 - Depends on: T15
@@ -442,7 +473,6 @@ and Go.
 
 ### T17 — Container executor (Docker and Podman)
 
-- Status: todo
 - Milestone: v2
 - Size: 3d
 - Depends on: T15
@@ -464,7 +494,6 @@ and Go.
 
 ### T18 — Settings → Code execution panel
 
-- Status: todo
 - Milestone: v2
 - Size: 2d
 - Depends on: T16, T17
@@ -484,7 +513,6 @@ and Go.
 
 ### T19 — Runner image in CI
 
-- Status: todo
 - Milestone: v2
 - Size: 2d
 - Depends on: T13, T15
@@ -505,7 +533,6 @@ and Go, multi-arch, published on release tags.
 
 ### T20 — README: optional container sandbox and toolchains
 
-- Status: todo
 - Milestone: v2
 - Size: 1d
 - Depends on: T18

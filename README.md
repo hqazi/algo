@@ -103,12 +103,8 @@ they appear in **Settings → Code execution**.
 
 ## Contributing
 
-Work is split into tickets in [`docs/TASKS.md`](docs/TASKS.md); see
-[`CLAUDE.md`](CLAUDE.md) for how to pick one up (with Claude Code:
-`/next-ticket`).
-
-```bash
-node scripts/tasks.mjs next
-```
+Work is split into tickets in [`docs/TASKS.md`](docs/TASKS.md); its Progress
+table shows what is done and what is ready. [`CLAUDE.md`](CLAUDE.md) explains
+how to pick one up.
 
 Licensed under Apache 2.0.

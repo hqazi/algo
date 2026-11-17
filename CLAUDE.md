@@ -14,10 +14,10 @@ project is in planning: no app code exists yet.
 
 ## Working on tickets
 
-Use the `next-ticket` skill (`/next-ticket`, or `/next-ticket T07`). It picks a
-ready ticket, claims it, loads the right context, builds, checks and records
-done notes. `node scripts/tasks.mjs list|next|show TNN|set TNN STATUS` reads
-and updates ticket status; edit status only through it.
+Each session works one ticket. Follow "How to work a ticket" in
+`docs/TASKS.md`: pick the next ready one from its Progress table, claim it,
+build, check, write done notes, then merge straight into `main` (no pull
+requests).
 
 ## Ground rules
 
