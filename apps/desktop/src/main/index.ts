@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { APP_NAME } from '@algorithm-tutor/core';
+import { registerExecScheme } from './exec/host-window';
 
 // Skeleton window only. The full security baseline (CSP, navigation and
 // permission blocking, fuses) and typed IPC are T02.
@@ -23,14 +24,16 @@ function createWindow(): BrowserWindow {
 
   const devUrl = process.env['ELECTRON_RENDERER_URL'];
   if (!app.isPackaged && devUrl) {
-    void win.loadURL(devUrl);
+    void win.loadURL(`${devUrl}/renderer/index.html`);
   } else {
-    void win.loadFile(join(import.meta.dirname, '../renderer/index.html'));
+    void win.loadFile(join(import.meta.dirname, '../renderer/renderer/index.html'));
   }
   return win;
 }
 
 app.setName(APP_NAME);
+// The execution host's protocol (T07); the executor itself is wired to IPC in T08.
+registerExecScheme();
 
 void app.whenReady().then(() => {
   createWindow();

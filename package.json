@@ -20,6 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "check:exec-host": "npm run check:exec-host --workspace apps/desktop --",
     "schema:export": "tsx scripts/export-schemas.ts"
   },
   "devDependencies": {

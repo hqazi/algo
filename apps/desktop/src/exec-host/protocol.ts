@@ -53,6 +53,8 @@ export type MainToHost =
   | { type: 'status'; id: number };
 
 export type HostToMain =
+  /** The page has the port and is listening. */
+  | { type: 'hello' }
   | { type: 'output'; id: number; output: HarnessOutput }
   | {
       type: 'status';

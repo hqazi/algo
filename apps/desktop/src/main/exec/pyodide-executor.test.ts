@@ -225,6 +225,44 @@ describe('PyodideExecutor', { timeout: 60_000 }, () => {
     expect(report.results[0]).toMatchObject({ status: 'pass' });
   });
 
+  it('survives long linked lists (freeing them used to exhaust the stack)', async () => {
+    const values = Array.from({ length: 20_000 }, (_, i) => i);
+    const code = [
+      'def f(head):',
+      '    prev = None',
+      '    while head:',
+      '        head.next, prev, head = prev, head, head.next',
+      '    return prev',
+    ].join('\n');
+    const report = await executor.run(
+      job(
+        code,
+        [test('long', { head: values }, [...values].reverse()), test('short', { head: [1] }, [1])],
+        {
+          signature: {
+            function: 'f',
+            params: [{ name: 'head', type: 'linked_list<int>' }],
+            returns: 'linked_list<int>',
+          },
+        },
+      ),
+    );
+    expect(report.results.map((r) => r.status)).toEqual(['pass', 'pass']);
+  });
+
+  it('reports runaway recursion as a RecursionError and keeps going', async () => {
+    const code = 'def f(n):\n    return 0 if n == 0 else 1 + max(f(n - 1), 0)\n';
+    // Python's own limit (100 000 frames) or, in Chromium's smaller worker
+    // stack, a JavaScript stack overflow: both end as a RecursionError.
+    const report = await executor.run(
+      job(code, [test('deep', { n: 10 ** 6 }, 0), test('shallow', { n: 3 }, 3)], {
+        timeLimitMs: 10_000,
+      }),
+    );
+    expect(report.results[0]).toMatchObject({ status: 'error', errorType: 'RecursionError' });
+    expect(report.results[1]).toMatchObject({ status: 'pass' });
+  });
+
   it('cancels a running job', async () => {
     const controller = new AbortController();
     const running = executor.run(

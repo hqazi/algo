@@ -265,12 +265,19 @@ export class PyodidePool {
               cases: cases.map((c) => c ?? { status: 'skipped' }),
             };
           }
-          cases[index] = {
-            status: 'error',
-            errorType: 'RuntimeCrash',
-            message: `the Python runtime crashed: ${why}`,
-            stdout: '',
-          };
+          cases[index] = /Maximum call stack size exceeded/.test(why)
+            ? {
+                status: 'error',
+                errorType: 'RecursionError',
+                message: 'the call stack ran out (recursion too deep for Pyodide)',
+                stdout: '',
+              }
+            : {
+                status: 'error',
+                errorType: 'RuntimeCrash',
+                message: `the Python runtime crashed: ${why}`,
+                stdout: '',
+              };
           resumeAt = index + 1;
           break;
         }

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The protocol handler also sends this policy as a header (main/exec/host-window.ts). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; worker-src 'self'; connect-src 'none'"
+    />
+    <title>Execution host</title>
+  </head>
+  <body>
+    <script type="module" src="./host.ts"></script>
+  </body>
+</html>

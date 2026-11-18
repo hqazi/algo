@@ -272,6 +272,10 @@ class Harness:
         self.returns = spec["returns"]
         self.ns = None
         self.func = None
+        # Inputs and results are never freed: freeing a long chain of nodes
+        # recurses once per node and can exhaust the JavaScript stack, which
+        # kills Pyodide. The worker is thrown away after the job anyway.
+        self._keep = []
 
     def _capture(self):
         cap = Capture()
@@ -308,10 +312,14 @@ class Harness:
         args = json.loads(input_json)
         cap = self._capture()
         elapsed = None
+        kwargs = {}
+        self._keep.append(kwargs)
         try:
-            kwargs = {p["name"]: convert_in(args[p["name"]], p["type"], self.ns) for p in self.params}
+            for p in self.params:
+                kwargs[p["name"]] = convert_in(args[p["name"]], p["type"], self.ns)
             t0 = time.perf_counter()
             result = self.func(**kwargs)
+            self._keep.append(result)
             elapsed = (time.perf_counter() - t0) * 1000
             actual_json = json.dumps(convert_out(result, self.returns), allow_nan=False)
             if len(actual_json) > ACTUAL_LIMIT:
