@@ -20,9 +20,10 @@ import { poolTransport } from '../../exec-host/pool-transport';
 import { nodeWorkerFactory } from '../../exec-host/testing/node-factory';
 import { PyodideExecutor } from './pyodide-executor';
 
+// The core loader takes `/`-separated paths (Node accepts them on Windows too).
 const FIXTURE = fileURLToPath(
   new URL('../../../../../packages/core/src/problems/fixtures/level-lists', import.meta.url),
-);
+).replaceAll('\\', '/');
 
 let pool: PyodidePool;
 let executor: PyodideExecutor;
