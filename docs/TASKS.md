@@ -118,10 +118,44 @@ React window.
 
 **Acceptance.**
 - [ ] `npm ci && npm run typecheck && npm run lint && npm test` passes locally and in CI on all three OSes.
-- [ ] `npm run dev` opens a window showing the app name.
-- [ ] `packages/core` has no dependency on Electron or Node built-ins (enforced by a lint rule or tsconfig `lib`/`types`).
+- [x] `npm run dev` opens a window showing the app name.
+- [x] `packages/core` has no dependency on Electron or Node built-ins (enforced by a lint rule or tsconfig `lib`/`types`).
 
 **Notes.**
+
+Built: npm workspaces (`packages/core`, `apps/desktop`); `tsconfig.base.json`
+(strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`,
+`verbatimModuleSyntax`); ESLint flat config (`eslint.config.js`), Prettier
+(`.prettierrc.json`, Markdown ignored to keep hand wrapping), `.gitattributes`
+forcing LF so `format:check` passes on Windows; Vitest with one project per
+workspace (`vitest.config.ts`). Root scripts `dev`, `build`, `typecheck`,
+`lint`, `format`, `format:check`, `test`. `apps/desktop` is electron-vite
+with `src/main`, `src/preload` (built as CJS for the sandbox) and
+`src/renderer` (React, shows "Algorithm Tutor"); the skeleton window already
+uses `contextIsolation`, `sandbox`, no `nodeIntegration` and a CSP meta tag,
+but the full baseline is T02. Core exports `APP_NAME`/`appTitle` with a test;
+the renderer has one render test. CI (`.github/workflows/ci.yml`) runs
+`npm ci`, typecheck, lint, format check, test and build on ubuntu, macOS and
+Windows, on every push and PR. Versions and the core-isolation mechanism are
+in D-10.
+
+Evidence: locally on Linux, `npm ci` then typecheck, lint, format check, test
+(3 tests) and build all pass; CI run 1 on all three OSes is pending. `electron-vite
+dev` was run under Xvfb and a screenshot showed the window with the app name.
+Core isolation checked by adding a temporary file using `process`,
+`document`, `setTimeout` (type errors) and importing `node:fs`, `path`,
+`electron` (lint errors).
+
+Not done / caveats: `npm run dev` was checked on Linux only, and as root, so
+it needed Chromium's `--no-sandbox` (`npx electron-vite dev -- --no-sandbox`);
+normal users do not. It was not opened on macOS or Windows (CI only builds).
+`npm install` with Node 22's npm 10.9 crashes on a fresh resolve; use
+`npx npm@11 install` to change dependencies (`npm ci` works). One
+dev-only `npm audit` advisory (picomatch) has no fix yet. The renderer bundle
+is ~565 kB because electron-vite does not minify by default (it is React's
+production build); revisit in T13 if size matters. The
+desktop `tsconfig.json` is a solution-style file for editors only; scripts
+use `tsconfig.node.json` and `tsconfig.web.json` directly.
 
 ### T02 — Electron security baseline and typed IPC
 

@@ -111,3 +111,33 @@ runtime plus wasmtime would add 30–50 MB, eroding Tauri's size advantage. The
 estimate rose from about 32 to about 42 dev-days. The owner chose to stay
 with Electron (D-02, D-03 stand). The reverted commit keeps the full Tauri
 spec if this is ever revisited.
+
+**D-10 Toolchain versions pinned in T01** (2026-11-18, T01)
+
+Exact versions in `package.json` (no ranges); the lockfile pins the rest.
+
+| Package | Version | Note |
+|---|---|---|
+| Node | 22 (`.nvmrc`, `engines >=22.12 <23`) | SPEC §3.1. |
+| Electron | 45.3.4 | Ships Node 24.22 and Chromium 156, so the main/preload code is typed with `@types/node` 24.19.2. |
+| electron-vite | 6.0.0 | On Vite 8.3.8 (Rolldown). |
+| React / React DOM | 19.3.1 | `@vitejs/plugin-react` 6.3.0. |
+| Vitest | 5.1.0 | 5.1.1 was published the same day; took the previous patch. |
+| TypeScript | 6.0.3 | Not 7.x: `typescript-eslint` 8.73 supports `<6.1`. |
+| ESLint | 10.15.0 | Flat config, `typescript-eslint` 8.73.0. |
+| Prettier | 3.10.1 | |
+
+How `packages/core` stays free of Electron and Node: its `tsconfig.json` has
+`lib: ["ES2023"]` and `types: []` (no `process`, `Buffer`, DOM, or
+`setTimeout`; time is injected), and ESLint `no-restricted-imports` rejects
+`electron`, `node:*` and bare built-in names in `packages/core/**`. Core is
+consumed as TypeScript source and bundled by electron-vite (excluded from
+`externalizeDeps`). The preload is built as CommonJS (`index.cjs`) because
+sandboxed preloads cannot be ES modules.
+
+Known issues: npm 10.9 (bundled with Node 22) crashes with `Cannot read
+properties of null (reading 'edgesOut')` when *resolving* a fresh tree
+(Vitest's optional peers); `npm ci` from the lockfile works. To change
+dependencies, use `npx npm@11 install`. `npm audit` reports a high-severity
+picomatch ReDoS advisory with no fixed version in dev-only tooling
+(Vitest, typescript-eslint); production dependencies audit clean.
