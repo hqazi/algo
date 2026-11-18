@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "slug": "max-haul",
+  "title": "Quiet Night Market",
+  "topic": "dynamic-programming",
+  "difficulty": "medium",
+  "source": "curated",
+  "content_version": 1,
+  "created_at": "2026-10-31T14:18:43Z",
+  "expected_complexity": { "time": "O(n)", "space": "O(1)" },
+  "compare": { "mode": "exact" },
+  "time_limit_ms": 2000,
+  "signature": {
+    "function": "max_haul",
+    "params": [{ "name": "stalls", "type": "list<int>" }],
+    "returns": "int"
+  },
+  "languages": ["python"]
+}
