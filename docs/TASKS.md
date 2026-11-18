@@ -55,7 +55,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | done |
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | done |
-| T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
+| T05 | SQLite storage and migrations | v1 | 2d | T01 | in-progress |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | todo |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | todo |
