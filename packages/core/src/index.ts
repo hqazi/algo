@@ -9,3 +9,4 @@ export function appTitle(version?: string): string {
 export * from './types';
 export * from './compare';
 export * from './problems';
+export * from './exec';

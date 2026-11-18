@@ -4,5 +4,13 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["electron.vite.config.ts", "vitest.config.ts", "src/main", "src/preload"]
+  "include": [
+    "electron.vite.config.ts",
+    "vitest.config.ts",
+    "src/main",
+    "src/preload",
+    "src/exec-host/preload.ts",
+    "src/exec-host/testing",
+    "src/exec-host/**/*.test.ts"
+  ]
 }
