@@ -354,7 +354,7 @@ verified.
 
 **Acceptance.**
 - [x] 50 problems under `content/problems/<topic>/<slug>/`, all valid.
-- [ ] `npm run validate:content` passes and runs in CI.
+- [x] `npm run validate:content` passes and runs in CI (run 44388766170: Linux, macOS, Windows).
 - [x] Any type that did not map cleanly is listed in the done notes with how it was resolved.
 
 **Notes.**
