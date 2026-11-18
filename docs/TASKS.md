@@ -417,7 +417,7 @@ Not done / not tested:
 **Acceptance.**
 - [x] Tests: fresh DB, migrate from v1 to v2 with a sample migration, refuse a newer DB, backup file created.
 - [x] Tests: invalid `settings.json` values fall back to defaults and are reported.
-- [ ] Storage runs under Electron's Node (rebuild verified in CI).
+- [x] Storage runs under Electron's Node (rebuild verified in CI). No rebuild exists with `node:sqlite` (D-20); `check:storage` passed on ubuntu, macOS and Windows in CI run 44412267409.
 
 **Notes.**
 
