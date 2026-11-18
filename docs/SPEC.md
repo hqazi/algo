@@ -552,7 +552,7 @@ language).
 | Hidden test data leaks to the tutor or UI | Redaction in the main process (6.1); `get_problem` never returns hidden tests. |
 | API key leaks | `safeStorage`, main process only, never logged, never sent to renderer or code under test (4.4). |
 | Prompt injection via pasted/imported problems | Delimited untrusted data; the tutor has no tool that writes code, files or reaches the network. |
-| Compromised renderer | `contextIsolation`, `sandbox`, no `nodeIntegration`, strict CSP, no remote content, `zod`-validated IPC, navigation and `window.open` blocked, `webSecurity` on. Electron fuses: disable `RunAsNode`, `EnableNodeCliInspectArguments`, enable ASAR integrity where supported. |
+| Compromised renderer | `contextIsolation`, `sandbox` (also `app.enableSandbox()`), no `nodeIntegration`, `webSecurity` on. The UI is served over the app's own `tutor-app://` protocol (never `file://`) with a strict CSP header (`connect-src 'none'`); every request from a page to anything else is cancelled, so no remote content. IPC only through the typed `window.tutor` bridge, `zod`-validated in main, accepted only from the UI page's main frame. Navigation, redirects, `window.open`, `<webview>`, permissions and downloads blocked in every web contents. Electron fuses (D-17): `RunAsNode`, `NODE_OPTIONS`, `--inspect` and `file://` extra privileges off; cookie encryption, ASAR integrity (macOS, Windows) and load-only-from-ASAR on. |
 | Malicious update | Updates only from the project's GitHub Releases over HTTPS; signed builds (11) verified by the OS/updater. |
 
 ## 11. Packaging and updates

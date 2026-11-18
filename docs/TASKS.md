@@ -52,7 +52,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | Ticket | Title | Milestone | Size | Depends on | Status |
 |---|---|---|---|---|---|
 | T01 | Repository scaffold | v1 | 2d | — | done |
-| T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | in-progress |
+| T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | done |
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | todo |
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
@@ -174,11 +174,86 @@ use `tsconfig.node.json` and `tsconfig.web.json` directly.
 - One example channel (`app:version`) used by the renderer.
 
 **Acceptance.**
-- [ ] Unit test: an IPC call with an invalid payload is rejected in main.
-- [ ] Unit or e2e check that the renderer has no `require`/`process`.
-- [ ] A streaming channel example with cancel works.
+- [x] Unit test: an IPC call with an invalid payload is rejected in main.
+- [x] Unit or e2e check that the renderer has no `require`/`process`.
+- [x] A streaming channel example with cancel works.
 
 **Notes.**
+
+Built: `shared/ipc.ts` (the contract: invoke and stream channels with zod
+schemas, the `IpcResult` envelope, the `TutorBridge` type) and
+`shared/channels.ts` (names only, for the preload; matched to the contract
+at compile time). `main/ipc/router.ts`: `IpcRouter.handle()` and
+`handleStream()` check the sender (the UI page's main frame), parse the
+request, parse the handler's reply and events, and answer with an envelope;
+streams cancel on request, when the page goes away, or on `dispose()`.
+`main/ipc/handlers.ts`: `app:version` and the example stream
+`example:count`. `preload/index.ts`: `window.tutor` with `invoke` and
+`stream` only. `main/window.ts`: the UI over the `tutor-app://` protocol with
+a CSP header, the UI session lock-down (requests, permissions, downloads),
+navigation/redirect/`window.open`/`<webview>` guards on every web contents,
+and the window itself. `packaging/fuses.ts`: the fuse settings and
+`applyFuses()` for T13. Design and fuse table: D-17; versions: D-18. SPEC §10's
+"Compromised renderer" row now says what is actually done.
+
+Evidence: `src/main/ipc/router.test.ts` (13 tests: invalid payloads, unknown
+channels and untrusted senders refused without calling the handler, contract
+breaks reported as `internal`, stream order, cancel, per-page cancel, page
+closed, dispose) and `src/main/window.test.ts` (8 tests: trusted URL, request
+filter, CSP strings, protocol serving). `npm run check:security` (new, runs in
+CI on Linux under Xvfb) starts the built app in Electron and checks from the
+real page: loaded over `tutor-app://`; `app:version` rendered; `require`,
+`process`, `module`, `Buffer`, `global`, `ipcRenderer` all undefined and
+`window.tutor` has only `invoke`/`stream`; invalid payloads and unknown
+channels refused over real IPC; a stream delivers 5 events and its result,
+and a cancelled one stops (no events after cancel, no stream left running);
+CSP blocks `fetch` (also to self), inline script, `eval`, `new Function` and
+iframes; navigation and `window.open` refused; notification and geolocation
+permission denied; the protocol returns 404 for `main/`, `preload/`,
+`pyodide/`, `exec-host/` and `..` paths; a window in the UI session told to
+load `https://example.com` gets `ERR_BLOCKED_BY_CLIENT`. `npm run
+check:fuses` (new, in CI on all three OSes) flips a copy of Electron and reads
+all nine fuses back. Manually on Linux: that copy (with `OnlyLoadAppFromAsar`
+left off, as there is no asar yet) passes `check:security` and
+`check:exec-host`, and ignores `ELECTRON_RUN_AS_NODE` and `--inspect`; dev
+mode (Vite dev server) renders, Vite's WebSocket connects under the dev CSP,
+and `app:version` answers. typecheck, lint, format check, 301 tests, build
+pass.
+
+A bug found by the tests and fixed: `new URL('tutor-app://x/...').origin` is
+`"null"` for every custom-scheme URL, so comparing origins trusted any host.
+The sender check compares protocol, host and path.
+
+Wiring outside **Owns**: `main/index.ts` (now small) and new `main/setup.ts`
+(start-up shared with the check); `main/exec/host-window.ts` exports its
+scheme privileges so both schemes are registered in one call (Electron allows
+one); `main/security-check.ts`; renderer `App.tsx`, `ipc.ts` (typed client
+that unwraps envelopes into `IpcError`), `env.d.ts`, `styles.css`,
+`index.html` (CSP meta tag removed, header instead); `electron.vite.config.ts`
+(check entry); `tsconfig.node.json`/`tsconfig.web.json` (`src/shared`,
+`packaging`); `eslint.config.js` (Node globals for `packaging/`);
+`package.json` scripts `check:security` and `check:fuses`; CI steps.
+
+Not done / caveats:
+- Fuses are not applied to any real build yet: there is no packaging until
+  T13, which must call `applyFuses()` (or pass the same settings to
+  electron-builder's `electronFuses`) and make sure the ASAR integrity hash is
+  embedded, or the app will not start on macOS/Windows. `OnlyLoadAppFromAsar`
+  and ASAR integrity were therefore not exercised at all. `check:fuses` on
+  macOS and Windows only ran in CI, not by hand.
+- The camera permission check got `NotFoundError` (this machine has no
+  camera), so it does not prove the camera request was denied; notification
+  and geolocation do show the handler denying.
+- Everything was run as root on Linux with `--no-sandbox`, which also skips
+  `app.enableSandbox()` (D-17); CI runs `check:security` as a normal user with
+  the sandbox. Not opened on macOS or Windows.
+- `example:count` is a placeholder stream; chat and job progress (T08, T10)
+  replace it. The example channel was left in rather than hidden behind a
+  development flag.
+- The renderer bundle includes zod (about 190 kB) because it imports
+  `@algorithm-tutor/core`'s index; that predates T02 (T03) and is unchanged.
+- Run from `out/main/` directly (not via `electron .`), `app.getVersion()`
+  reports Electron's version or `0.0`; packaged builds read `package.json`.
 
 ### T03 — Problem format v2 and neutral types
 

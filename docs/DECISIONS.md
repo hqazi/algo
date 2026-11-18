@@ -294,3 +294,67 @@ finish starting.
 | Package | Version | Note |
 |---|---|---|
 | pyodide | 314.0.7 | Python 3.14.2. Desktop dependency; its runtime files (`pyodide.mjs`, `pyodide.asm.mjs`, `pyodide.asm.wasm`, `python_stdlib.zip`, `pyodide-lock.json`, about 13.5 MB) are copied into the renderer build under `pyodide/` by a plugin in `electron.vite.config.ts`. 314.0.8 was five days old; took the previous patch. MPL-2.0. |
+
+**D-17 Security baseline: custom UI protocol, IPC envelope, fuses**
+(2026-11-18, T02)
+
+- **The UI is served over `tutor-app://app/`**, a privileged custom
+  protocol on the default session, not `file://`. It serves only `renderer/`
+  and `assets/` from the renderer build, with CSP as a response header
+  (`default-src 'none'`, scripts and styles from the app, `connect-src
+  'none'`, no frames, objects, forms or `<base>`). This lets the
+  `GrantFileProtocolExtraPrivileges` fuse be off and gives IPC a real origin
+  to check senders against. The CSP meta tag was removed: in development the
+  dev server's page gets a header CSP that also allows Vite's inline preamble
+  and its WebSocket, which a stricter meta tag would block.
+- **Every request a page makes** in the UI session to anything but the app
+  protocol (or the dev server, in development) is cancelled in
+  `webRequest.onBeforeRequest`, so remote content is blocked even if CSP is
+  bypassed. Requests without a web contents (the main process's own `net`,
+  e.g. updates in T13) are not touched.
+- **IPC**: `shared/ipc.ts` lists every channel with zod schemas. Main parses
+  each request, and its own replies and stream events, and answers with an
+  `IpcResult` envelope (`invalid_request`, `unknown_channel`, `forbidden`,
+  `cancelled`, `internal`) instead of throwing, because errors thrown across
+  `ipcMain.handle` and `contextBridge` lose everything but a prefixed message.
+  Only the UI page's main frame may call (checked on `senderFrame`).
+  Streams: `ipc:stream:start` (invoke, resolves with the result),
+  `ipc:stream:event` (main → page, tagged with the stream id),
+  `ipc:stream:cancel` (page → main); a cancel answers at once even if the
+  handler ignores its `AbortSignal`, and a closed page cancels its streams.
+  MessagePorts were not used: one port per stream adds lifecycle code for no
+  gain at this volume. The preload imports only channel names
+  (`shared/channels.ts`, checked against the contract at compile time)
+  because a sandboxed preload cannot `require` zod.
+- **`app.enableSandbox()`** is skipped only when `--no-sandbox` is passed
+  explicitly: with it on, Chromium refuses to start as root at all, which
+  breaks development in root containers. Every window sets `sandbox: true`
+  regardless.
+- **Fuses** (`apps/desktop/packaging/fuses.ts`, applied by T13's packaging
+  step; Electron 45 has nine, all set, `strictlyRequireAllFuses` on):
+
+  | Fuse | Set | Why |
+  |---|---|---|
+  | RunAsNode | off | `ELECTRON_RUN_AS_NODE` turns the app into Node. |
+  | EnableCookieEncryption | on | No cookies kept; free. |
+  | EnableNodeOptionsEnvironmentVariable | off | `NODE_OPTIONS` can preload code. |
+  | EnableNodeCliInspectArguments | off | `--inspect` opens a debugger on main. |
+  | EnableEmbeddedAsarIntegrityValidation | on | macOS and Windows only; T13 must embed the hash (electron-builder does). |
+  | OnlyLoadAppFromAsar | on | So the integrity check covers the app code. |
+  | LoadBrowserProcessSpecificV8Snapshot | off | Needs a snapshot we do not build. |
+  | GrantFileProtocolExtraPrivileges | off | Nothing uses `file://`. |
+  | WasmTrapHandlers | on | Default; WebAssembly (Pyodide) speed. |
+
+  Checked on Linux: `npm run check:fuses` flips a copy of the development
+  Electron and reads all nine back. With every fuse but `OnlyLoadAppFromAsar`
+  flipped (there is no `app.asar` before T13), the same copy passes
+  `check:security` and `check:exec-host`, ignores `ELECTRON_RUN_AS_NODE`
+  and `--inspect` (the stock binary honours both).
+
+**D-18 Versions pinned in T02** (2026-11-18, T02)
+
+| Package | Version | Note |
+|---|---|---|
+| @electron/fuses | 2.1.3 | Desktop dev dependency (`packaging/fuses.ts`). Covers all nine Electron 45 fuses. |
+| zod | 4.6.7 | Now also a direct desktop dependency (IPC contract); same version as core. |
+
