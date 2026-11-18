@@ -31,6 +31,8 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
+      # Every curated problem validates and its reference passes in Pyodide.
+      - run: npm run validate:content
       - run: npm run build
       # The real execution host in Electron (CSP, network blocking, timeouts).
       # Ubuntu 24.04 blocks the unprivileged user namespaces Chromium's sandbox uses.
