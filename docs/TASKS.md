@@ -227,7 +227,9 @@ Decisions: D-11 (exact 64-bit integers), D-12 (format v2 rules), D-13
 and §5.2 (type rules, tree shape, big integers) updated to match.
 
 Evidence: `npm run typecheck`, `npm run lint`, `npm run format:check`,
-`npm test` (241 tests) pass locally. Compare: `dsa-tutor` has no tests for
+`npm test` (241 tests) pass locally; CI run 44346025554 passed on
+ubuntu, Windows and macOS (macOS on a re-run: the first attempt was
+cancelled after 15 minutes waiting for a runner). Compare: `dsa-tutor` has no tests for
 compare modes, so `compare/fixtures/gen-dsa-tutor-cases.py` runs the
 original `compare()` on 62 cases (every mode, bool/number, key sets,
 nesting, tolerance edges) and the port must agree with each; plus bigint
