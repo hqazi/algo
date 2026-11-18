@@ -53,7 +53,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 |---|---|---|---|---|---|
 | T01 | Repository scaffold | v1 | 2d | — | done |
 | T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | todo |
-| T03 | Problem format v2 and neutral types | v1 | 2d | T01 | in-progress |
+| T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | todo |
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | todo |
@@ -198,10 +198,65 @@ use `tsconfig.node.json` and `tsconfig.web.json` directly.
 - A loader that reads a problem folder (via an injected file reader) and returns a validated problem.
 
 **Acceptance.**
-- [ ] Unit tests for the type parser (valid and invalid), value validation per type, every compare mode (port the `dsa-tutor` cases).
-- [ ] The `level-lists` problem from `dsa-tutor`, hand-converted, loads and validates.
+- [x] Unit tests for the type parser (valid and invalid), value validation per type, every compare mode (port the `dsa-tutor` cases).
+- [x] The `level-lists` problem from `dsa-tutor`, hand-converted, loads and validates.
 
 **Notes.**
+
+Built, in `packages/core/src/`:
+- `types/`: `parseType`/`formatType` for neutral types (grammar in
+  `neutral.ts`), `checkValue` (a JSON value against a type, with paths like
+  `input.root[3]`), `pythonType`/`pythonSignatureLine`/`pythonNodeClasses`
+  (matches the hints `dsa-tutor` used, e.g. `TreeNode | None`), the
+  signature zod schema and `Language`, and `parseJson`/`stringifyJson`,
+  which keep integers beyond 2^53 exact as `bigint` (D-11).
+- `compare/`: `compareValues` (`exact`, `unordered`, `unordered_deep`,
+  `float` + tolerance) and `valuesEqual`, ported from `grading.py`.
+- `problems/`: zod schemas for `meta.json` and `tests.json` v2, cross-file
+  checks (`crossCheckProblem`: inputs and expected values against the
+  signature, compare mode against the return type, language support),
+  `loadProblem(reader, dir, { topics? })` over an injected
+  `ProblemFileReader`, returning the problem (meta, tests, statement,
+  reference, brute force) or every error as `file: path: message`, and
+  `problemJsonSchemas()`.
+- `content/schema/meta.v2.schema.json`, `tests.v2.schema.json`, written by
+  `npm run schema:export`; a test fails if they drift from the zod schemas.
+
+Decisions: D-11 (exact 64-bit integers), D-12 (format v2 rules), D-13
+(zod 4.6.7, tsx 4.23.15). `SPEC.md` §5.1 (optional fields, strict keys)
+and §5.2 (type rules, tree shape, big integers) updated to match.
+
+Evidence: `npm run typecheck`, `npm run lint`, `npm run format:check`,
+`npm test` (241 tests) pass locally. Compare: `dsa-tutor` has no tests for
+compare modes, so `compare/fixtures/gen-dsa-tutor-cases.py` runs the
+original `compare()` on 62 cases (every mode, bool/number, key sets,
+nesting, tolerance edges) and the port must agree with each; plus bigint
+cases. `level-lists` is hand-converted under `problems/fixtures/` and
+loads; ~30 mutations of it each produce the expected error. As an extra
+check (scratch script, not committed; T04 owns the converter) all 50
+curated problems were converted with a plain type map (`TreeNode | None` →
+`tree<int>`, `ListNode | None` → `linked_list<int>`, `str` → `string`, …)
+and all 50 load and validate.
+
+Wiring outside **Owns**: `zod` in `packages/core/package.json`; `tsx`, the
+`schema:export` script and `tsc -p tsconfig.scripts.json` in the root
+`package.json` typecheck; new `tsconfig.scripts.json`, `scripts/export-schemas.ts`;
+`eslint.config.js` gives `scripts/**` Node globals; `packages/core/src/raw.d.ts`
+types Vite `?raw` imports for tests.
+
+Not done / for later tickets:
+- No Node file reader for `loadProblem` yet; main (T04/T08) provides one.
+  Paths are joined with `/`.
+- T07 must use `parseJson`/`stringifyJson` for harness input and output,
+  convert `map<int,…>` keys (JSON strings) to Python ints, and build nodes
+  from the neutral type rather than `dsa-tutor`'s `"TreeNode" in type` test.
+- `tree<T>` and `linked_list<T>` are limited to scalar `T`; `tuple` needs
+  ≥ 2 items. Revisit if a problem needs more.
+- An `int` written as `2.0` passes validation (indistinguishable after
+  parsing; D-11).
+- Topic ids are checked only when the caller passes `topics` (the topics
+  table arrives with T04's references).
+- The time-limit rule is T07's; the fixture uses 2000 ms.
 
 ### T04 — Port the curated problems and references
 

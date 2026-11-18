@@ -243,6 +243,12 @@ to its own convention (`levelLists`, `LevelLists`). `languages` lists the
 languages the problem is offered in; a problem can be offered in any language
 whose harness supports every type in its signature.
 
+Optional fields: `created_at` (ISO time) and `origin` (required for `pasted`
+and `imported` problems: `{ "kind": "paste" }` or `{ "kind": "open-set",
+"name", "url", "license", "attribution" }`, as in `dsa-tutor`). Unknown keys
+are rejected; the zod schemas in `packages/core/src/problems/schema.ts` are
+the reference and `content/schema/*.v2.schema.json` their JSON Schema export.
+
 `tests.json` keeps the `dsa-tutor` shape: `{ "schema_version": 2, "tests": [
 { "id", "visibility": "visible" | "hidden", "category", "input": { name: value },
 "expected", "explanation"? } ] }`. At least 2 visible and 3 hidden tests;
@@ -255,7 +261,7 @@ Compare modes are unchanged: `exact`, `unordered`, `unordered_deep`, `float`
 
 | Type | JSON form | Python | Rust (v2) | Go (v2) |
 |---|---|---|---|---|
-| `int` | number (integer, 64-bit range) | `int` | `i64` | `int` |
+| `int` | number (integer, 64-bit range; core parses JSON so integers beyond 2^53 stay exact) | `int` | `i64` | `int` |
 | `float` | number | `float` | `f64` | `float64` |
 | `bool` | boolean | `bool` | `bool` | `bool` |
 | `string` | string | `str` | `String` | `string` |
@@ -271,6 +277,13 @@ Graphs are expressed with existing types (`list<list<int>>` adjacency lists or
 edge lists, `list<string>` grids). The Rust and Go columns are indicative; T15
 finalises them. **DECISION**: whether `int` is `i64` or `i32` in Rust (default
 `i64`).
+
+Rules (enforced by the parser, D-12): `tuple` has two or more items; `tree`
+and `linked_list` hold a scalar (`int`, `float`, `bool`, `string`, `char`);
+`optional<optional<T>>` is not allowed; map keys are `string` or `int`. A
+`tree` is read as every harness builds it (each node takes the next two slots
+as its children; an empty tree is `[]`, never `[null]`); expected trees have no
+trailing `null`s, since harnesses print them without.
 
 `packages/core` validates every test input and expected value against the
 signature, so a problem that validates is runnable by every harness that

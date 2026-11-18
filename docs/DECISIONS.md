@@ -141,3 +141,65 @@ properties of null (reading 'edgesOut')` when *resolving* a fresh tree
 dependencies, use `npx npm@11 install`. `npm audit` reports a high-severity
 picomatch ReDoS advisory with no fixed version in dev-only tooling
 (Vitest, typescript-eslint); production dependencies audit clean.
+
+**D-11 Exact 64-bit integers: core parses JSON with bigints** (2026-11-18, T03)
+
+Neutral `int` is 64-bit (SPEC §5.2), but `JSON.parse` turns every number into
+a double. Three curated problems have integers beyond 2^53 (`floor-sqrt`
+inputs `999999999999999999` and `10^18`, `power-mod` inputs, `count-ways`
+expected `4660046610375530309`); parsed normally, `999999999999999999` becomes
+`10^18` and the test changes meaning. Core's `parseJson` uses
+`JSON.parse`'s source-text access (the reviver's third argument; V8 since
+Chrome 114 / Node 21, so Node 22, Electron 45 and its Chromium all have it)
+to keep integer literals outside ±(2^53 − 1) as `bigint`; `stringifyJson`
+writes them back as digits. Compare treats `bigint` and `number` as the same
+integer when equal. Every problem file, harness input and harness output
+must go through these two functions (T07, T04). Integers outside the i64
+range, or written in exponent form beyond 2^53 (`1e20` for an `int`), are
+rejected.
+
+Rejected: limiting `int` to ±2^53 (would change three curated problems and
+diverge from Python, Rust `i64` and Go `int`); a third-party JSON library
+(the built-in does it now); encoding big integers as strings in tests
+(changes the format every harness reads).
+
+Caveat: once parsed, `2.0` and `2` are the same number, so an `int` written
+as `2.0` passes validation (Python would receive a float).
+
+**D-12 Problem format v2 rules** (2026-11-18, T03)
+
+What the v2 schemas enforce beyond SPEC §5.1's example, and why:
+
+- Unknown keys in `meta.json`, `tests.json` and test cases are errors
+  (catches typos in hand-written content; a format change bumps
+  `schema_version`). Loading a v1 file says to convert it; a newer version
+  says to update the app.
+- `time_limit_ms` and `content_version` are required; `created_at` and
+  `origin` are optional, with `origin` required and matching for `pasted`
+  (`paste`) and `imported` (`open-set`), as in `dsa-tutor`.
+- `compare` is required; `tolerance` is allowed only in `float` mode.
+  `unordered`/`unordered_deep` need a `list` return type and `float` needs a
+  `float` somewhere in it (`dsa-tutor` silently fell back to exact).
+- Names are snake_case and not Python keywords; Rust/Go keywords are left to
+  the T15 generators to escape.
+- Types: `tuple` has ≥ 2 items; `tree`/`linked_list` hold scalars only (each
+  harness needs one node type per element type); no `optional<optional<T>>`
+  (both levels are `null` in JSON); map keys `string` or `int`, `int` keys
+  written as canonical integer strings.
+- Tree values are checked the way `dsa-tutor`'s harness builds them: root not
+  `null` (empty tree is `[]`), no values left over as children of `null`;
+  expected trees must not end in `null` because harnesses print them without
+  trailing nulls, so such a test could never pass. Inputs may have trailing
+  nulls.
+- Test rules from `dsa-tutor`: ≥ 2 visible, ≥ 3 hidden, hidden need a
+  category, ids unique slugs, input keys exactly the parameter names.
+- `languages` entries must have a harness supporting every type in the
+  signature; only Python has one in v1, so `rust`/`go` are rejected until
+  T15 registers them in `problems/validate.ts`.
+
+**D-13 Versions pinned in T03** (2026-11-18, T03)
+
+| Package | Version | Note |
+|---|---|---|
+| zod | 4.6.7 | `packages/core` dependency; `z.toJSONSchema` exports `content/schema/`. |
+| tsx | 4.23.15 | Root dev dependency to run TypeScript in `scripts/` (`npm run schema:export`; T04's converter). `scripts/` is type-checked by `tsconfig.scripts.json`. |
