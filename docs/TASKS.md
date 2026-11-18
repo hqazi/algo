@@ -51,7 +51,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 
 | Ticket | Title | Milestone | Size | Depends on | Status |
 |---|---|---|---|---|---|
-| T01 | Repository scaffold | v1 | 2d | — | in-progress |
+| T01 | Repository scaffold | v1 | 2d | — | done |
 | T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | todo |
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | todo |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | todo |
@@ -117,7 +117,7 @@ React window.
   `DECISIONS.md`.
 
 **Acceptance.**
-- [ ] `npm ci && npm run typecheck && npm run lint && npm test` passes locally and in CI on all three OSes.
+- [x] `npm ci && npm run typecheck && npm run lint && npm test` passes locally and in CI on all three OSes.
 - [x] `npm run dev` opens a window showing the app name.
 - [x] `packages/core` has no dependency on Electron or Node built-ins (enforced by a lint rule or tsconfig `lib`/`types`).
 
@@ -140,7 +140,7 @@ Windows, on every push and PR. Versions and the core-isolation mechanism are
 in D-10.
 
 Evidence: locally on Linux, `npm ci` then typecheck, lint, format check, test
-(3 tests) and build all pass; CI run 1 on all three OSes is pending. `electron-vite
+(3 tests) and build all pass; CI run 2 (44340601241) passed on ubuntu, macOS and Windows (run 1 was cancelled by a newer push). `electron-vite
 dev` was run under Xvfb and a screenshot showed the window with the app name.
 Core isolation checked by adding a temporary file using `process`,
 `document`, `setTimeout` (type errors) and importing `node:fs`, `path`,
