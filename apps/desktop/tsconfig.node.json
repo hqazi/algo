@@ -7,7 +7,9 @@
   "include": [
     "electron.vite.config.ts",
     "vitest.config.ts",
+    "packaging",
     "src/main",
+    "src/shared",
     "src/preload",
     "src/exec-host/preload.ts",
     "src/exec-host/testing",

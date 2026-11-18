@@ -39,3 +39,10 @@ jobs:
         run: |
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           xvfb-run -a npm run check:exec-host
+      # The UI window's security baseline: CSP, IPC validation, blocked
+      # navigation and remote content, no Node in the renderer.
+      - name: check security baseline
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run check:security
+      # Flip the packaged-build fuses on a copy of Electron and read them back.
+      - run: npm run check:fuses

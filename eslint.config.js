@@ -27,6 +27,7 @@ export default tseslint.config(
       'scripts/**/*.ts',
       '**/*.config.{js,ts}',
       'apps/desktop/src/{main,preload}/**/*.ts',
+      'apps/desktop/packaging/**/*.ts',
     ],
     languageOptions: { globals: globals.node },
   },

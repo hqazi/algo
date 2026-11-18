@@ -61,6 +61,8 @@ export default defineConfig({
           index: src('main/index.ts'),
           // `npm run check:exec-host`: drives the real execution host window.
           'exec-check': src('main/exec/check.ts'),
+          // `npm run check:security`: the security baseline in the real window.
+          'security-check': src('main/security-check.ts'),
         },
       },
     },

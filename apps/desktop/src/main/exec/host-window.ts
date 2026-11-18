@@ -24,6 +24,7 @@ import {
   net,
   protocol,
   session,
+  type CustomScheme,
   type MessagePortMain,
   type Session,
 } from 'electron';
@@ -60,11 +61,19 @@ const TYPES: Record<string, string> = {
   '.zip': 'application/zip',
 };
 
-/** Call before `app.whenReady()`. */
+/** Privileges for `protocol.registerSchemesAsPrivileged`. */
+export const EXEC_SCHEME_PRIVILEGES: CustomScheme = {
+  scheme: EXEC_SCHEME,
+  privileges: { standard: true, secure: true, supportFetchAPI: true },
+};
+
+/**
+ * Call before `app.whenReady()`, when this is the only custom scheme (checks).
+ * Electron takes one `registerSchemesAsPrivileged` call; the app registers
+ * all its schemes together in `main/index.ts`.
+ */
 export function registerExecScheme(): void {
-  protocol.registerSchemesAsPrivileged([
-    { scheme: EXEC_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
-  ]);
+  protocol.registerSchemesAsPrivileged([EXEC_SCHEME_PRIVILEGES]);
 }
 
 export interface ExecHostOptions {

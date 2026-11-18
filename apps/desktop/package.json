@@ -11,15 +11,19 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
-    "check:exec-host": "electron-vite build && electron out/main/exec-check.js"
+    "check:exec-host": "electron-vite build && electron out/main/exec-check.js",
+    "check:fuses": "tsx packaging/fuses.ts --check",
+    "check:security": "electron-vite build && electron out/main/security-check.js"
   },
   "dependencies": {
     "@algorithm-tutor/core": "*",
     "pyodide": "314.0.7",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electron/fuses": "2.1.3",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
