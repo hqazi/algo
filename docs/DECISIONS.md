@@ -203,3 +203,94 @@ What the v2 schemas enforce beyond SPEC §5.1's example, and why:
 |---|---|---|
 | zod | 4.6.7 | `packages/core` dependency; `z.toJSONSchema` exports `content/schema/`. |
 | tsx | 4.23.15 | Root dev dependency to run TypeScript in `scripts/` (`npm run schema:export`; T04's converter). `scripts/` is type-checked by `tsconfig.scripts.json`. |
+
+**D-14 Pyodide can be network-blocked and package loading disabled**
+(2026-11-18, T07; resolves the SPEC §14 VERIFY)
+
+Yes, in layers, each checked in the real Electron window by `npm run
+check:exec-host` (Electron 45.3.4, Pyodide 314.0.7, Python 3.14.2):
+
+1. Python cannot reach JavaScript. `loadPyodide({ jsglobals: {} })` makes the
+   `js` module an empty object: `js.fetch` is an `AttributeError`, and
+   `pyodide.code.run_js` has no `eval` to call. The harness also blocks
+   importing `micropip`, `pyodide_js` (the JS API, with `loadPackage`),
+   `pyodide.http`, `pyodide.code` and `pyodide.webloop`, and stdin is empty.
+   On the JS side `loadPackage`, `loadPackagesFromImports`, `mountNativeFS`,
+   `mountNodeFS` and `unpackArchive` throw. `micropip` is not bundled anyway;
+   Pyodide's in-memory file system has no `/etc/passwd`.
+2. The worker removes `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`,
+   `importScripts`, `indexedDB`, `caches`, `BroadcastChannel`, `Worker` and
+   similar from its global scope (and their prototypes) once Pyodide has
+   started.
+3. CSP, sent as response headers by the protocol handler. The page:
+   `default-src 'none'; script-src 'self'; worker-src 'self'; connect-src
+   'none'` (verified: `fetch`, images and `blob:` workers are refused).
+   Workers: `connect-src 'self'` and `script-src 'self' 'wasm-unsafe-eval'`,
+   **not** `connect-src 'none'` as SPEC §6.2 first said: Pyodide fetches its
+   own `pyodide.asm.wasm`, `python_stdlib.zip` and lock file, and
+   instantiating WebAssembly needs `'wasm-unsafe-eval'`. `'self'` is the
+   `tutor-exec://host` origin, which serves only `exec-host/`, `assets/` and
+   `pyodide/` from the app's renderer build (any path from the local dev
+   server in development).
+4. The partition (`exec-host`, in memory) cancels every request that is not
+   `tutor-exec://host/...` in `webRequest.onBeforeRequest` (verified with a
+   `session.fetch` to an outside host: `ERR_BLOCKED_BY_CLIENT`), denies all
+   permissions and downloads, and the window denies navigation and
+   `window.open`.
+
+Each job gets fresh workers, terminated at the end, so files, modules and
+builtins a solution changes do not reach the next job (tested). Expected
+values are never sent to the host, so a solution that forges its worker's
+messages (it shares the interpreter with the harness) can only lie about its
+own return values, which core still grades.
+
+Found while measuring, and handled:
+- Freeing a long chain of Python objects (a 20 000-node linked list) recurses
+  once per node in CPython's deallocator and overflows the JavaScript stack,
+  which is a fatal Pyodide error, not a `RecursionError`. The harness keeps
+  every test's inputs and results alive until the worker is discarded.
+  User code that drops a long chain itself can still hit it.
+- Deep recursion through C calls (e.g. `1 + max(f(n - 1), 0)`) overflows
+  Chromium's worker stack before Python's limit (set to 100 000). The pool
+  reports that as a `RecursionError` ("the call stack ran out") and resumes
+  with the next test in a fresh worker. Pure-Python recursion 5 000 deep works.
+
+Not done: **memory limits.** `memoryLimitMb` is advisory; WebAssembly memory
+only grows and Pyodide's maximum is fixed at build time. A solution that
+allocates without bound gets Python's `MemoryError` or a worker crash, which
+is reported and does not affect later jobs. Rejected: memory snapshots
+(`_makeSnapshot`/`_loadSnapshot`, start in 0.15 s instead of 2 s in Node)
+because they are undocumented options (`@ignore` in `pyodide.d.ts`); a warm
+spare gives the same result between runs. Rejected for now: interrupting via
+`setInterruptBuffer` instead of terminating (needs `SharedArrayBuffer`, so a
+cross-origin-isolated page, and still needs termination for C-level loops).
+
+**D-15 Pyodide time limits: the default stands** (2026-11-18, T07; resolves
+the SPEC §14 DECISION)
+
+All 50 `dsa-tutor` references were run in the execution host (`npm run
+check:exec-host -- --measure ../dsa-tutor/problems/curated`, three runs, signatures
+mapped to neutral types on the fly) and on CPython 3.13 through the same
+harness. All pass. The slowest test of any problem took at most 100 ms in
+Pyodide (`min-daily-pages`, 54–100 ms; next `count-islands` 23–57 ms,
+`rope-joining` 25–32 ms, `course-plan` 18–30 ms, `has-route` 18–27 ms);
+Pyodide was a median 2.4× slower than CPython on the 15 problems whose
+slowest CPython test took ≥ 2 ms.
+
+So `time_limit_ms = max(2000, 3 × slowest reference test)`, rounded up to
+100 ms (`timeLimitFromReference`), is 2000 ms for every curated problem, with
+≥ 20× headroom. At run time the limit is multiplied by `execution.timeScale`,
+clamped to 0.5–10 (`effectiveTimeLimitMs`). The host kills a test at its
+limit plus 250 ms (conversions and messaging); a test that returns but took
+longer than its limit by the harness's own clock is also a `timeout`.
+
+Start-up, measured in Electron on this machine: first Pyodide start 2.6 s;
+a warm job of two tests 15–25 ms; a job with one 500 ms timeout 3.3 s (the
+replacement worker's start-up). Back-to-back jobs wait for the spare to
+finish starting.
+
+**D-16 Versions pinned in T07** (2026-11-18, T07)
+
+| Package | Version | Note |
+|---|---|---|
+| pyodide | 314.0.7 | Python 3.14.2. Desktop dependency; its runtime files (`pyodide.mjs`, `pyodide.asm.mjs`, `pyodide.asm.wasm`, `python_stdlib.zip`, `pyodide-lock.json`, about 13.5 MB) are copied into the renderer build under `pyodide/` by a plugin in `electron.vite.config.ts`. 314.0.8 was five days old; took the previous patch. MPL-2.0. |

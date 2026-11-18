@@ -306,7 +306,7 @@ supports its types.
 interface Executor {
   id: "pyodide" | "local" | "container";
   status(): Promise<ExecutorStatus>;            // available, reason, versions
-  run(job: RunJob, signal: AbortSignal): Promise<RunReport>;
+  run(job: RunJob, signal?: CancelSignal): Promise<RunReport>;  // AbortSignal fits
 }
 
 interface RunJob {
@@ -316,7 +316,7 @@ interface RunJob {
   compare: CompareSpec;
   tests: TestCase[];                            // inputs and expected values
   timeLimitMs: number;                          // per test, after timeScale
-  memoryLimitMb: number;
+  memoryLimitMb: number;                        // advisory: Pyodide cannot enforce it (D-14)
 }
 
 interface RunReport {
@@ -333,33 +333,59 @@ interface TestResult {
   status: "pass" | "fail" | "error" | "timeout";
   // visible tests only:
   input?: unknown; expected?: unknown; actual?: unknown; stdout?: string; message?: string;
+  errorType?: string; line?: number;            // for errors: exception type, solution line
   timeMs?: number;
 }
 ```
 
+The types live in `packages/core/src/exec/`; `CancelSignal` is the part of
+`AbortSignal` executors use, declared structurally because core has no DOM
+types. A load failure (syntax error, missing function, error or endless loop
+at import) is `error.kind: "compile"` with every test `error`. stdout is kept
+per test up to 2000 characters (the end, with a note of what was dropped);
+messages up to 500.
+
 Comparison happens in `packages/core`, not in the harness, so every language
 grades the same way: the harness returns `actual` (JSON) and stdout per test,
-and core compares. Before a report leaves the main process it is **redacted**:
-hidden tests keep only `id`, `category`, `status`, `timeMs`. The renderer and
-the tutor see only redacted reports. Hidden inputs and expected values exist
-only in the main process and the execution host.
+and core compares (`gradeRun`). Only inputs are sent to the harness, never
+expected values. Before a report leaves the main process it is **redacted**
+(`redactReport`): hidden tests keep only `id`, `visibility`, `category`,
+`status`, `timeMs`. The renderer and the tutor see only redacted reports.
+Hidden inputs exist only in the main process and the execution host; expected
+values only in the main process.
 
 ### 6.2 Python: Pyodide in the execution host
 
 - A hidden `BrowserWindow` with `sandbox: true`, `contextIsolation: true`, no
-  preload Node access, its own session partition. All network requests from
-  that partition are blocked (`session.webRequest`) except the app's own
-  bundled files; its CSP is `default-src 'self'; connect-src 'none'`.
-- Each job runs in a fresh Web Worker (Pyodide loaded from the bundle; the
-  loaded runtime is snapshotted or kept warm in a pool of one so start-up is
-  paid once). A timeout terminates the worker; nothing survives a job.
+  Node (its preload only hands over a MessagePort), background throttling
+  off, its own in-memory session partition. The page and Pyodide are served
+  from the app's files over a `tutor-exec://` protocol registered only on
+  that partition; every other request from it is cancelled
+  (`session.webRequest`), permissions are denied, navigation, new windows and
+  downloads are blocked. CSP (response headers): the page `default-src
+  'none'; script-src 'self'; worker-src 'self'; connect-src 'none'`; workers
+  `default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src
+  'self'`, because Pyodide fetches its own bundled files (D-14).
+- Each job runs in a fresh Web Worker (Pyodide loaded from the bundle) and the
+  worker is terminated when the job ends; nothing survives a job. One spare
+  worker is kept started, so start-up (about 2.6 s) is paid ahead of the job.
+  Each test has a kill timer of its limit plus 250 ms; on timeout the worker
+  is terminated and a fresh one resumes with the next test.
 - The Python harness (`content/runners/python/harness.py`, ported) builds
-  `TreeNode` / `ListNode` from JSON, calls the function, serialises the result
-  and captures stdout, per test.
-- `micropip`, `pyodide.http` and package loading are disabled.
-- Time limits: Pyodide is slower than CPython. **DECISION** (T07 measures):
-  default per-test limit `max(2000 ms, 3 × the slowest reference run)`,
-  stored per problem as `time_limit_ms`, times `execution.timeScale`.
+  `TreeNode` / `ListNode` (and tuples, int-keyed maps, floats) from JSON by
+  the neutral types, calls the function, serialises the result and captures
+  stdout and stderr, per test.
+- `micropip`, `pyodide.http`, `pyodide.code`, `pyodide_js` and package loading
+  are disabled; Python's `js` module is empty; the worker removes `fetch` and
+  the other network APIs from its global scope after start-up (D-14).
+- Time limits: Pyodide is slower than CPython (median 2.4× on the curated
+  references). Per-test limit `max(2000 ms, 3 × the slowest reference run)`,
+  rounded up to 100 ms, stored per problem as `time_limit_ms`, times
+  `execution.timeScale` (clamped to 0.5–10). Every curated reference's slowest
+  test is under 101 ms, so all get 2000 ms (D-15).
+- `npm run check:exec-host` runs these rules against the real window in
+  Electron (CI on Linux); Vitest runs the same pool, worker runtime and
+  harness on Node worker threads.
 
 ### 6.3 Self-check
 
@@ -566,10 +592,10 @@ needs.
 | Item | Where | Default until decided |
 |---|---|---|
 | **DECISION** default tutor model | 4.3, T10 | chosen in T10 from current models |
-| **DECISION** Pyodide time limits | 6.2, T07 | `max(2 s, 3 × slowest reference)` |
+| ~~**DECISION** Pyodide time limits~~ | 6.2, T07 | Resolved: default kept, measured (D-15) |
 | **DECISION** Rust `int` width | 5.2, T15 | `i64` |
 | **DECISION** code signing | 11, T13 | ship unsigned, document it |
 | **VERIFY** Electron `safeStorage` API and Linux fallback | 4.4, T09 | |
 | **VERIFY** Anthropic API behaviour notes | 7.3, T10 | |
 | **VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login | 7.3, T11 | API key only if unclear |
-| **VERIFY** Pyodide can be fully network-blocked and package loading disabled | 6.2, T07 | |
+| ~~**VERIFY** Pyodide can be fully network-blocked and package loading disabled~~ | 6.2, T07 | Resolved: yes, with `connect-src 'self'` for workers (D-14) |

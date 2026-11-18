@@ -57,7 +57,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | todo |
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | todo |
-| T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | in-progress |
+| T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | todo |
 | T09 | Onboarding and Settings | v1 | 2d | T08 | todo |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | todo |
@@ -350,11 +350,71 @@ tool handlers, in TypeScript.
 - Resolve the §14 VERIFY on network blocking.
 
 **Acceptance.**
-- [ ] Tests: pass, fail, runtime error, syntax error, infinite loop (timeout kills it, next job works), large output truncated.
-- [ ] Test: Python code calling `js.fetch`, `open('/etc/passwd')`, `import micropip` fails or is blocked.
-- [ ] Redacted report contains no hidden input/expected/actual (test).
+- [x] Tests: pass, fail, runtime error, syntax error, infinite loop (timeout kills it, next job works), large output truncated.
+- [x] Test: Python code calling `js.fetch`, `open('/etc/passwd')`, `import micropip` fails or is blocked.
+- [x] Redacted report contains no hidden input/expected/actual (test).
 
 **Notes.**
+
+Built:
+- `packages/core/src/exec/`: `Executor`, `RunJob`, `RunReport`, `TestResult`
+  (SPEC §6.1, plus `errorType` and `line`, and a structural `CancelSignal`
+  since core has no DOM types); the harness wire format (`toHarnessRequest`:
+  inputs only, as exact JSON text); `gradeRun` (compare in core, time limit,
+  stdout/message clipping, compile errors, cancellation); `redactReport`
+  (allowlist: hidden tests keep `id`, `visibility`, `category`, `status`,
+  `timeMs`); `timeLimitFromReference` / `effectiveTimeLimitMs`.
+- `content/runners/python/harness.py`: ported from `dsa-tutor`; now a library
+  the worker calls per test (`make_harness`, `load`, `run`), typed by the
+  neutral types (trees, linked lists, tuples, int-keyed maps, floats,
+  optionals), bounded stdout/stderr capture, import guards.
+- `apps/desktop/src/exec-host/`: `runtime.ts` (locked-down Pyodide start,
+  shared by the browser worker and the Node test worker), `pool.ts` (single-use
+  workers, warm spares, per-test kill timers, resume after timeout, crash and
+  stack-overflow handling, cancellation, jobs serialised), `worker.ts`,
+  `host.ts` + `index.html`, `preload.ts` (port hand-over only),
+  `testing/` (Node worker-thread factory for tests).
+- `apps/desktop/src/main/exec/`: `PyodideExecutor` (grades in core),
+  `host-window.ts` (`ExecHost`: hidden window, in-memory partition,
+  `tutor-exec://` protocol with CSP headers, `webRequest` blocking, permission
+  denial, watchdog, restart after a renderer crash), `check.ts`
+  (`npm run check:exec-host`, 20 checks in real Electron; `-- --measure <dir>`
+  times references).
+- Tests: `packages/core/src/exec/*.test.ts` (13) and
+  `apps/desktop/src/main/exec/pyodide-executor.test.ts` (25, real Pyodide on
+  Node worker threads through the same pool/runtime/harness).
+
+Decisions: D-14 (VERIFY resolved: network blocking and package loading;
+worker CSP needs `connect-src 'self'` and `'wasm-unsafe-eval'`, so SPEC §6.2
+changed), D-15 (DECISION resolved: default time-limit rule kept; all 50
+references measured, slowest test ≤ 100 ms, Pyodide ~2.4× CPython), D-16
+(pyodide 314.0.7). SPEC §6.1, §6.2 and §14 updated.
+
+Wiring outside Owns: `apps/desktop/electron.vite.config.ts` (renderer root is
+now `src/` with two pages, so the UI page is `out/renderer/renderer/index.html`
+/ `<dev>/renderer/index.html`; second preload `exec-host.cjs`; second main
+entry `exec-check.js`; plugin copying Pyodide's files); `src/main/index.ts`
+(registers the scheme before `ready`, new page path); `tsconfig.node.json` /
+`tsconfig.web.json` includes; `apps/desktop/package.json` (pyodide,
+`check:exec-host`); root `package.json` script; `.github/workflows/ci.yml`
+(Linux step: `xvfb-run -a npm run check:exec-host`, after relaxing Ubuntu's
+AppArmor user-namespace restriction for Chromium's sandbox); `.gitignore`
+(`__pycache__/`).
+
+Not done / not tested:
+- The executor is not wired to IPC or created by the app yet (T08 creates
+  `ExecHost` + `PyodideExecutor` with `rendererDir`/`preloadPath`, and must
+  `redactReport` before anything reaches the renderer or tutor).
+- `memoryLimitMb` is not enforced (D-14).
+- User code that frees a very long node chain itself can still crash the
+  worker; it is reported as an error on that test and the run continues.
+- `check:exec-host` was run here on Linux (as root, so with `--no-sandbox`)
+  in both the built app and `electron-vite dev`; on macOS and Windows it has
+  not been run, and CI runs it on Linux only. The measurement numbers come
+  from one Linux container.
+- Pyodide is MPL-2.0; its licence notice in the packaged app is left to T13.
+- In development the host page shows harmless CSP refusals of Vite's inline
+  preamble and HMR socket.
 
 ### T08 — Port the UI shell and practice flow
 
