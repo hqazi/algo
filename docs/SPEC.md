@@ -1,6 +1,6 @@
 # Algorithm Tutor: specification
 
-Status: draft 1 (2026-11-17). Tickets that implement it are in
+Status: draft 2 (2026-11-18), Tauri edition. Tickets that implement it are in
 [`TASKS.md`](TASKS.md); the reasoning behind the main choices is in
 [`DECISIONS.md`](DECISIONS.md); what is carried over from the first attempt
 (`hqazi/dsa-tutor`) is in [`CONTEXT.md`](CONTEXT.md).
@@ -24,8 +24,8 @@ installer, configured from its own Settings screen, that updates itself.
 
 ### Goals
 
-1. **Install in one step.** A signed (eventually) installer per OS. No
-   terminal, Docker, Python or Node needed to practise in Python.
+1. **Install in one step.** An installer per OS. No terminal, Docker, Python
+   or Node needed to practise in Python.
 2. **Configure in the app.** Every user-facing setting is on the Settings
    screen and applies without a restart. The API key is entered there and kept
    in the OS keychain.
@@ -33,8 +33,8 @@ installer, configured from its own Settings screen, that updates itself.
    never touched by an update except through explicit database migrations.
 4. **Honest feedback.** Pass or fail comes from running the tests, never from
    the model.
-5. **Safe by default.** Code the model writes runs only in the in-app Python
-   sandbox (Pyodide). The user's own code runs there too for Python.
+5. **Safe by default.** Python, both the user's and any code the model
+   writes, runs in a WebAssembly sandbox inside the app (section 6.2).
 6. **Works without AI.** Browsing, editing, running, submitting and progress
    need no credentials. The tutor chat and new problems do.
 7. **More languages later without redoing problems.** The problem format is
@@ -47,7 +47,7 @@ installer, configured from its own Settings screen, that updates itself.
   detects what is installed (section 6.5).
 - Accounts, sync, a hosted service, multiple users per install.
 - A coding-agent skill mode. `dsa-tutor` had one; it may come back later as a
-  separate entry point on top of `packages/core`.
+  separate front end on top of `tutor-core`.
 - Fetching problems from sites whose terms forbid it. No "fetch by URL".
 
 ## 2. Users and main flows
@@ -62,7 +62,7 @@ One person, on their own computer.
    (all tests; hidden ones report a category only), Hint, Review, Explain.
 3. **New problem.** Generate (topic, difficulty, idea), Paste (a statement the
    user has) or Import (from an openly licensed set). Every new problem passes
-   the self-check (section 8.2) before it appears.
+   the self-check (section 6.3) before it appears.
 4. **Progress.** Level per topic, recent attempts.
 5. **Settings.** Tutor (backend, key, model, effort), code execution
    (section 6.5), profile and focus, data (folder, export, import, reset),
@@ -71,56 +71,61 @@ One person, on their own computer.
 ## 3. Architecture
 
 ```
-┌────────────────────────── Electron app ───────────────────────────┐
-│                                                                   │
-│  UI window (renderer, sandboxed)        Execution host (hidden    │
-│  React, CodeMirror 6                    window, sandboxed, no     │
-│  talks only through the preload         network): Pyodide in a    │
-│  bridge (typed IPC)                     Web Worker per job        │
-│        │                                        ▲                 │
-│        ▼                                        │ MessagePort     │
-│  Main process (Node) ───────────────────────────┘                 │
-│   ├─ packages/core   problems, recommender, grading, tools, prompt│
-│   ├─ storage         SQLite (tutor.db), settings.json, files      │
-│   ├─ secrets         safeStorage (OS keychain)                    │
-│   ├─ tutor           Anthropic API backend, Claude Code backend   │
-│   ├─ executors       pyodide │ local toolchain (v2) │ container (v2)
-│   └─ updater         electron-updater, GitHub Releases            │
-└───────────────────────────────────────────────────────────────────┘
+┌──────────────────────────── Tauri app (one process) ────────────────────────┐
+│                                                                             │
+│  Web view (the OS's own)              Rust backend                          │
+│  React, CodeMirror 6       typed      ├─ tutor-core   problems, neutral     │
+│  no fs, no shell, no net ─ commands ─▶│               types, compare,       │
+│  only this app's commands  + events   │               teaching, tools,      │
+│                            (channels) │               prompt; traits only   │
+│                                       ├─ tutor-store  SQLite, settings.json,│
+│                                       │               workspace files       │
+│                                       ├─ secrets      OS keychain (keyring) │
+│                                       ├─ tutor-ai     Anthropic HTTP client,│
+│                                       │               Claude Code + MCP     │
+│                                       ├─ tutor-exec   wasmtime + CPython    │
+│                                       │               (WASI); v2: local     │
+│                                       │               toolchain, container  │
+│                                       └─ updater      tauri-plugin-updater  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.1 Packages
+### 3.1 Layout
 
-npm workspaces, Node 22, TypeScript throughout.
+A Cargo workspace plus one npm package for the UI.
 
 | Path | What | May depend on |
 |---|---|---|
-| `packages/core` | Pure logic: problem schema and validation, neutral types (5.2), test comparison, recommender and levels, hint ladder, tool definitions and handlers, system prompt builder, executor and storage *interfaces*. | No Electron, no Node built-ins beyond what runs in both Node and the browser. Storage, executors and time are injected. |
-| `apps/desktop/src/main` | Electron main process: windows, IPC handlers, SQLite storage, secrets, executors, tutor backends, updater. | `packages/core`, Electron, Node. |
-| `apps/desktop/src/preload` | The only bridge: a typed `window.tutor` API. | Electron `contextBridge`. |
-| `apps/desktop/src/renderer` | The UI (ported from `dsa-tutor/web`). | React, CodeMirror. No Node. |
-| `apps/desktop/src/exec-host` | The execution host page and Pyodide worker. | Pyodide (bundled). |
-| `content/` | Curated problems, `references/*.md` (topics, questionnaire, hint ladder, review rubric, problem spec), runner harnesses. Shipped read-only inside the app. | — |
+| `crates/tutor-core` | Pure logic: problem schema and validation, neutral types (5.2), test comparison, recommender and levels, hint ladder, tool definitions and handlers, system prompt builder, the `Storage`, `Executor`, `Clock` and `TutorBackend` traits, redaction. | serde, serde_json, thiserror and similar pure crates. **No Tauri, no I/O** (no files, network, processes, clocks except through traits). |
+| `crates/tutor-store` | SQLite storage, migrations, `settings.json`, workspace files, export/import. | `tutor-core`, rusqlite (bundled), zip. |
+| `crates/tutor-exec` | Executors: `wasi-python` (v1); `local` and `container` (v2). Language harnesses. | `tutor-core`, wasmtime, wasmtime-wasi. |
+| `crates/tutor-ai` | Tutor backends: `anthropic` (HTTP), `claude-code` (CLI + MCP), `fake`. Turn runner. | `tutor-core`, reqwest (rustls), tokio, rmcp. |
+| `crates/tutor-cli` | Developer tool, not shipped: `validate-content`, `convert-dsa-tutor`, `smoke-ai`, `measure-limits`. | all crates above. |
+| `apps/desktop/src-tauri` | The Tauri shell: windows, commands, events, capabilities, secrets, updater, app state wiring. Thin. | all crates above, Tauri plugins. |
+| `apps/desktop/ui` | The UI (ported from `dsa-tutor/web`), Vite + React + TypeScript. Calls only generated, typed command bindings. | React, CodeMirror, generated bindings. |
+| `content/` | Curated problems, `references/*.md`, runner harnesses, the CPython WASI runtime. Bundled read-only as Tauri resources. | — |
 
-The core/shell split is deliberate: the tutor logic must not depend on
-Electron, so another shell (Tauri, a browser build, an agent skill) is a new
-shell, not a rewrite.
+The core/shell split is deliberate: tutor logic must not depend on Tauri, so
+another front end (a CLI, an agent skill, a different shell) is a new shell,
+not a rewrite. Keeping `tutor-core` free of I/O also makes it fast to test.
 
 ### 3.2 Tooling
 
-electron-vite (build), electron-builder (packaging, auto-update), Vitest (unit),
-Playwright for Electron (end-to-end), ESLint + Prettier, `zod` for IPC and file
-schemas, `better-sqlite3` (rebuilt for Electron by electron-builder),
-`@anthropic-ai/sdk`. Pyodide is pinned and bundled with the app (works offline).
-Exact versions are chosen in T01 and pinned in the lockfile.
+Rust stable pinned in `rust-toolchain.toml`; Tauri 2; `tauri-specta` (or
+equivalent) generates TypeScript bindings for commands and events from Rust
+types, so the UI and backend cannot drift (**VERIFY** the current
+Tauri 2-compatible option in T02). UI: Node 22 for development only, Vite,
+React, CodeMirror 6, Vitest, ESLint. Rust: rustfmt, clippy (`-D warnings`),
+`cargo test`. Exact versions are chosen in T01 and recorded in
+`DECISIONS.md`. Users never need Rust or Node.
 
 ## 4. Data and settings
 
 ### 4.1 Where things live
 
-Everything the user produces is under the per-user app data folder
-(`app.getPath('userData')`; overridable with `ALGOTUTOR_DATA_DIR` for tests
-and development):
+Everything the user produces is under the per-user app data folder (Tauri's
+`app_data_dir()`; overridable with `ALGOTUTOR_DATA_DIR` for tests and
+development):
 
 ```
 tutor.db                    SQLite: profile, progress, attempts, hints, chats, problem index
@@ -129,7 +134,7 @@ workspace/<slug>/solution.<ext>   the user's code, plain files
 problems/generated/<slug>/  problems the tutor made
 problems/imported/<slug>/   pasted and imported problems (+ origin.md / NOTICE.md)
 explanations/<slug>/        explanation pages, one file per version
-cache/                      downloaded open-set files, runner image metadata
+cache/                      compiled WASM module cache, open-set downloads, v2 build caches
 logs/                       app log (no credentials, no chat bodies)
 ```
 
@@ -137,17 +142,19 @@ Curated problems live inside the app bundle (`content/`) and are replaced
 wholesale by updates. User data refers to problems by slug only.
 
 Solutions are plain files so the user can open them in their own editor. The
-app watches the open problem's file and reloads it when it changes on disk.
+app watches the open problem's file (`notify` crate) and reloads it when it
+changes on disk.
 
 ### 4.2 Database (`tutor.db`)
 
-Numbered SQL migrations in `apps/desktop/src/main/storage/migrations/`, applied
-at start inside a transaction; a backup copy `tutor.db.bak-<version>` is made
-before any migration. The app refuses to open a database newer than it knows.
+rusqlite with the `bundled` feature. Numbered SQL migrations embedded in
+`tutor-store`, tracked with `PRAGMA user_version`, each in a transaction; a
+backup copy `tutor.db.bak-<version>` (SQLite backup API) is made before any
+migration. The app refuses to open a database newer than it knows.
 
 | Table | Columns (main) |
 |---|---|
-| `meta` | `key`, `value` (schema version, install id) |
+| `meta` | `key`, `value` (install id, created) |
 | `profile` | single row: goal, experience, group comfort (JSON), focus topic, language, onboarded |
 | `topic_progress` | `topic`, `level` (`new` / `learning` / `comfortable`), `unaided_solves`, `updated_at` |
 | `problems` | `slug`, `source` (`curated` / `generated` / `pasted` / `imported`), `topic`, `difficulty`, `title`, `path`, `content_version`, `created_at` |
@@ -157,49 +164,51 @@ before any migration. The app refuses to open a database newer than it knows.
 | `messages` | `thread_id`, `seq`, `role`, `content` (JSON: text and tool events), `created_at` |
 | `test_runs` | `attempt_id`, `kind` (`run` / `submit`), `report` (JSON, already redacted per 6.1), `created_at` |
 
-All writes go through one storage module in the main process. State-changing
-tool calls and UI actions are serialised (one write queue), as in `dsa-tutor`.
+All writes go through `tutor-store` behind one async mutex, so tool calls from
+a chat turn and UI actions cannot interleave writes (as in `dsa-tutor`).
 
 ### 4.3 Settings (`settings.json`)
 
-Validated with a `zod` schema; unknown keys are kept, invalid values fall back
-to defaults with a notice. Changes apply immediately (no restart).
+A serde struct with defaults; unknown keys are kept, invalid values fall back
+to defaults with a notice shown in Settings. Changes apply immediately (no
+restart) and are broadcast to the UI as an event.
 
 | Key | Default | Notes |
 |---|---|---|
 | `tutor.backend` | `auto` | `auto` / `anthropic` / `claude-code` / `none`. `auto`: Anthropic if a key is stored, else Claude Code if found, else none. |
 | `tutor.model` | (T10) | **DECISION**: default model, chosen in T10 from the current models list. |
 | `tutor.effort` | `medium` | |
-| `execution.runtime` | `local` | v2: `local` / `podman` / `docker` for Rust and Go. Python always uses Pyodide. |
+| `execution.runtime` | `local` | v2: `local` / `podman` / `docker` for Rust and Go. Python always uses `wasi-python`. |
 | `execution.timeScale` | `1.0` | Multiplier on per-test time limits (slow machines). |
 | `editor.fontSize`, `editor.keymap` | `14`, `default` | `default` / `vim` / `emacs`. |
 | `ui.theme` | `system` | `system` / `light` / `dark`. |
 | `updates.channel` | `stable` | `stable` / `beta`. |
-| `updates.auto` | `true` | Download in background, install on quit. |
+| `updates.auto` | `true` | Check on start and daily; download in background; install on restart. |
 
 Secrets are never in `settings.json` (4.4).
 
 ### 4.4 Secrets
 
-The Anthropic API key is stored with Electron `safeStorage` (backed by the OS
-keychain / DPAPI / libsecret) in `secrets.bin`. On Linux without a keyring,
-`safeStorage` falls back to a weak backend: the app detects this
-(`getSelectedStorageBackend()` is `basic_text`), warns in Settings and still
-works. **VERIFY** the API names against the Electron version chosen in T01.
+The Anthropic API key is stored with the `keyring` crate (macOS Keychain,
+Windows Credential Manager, Linux Secret Service). On Linux without a Secret
+Service provider, fall back to a file readable only by the user
+(`secrets.json`, mode 0600) and show a warning in Settings. **VERIFY** the
+crate's current platform support and how it reports a missing provider.
 
 `ANTHROPIC_API_KEY` in the environment, if set, is used and shown in Settings
-as "from environment" (read-only). The key never reaches the renderer, the
-execution host, logs, the database or code under test; Settings shows only
-"stored, ends in …abcd".
+as "from environment" (read-only). The key never reaches the web view, logs,
+the database, `settings.json` or code under test; Settings shows only
+"stored, ends in …abcd". The UI can set, test and delete the key, never read
+it.
 
 ### 4.5 Export, import, reset
 
-- **Export** writes a zip: `tutor.db` (via SQLite backup API), `settings.json`,
-  `workspace/`, `problems/generated/`, `problems/imported/`, `explanations/`.
-  Never secrets.
-- **Import** validates the zip, backs up current data, replaces it, restarts
-  the app.
-- **Reset progress** and **Reset everything** with a confirm dialog and an
+- **Export** writes a zip: `tutor.db` (via the SQLite backup API),
+  `settings.json`, `workspace/`, `problems/generated/`, `problems/imported/`,
+  `explanations/`. Never secrets.
+- **Import** validates the zip, exports the current data first, replaces it,
+  and reloads the app state.
+- **Reset progress** and **Reset everything**, with a confirm dialog and an
   automatic export first.
 
 ## 5. Problems
@@ -239,9 +248,10 @@ execution host, logs, the database or code under test; Settings shows only
 ```
 
 `function` and `params[].name` are snake_case; each language harness converts
-to its own convention (`levelLists`, `LevelLists`). `languages` lists the
-languages the problem is offered in; a problem can be offered in any language
-whose harness supports every type in its signature.
+to its own convention. `languages` lists the languages the problem is offered
+in; a problem can be offered in any language whose harness supports every type
+in its signature. A JSON Schema for both files is generated from the Rust
+types (`schemars`) into `content/schema/`.
 
 `tests.json` keeps the `dsa-tutor` shape: `{ "schema_version": 2, "tests": [
 { "id", "visibility": "visible" | "hidden", "category", "input": { name: value },
@@ -272,7 +282,7 @@ edge lists, `list<string>` grids). The Rust and Go columns are indicative; T15
 finalises them. **DECISION**: whether `int` is `i64` or `i32` in Rust (default
 `i64`).
 
-`packages/core` validates every test input and expected value against the
+`tutor-core` validates every test input and expected value against the
 signature, so a problem that validates is runnable by every harness that
 supports its types.
 
@@ -283,92 +293,97 @@ supports its types.
 | Curated | ships with the app (50 problems across 15 topics, from `dsa-tutor`) | Original, Apache 2.0. |
 | Generated | topic, difficulty, optional idea | Written fresh by the model in original wording. |
 | Pasted | text of a problem statement the user has | Personal practice only; stays in the data folder, sent only to the configured AI provider. Treated as untrusted data in prompts. |
-| Imported | a pick from an openly licensed set | v1: Exercism problem-specifications (MIT), pinned commit, as in `dsa-tutor`. Fetched by the main process from `raw.githubusercontent.com` only. Licence and attribution shown under the title and kept in `NOTICE.md`. |
+| Imported | a pick from an openly licensed set | v1: Exercism problem-specifications (MIT), pinned commit, as in `dsa-tutor`. Fetched by the backend from `raw.githubusercontent.com` only. Licence and attribution shown under the title and kept in `NOTICE.md`. |
 
 ## 6. Code execution
 
-### 6.1 Executor interface
+### 6.1 Executor trait
 
-```ts
-interface Executor {
-  id: "pyodide" | "local" | "container";
-  status(): Promise<ExecutorStatus>;            // available, reason, versions
-  run(job: RunJob, signal: AbortSignal): Promise<RunReport>;
+```rust
+#[async_trait]
+pub trait Executor: Send + Sync {
+    fn id(&self) -> ExecutorId;                       // WasiPython | Local | Container
+    async fn status(&self) -> ExecutorStatus;         // available, reason, versions
+    async fn run(&self, job: RunJob, cancel: CancellationToken) -> RunReport;
 }
 
-interface RunJob {
-  language: Language;                           // "python" in v1
-  code: string;                                 // the solution source
-  signature: Signature;
-  compare: CompareSpec;
-  tests: TestCase[];                            // inputs and expected values
-  timeLimitMs: number;                          // per test, after timeScale
-  memoryLimitMb: number;
+pub struct RunJob {
+    pub language: Language,          // Python in v1
+    pub code: String,                // the solution source
+    pub signature: Signature,
+    pub tests: Vec<TestCase>,        // inputs (expected values stay in core)
+    pub time_limit_ms: u64,          // per test, after timeScale
+    pub memory_limit_mb: u64,
 }
 
-interface RunReport {
-  ok: boolean;                                  // the harness ran (not: all passed)
-  error?: { kind: "compile" | "harness" | "runtime-missing" | "cancelled"; message: string };
-  results: TestResult[];
-  durationMs: number;
-}
-
-interface TestResult {
-  id: string;
-  visibility: "visible" | "hidden";
-  category?: string;
-  status: "pass" | "fail" | "error" | "timeout";
-  // visible tests only:
-  input?: unknown; expected?: unknown; actual?: unknown; stdout?: string; message?: string;
-  timeMs?: number;
+pub struct RunReport {
+    pub ok: bool,                    // the harness ran (not: all passed)
+    pub error: Option<RunError>,     // Compile | Harness | RuntimeMissing | Cancelled | Limit
+    pub results: Vec<RawResult>,     // per test: id, actual (JSON) or error, stdout, time_ms, timed_out
+    pub duration_ms: u64,
 }
 ```
 
-Comparison happens in `packages/core`, not in the harness, so every language
-grades the same way: the harness returns `actual` (JSON) and stdout per test,
-and core compares. Before a report leaves the main process it is **redacted**:
-hidden tests keep only `id`, `category`, `status`, `timeMs`. The renderer and
-the tutor see only redacted reports. Hidden inputs and expected values exist
-only in the main process and the execution host.
+Executors never see expected values: they return `actual` per test and
+`tutor-core` compares, so every language grades the same way. Core then builds
+a `TestReport` (`pass` / `fail` / `error` / `timeout` per test) and
+**redacts** it before it leaves the backend: hidden tests keep only `id`,
+`category`, `status`, `time_ms`. The web view and the tutor only ever see
+redacted reports. Hidden inputs and expected values never leave the backend.
 
-### 6.2 Python: Pyodide in the execution host
+### 6.2 Python: CPython on WASI in wasmtime
 
-- A hidden `BrowserWindow` with `sandbox: true`, `contextIsolation: true`, no
-  preload Node access, its own session partition. All network requests from
-  that partition are blocked (`session.webRequest`) except the app's own
-  bundled files; its CSP is `default-src 'self'; connect-src 'none'`.
-- Each job runs in a fresh Web Worker (Pyodide loaded from the bundle; the
-  loaded runtime is snapshotted or kept warm in a pool of one so start-up is
-  paid once). A timeout terminates the worker; nothing survives a job.
-- The Python harness (`content/runners/python/harness.py`, ported) builds
-  `TreeNode` / `ListNode` from JSON, calls the function, serialises the result
-  and captures stdout, per test.
-- `micropip`, `pyodide.http` and package loading are disabled.
-- Time limits: Pyodide is slower than CPython. **DECISION** (T07 measures):
-  default per-test limit `max(2000 ms, 3 × the slowest reference run)`,
-  stored per problem as `time_limit_ms`, times `execution.timeScale`.
+- The executor embeds **wasmtime** and runs a **CPython build for WASI**
+  (`wasm32-wasip1`), shipped in `content/runtime/python/` with a trimmed
+  standard library. **VERIFY** in T07: the source of an official or
+  well-maintained CPython WASI build, its version, licence, size, and that
+  `collections`, `heapq`, `bisect`, `functools`, `itertools`, `math` and
+  `json` work.
+- Each job gets a fresh `Store` and instance. WASI context: **no preopened
+  directories except the standard library, read-only**; no sockets; an empty
+  environment; argv fixed; stdin carries the job (harness, solution, test
+  inputs as JSON); stdout and stderr captured in memory with a size cap.
+- Limits: memory with `StoreLimits` (default 512 MB); time with epoch
+  interruption (a timer thread bumps the epoch; the deadline is the sum of
+  per-test limits plus start-up); a bounded wasm stack and a Python recursion
+  limit high enough for tree and backtracking problems (**VERIFY** recursion
+  depth for the deepest curated problems in T07).
+- The harness (`content/runners/python/harness.py`, ported) builds `TreeNode`
+  / `ListNode` from JSON, calls the function per test, measures each test with
+  `time.perf_counter`, catches exceptions per test, and writes one JSON line
+  per test. If the hard deadline hits, the remaining tests are `timeout`.
+- The compiled module is cached (`Module::serialize` into `cache/`, keyed by
+  wasmtime and runtime versions) so start-up after the first run is fast.
+- Runs on a blocking thread pool, at most N jobs at once (default 2).
+- Time limits: WASI CPython is slower than native. **DECISION** (T07
+  measures): default per-test limit `max(2000 ms, 3 × the slowest reference
+  run)`, stored per problem as `time_limit_ms`, times `execution.timeScale`.
+
+This works the same on every OS, needs no window, and runs headless in CI
+(`tutor-cli validate-content`).
 
 ### 6.3 Self-check
 
-A new problem is accepted only if, in Pyodide: the spec validates (5.1, 5.2);
-`brute_force.py` (if given) computes or agrees with every expected value;
-`reference.py` passes every test within the limit. At most 4 attempts with the
-failures fed back to the model, then the job fails with the reason. Same rules
-as `dsa-tutor/references/problem_spec.md`.
+A new problem is accepted only if, in `wasi-python`: the spec validates (5.1,
+5.2); `brute_force.py` (if given) computes or agrees with every expected
+value; `reference.py` passes every test within the limit. At most 4 attempts
+with the failures fed back to the model, then the job fails with the reason.
+Same rules as `dsa-tutor/references/problem_spec.md`.
 
-Model-written code (references, brute forces) runs **only** in Pyodide, never
-in the local toolchain or a container, in every version.
+Model-written code (references, brute forces) runs **only** in `wasi-python`,
+never in the local toolchain or a container, in every version.
 
 ### 6.4 Rust and Go (v2)
 
-- Each language has a harness generator in `packages/core` that, from the
-  signature, writes: the stub the user sees, a `main` that reads tests from
+- Each language has a harness generator in `tutor-core` that, from the
+  signature, writes: the stub the user sees, and a `main` that reads tests from
   stdin as JSON, converts with the type adapters, calls the function, and
   writes one JSON result line per test.
 - **Local executor:** uses `cargo` / `go` on `PATH`. One cached project per
   problem under `cache/build/<lang>/<slug>/` so reruns compile incrementally.
-  Process per run, killed (with its process group) on timeout. No sandbox: the
-  user's own code, with the user's own rights. Settings says so plainly.
+  Process per run, killed with its process group (Windows: a job object) on
+  timeout. No sandbox: the user's own code, with the user's own rights.
+  Settings says so plainly.
 - **Container executor:** runs the same harness in the runner image (6.5).
 
 ### 6.5 Container runtimes (v2): detect and choose, never install
@@ -386,8 +401,8 @@ in the local toolchain or a container, in every version.
   detection, `pull` of the runner image, and job runs.
 - If the selected runtime disappears, fall back to `local` with a notice.
 - **Runner image** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`, built
-  and published by CI with Python, Rust and Go toolchains. **Pull / Update**
-  and **Test sandbox** buttons (hello-world per language).
+  and published by CI with Rust and Go toolchains. **Pull / Update** and
+  **Test sandbox** buttons (hello-world per language).
 - Each run: `--rm --network none --read-only --cap-drop ALL
   --security-opt no-new-privileges --user 65534:65534 --pids-limit 128
   --memory <limit> --cpus 1 --tmpfs /tmp:rw,noexec,size=64m`, the job folder
@@ -399,8 +414,8 @@ in the local toolchain or a container, in every version.
 
 ### 7.1 Tools
 
-Ported from `dsa-tutor` SPEC 5.1; handlers live in `packages/core` and call
-injected storage and executors.
+Ported from `dsa-tutor` SPEC 5.1; definitions and handlers live in
+`tutor-core` and call the injected storage and executors.
 
 | Tool | Does | Notes |
 |---|---|---|
@@ -429,34 +444,40 @@ prompt caching works; per-turn context (problem, current code, last redacted
 report, language) goes with the user message. Pasted and imported text is
 delimited untrusted data.
 
-### 7.3 Backend interface
+### 7.3 Backend trait
 
-```ts
-interface TutorBackend {
-  id: "anthropic" | "claude-code" | "fake";
-  status(): Promise<BackendStatus>;           // available, reason, model
-  runTurn(turn: Turn, signal: AbortSignal): AsyncIterable<ChatEvent>;
+```rust
+#[async_trait]
+pub trait TutorBackend: Send + Sync {
+    fn id(&self) -> BackendId;                         // Anthropic | ClaudeCode | Fake
+    async fn status(&self) -> BackendStatus;           // available, reason, model
+    fn run_turn(&self, turn: Turn, cancel: CancellationToken)
+        -> BoxStream<'static, ChatEvent>;
 }
 ```
 
-`ChatEvent`: `text_delta`, `tool_start`, `tool_end`, `ui_event`, `error`
-(kind: `auth` / `rate_limit` / `network` / `refusal` / `max_tokens` /
-`other`, user-readable message), `done`. Chat events go to the renderer over
-IPC as a stream per turn; the turn can be cancelled.
+`ChatEvent`: `TextDelta`, `ToolStart`, `ToolEnd`, `UiEvent`, `Error` (kind:
+`auth` / `rate_limit` / `network` / `refusal` / `max_tokens` / `other`, with a
+user-readable message), `Done`. Events reach the UI through a Tauri
+`Channel` per turn; a `cancel_turn` command cancels it.
 
-- **`anthropic`**: `@anthropic-ai/sdk`, Messages API, streaming, client tools,
-  the tool loop run by the main process. Port the `dsa-tutor` notes (stream
-  every request, check `stop_reason`, replay content blocks unchanged, cache
-  breakpoint after system prompt and tools, map SDK error classes to `error`
-  events). **VERIFY** each against the current API docs in T10.
+- **`anthropic`**: a small Messages API client in `tutor-ai` built on
+  `reqwest` (rustls) with SSE streaming, client tools and the tool loop run in
+  the backend. **VERIFY** in T10 whether an official Rust SDK exists by then;
+  if it does and fits, use it. Response content blocks are kept as raw JSON
+  (`serde_json::Value`) and replayed unchanged, so thinking and other blocks
+  survive round trips. Port the `dsa-tutor` notes (stream every request, check
+  `stop_reason`, handle `refusal` and `max_tokens`, cache breakpoint after
+  system prompt and tools, map HTTP errors and `retry-after` to `Error`
+  events). **VERIFY** each against the current API docs.
 - **`claude-code`**: available when a `claude` executable is found on `PATH`
-  (or configured path) and reports being signed in. Spawns it headless per
-  turn with every built-in tool disabled and only the tutor tools allowed, via
-  an MCP server the main process serves on loopback with a per-turn token
-  (port the `dsa-tutor` 5.3/5.4 notes). **VERIFY** in T11: current CLI flags,
-  whether the Claude Agent SDK is the better integration, and that the
-  intended use of a user's own Claude login this way is permitted by current
-  terms. If it is not, ship T11 as "Claude Code with an API key" only.
+  (or a configured path) and reports being signed in. Spawned headless per
+  turn with every built-in tool disabled and only the tutor tools allowed,
+  through an MCP server the backend serves on loopback (`rmcp`, streamable
+  HTTP) with a per-turn token (port the `dsa-tutor` 5.3/5.4 notes).
+  **VERIFY** in T11: current CLI flags, the `rmcp` API, and that using a
+  user's own Claude login this way is permitted by current terms. If it is
+  not, ship T11 as "Claude Code with an API key" only.
 - **`fake`**: scripted events for tests and UI work; not selectable in
   Settings (enabled with `ALGOTUTOR_FAKE_TUTOR=<script>`).
 
@@ -470,13 +491,22 @@ chat" archives the thread and starts a new one.
 Ported from `dsa-tutor/web` (React, CodeMirror 6). Pages: Welcome/onboarding,
 Home, Problems (browse, filter by topic/difficulty/source), Practice
 (statement | editor | results + chat, resizable panes), Progress,
-Explanations (sandboxed iframe, version picker), Settings.
+Explanations (sandboxed iframe with `srcdoc`, version picker), Settings.
 
-Settings sections: **Tutor** (backend, key entry with test-connection button,
-model, effort, status line), **Code execution** (6.5; v1 shows Python/Pyodide
-status only), **Profile** (questionnaire answers, focus), **Data** (open data
-folder, export, import, reset), **Updates** (version, channel, check now),
-**About** (licences, including Pyodide and imported sets).
+The UI calls the backend only through the generated bindings (3.2): commands
+for requests, `Channel`s for streams (chat turns, intake jobs, image pulls),
+and events for broadcasts (settings changed, file changed on disk, update
+available).
+
+The UI runs in the OS web view: WebView2 (Chromium) on Windows, WKWebView on
+macOS, WebKitGTK on Linux. Test on all three; avoid Chromium-only APIs.
+
+Settings sections: **Tutor** (backend, key entry with a test-connection
+button, model, effort, status line), **Code execution** (6.5; v1 shows the
+Python runtime status only), **Profile** (questionnaire answers, focus),
+**Data** (open data folder, export, import, reset), **Updates** (version,
+channel, check now, restart to update), **About** (licences, including
+CPython, wasmtime and imported sets).
 
 Keyboard: Run Ctrl/Cmd+Enter, Submit Ctrl/Cmd+Shift+Enter. Light and dark
 themes.
@@ -507,56 +537,74 @@ language).
 
 | Threat | Mitigation |
 |---|---|
-| Model-written code harms the machine | Runs only in Pyodide inside the sandboxed, network-blocked execution host (6.2). |
-| User's Python code reads files or the network | Same: Pyodide in the execution host. |
+| Model-written code harms the machine | Runs only in `wasi-python`: no filesystem beyond a read-only stdlib, no network, no environment, memory and time limits (6.2). |
+| User's Python code reads files or the network | Same sandbox. |
 | User's Rust/Go code (v2) | Local executor: the user's own code with their own rights, stated in Settings. Container executor for isolation (6.5). |
-| Hidden test data leaks to the tutor or UI | Redaction in the main process (6.1); `get_problem` never returns hidden tests. |
-| API key leaks | `safeStorage`, main process only, never logged, never sent to renderer or code under test (4.4). |
+| A wasmtime escape | Keep wasmtime current (Dependabot / `cargo update` in each release); only the user's and the model's code is run, never downloaded code. Optional later: run the executor in a child process of the app binary for crash and fault isolation. |
+| Hidden test data leaks to the tutor or UI | Expected values never leave core; redaction before any report leaves the backend (6.1); `get_problem` never returns hidden tests. |
+| API key leaks | Keychain via `keyring`, backend only, never logged, never sent to the web view or code under test (4.4). |
 | Prompt injection via pasted/imported problems | Delimited untrusted data; the tutor has no tool that writes code, files or reaches the network. |
-| Compromised renderer | `contextIsolation`, `sandbox`, no `nodeIntegration`, strict CSP, no remote content, `zod`-validated IPC, navigation and `window.open` blocked, `webSecurity` on. Electron fuses: disable `RunAsNode`, `EnableNodeCliInspectArguments`, enable ASAR integrity where supported. |
-| Malicious update | Updates only from the project's GitHub Releases over HTTPS; signed builds (11) verified by the OS/updater. |
+| Compromised web view | Tauri 2 capabilities grant the main window only this app's own commands; no `fs`, `shell` or `http` plugins exposed to the UI; strict CSP (`default-src 'self'`, no remote scripts, `connect-src ipc: http://ipc.localhost`); no remote content; `freezePrototype`; consider the isolation pattern (T02 decides). Every command validates its input in Rust. |
+| Malicious update | `tauri-plugin-updater` verifies every update with the project's updater public key (separate from OS code signing); updates only from the project's GitHub Releases over HTTPS. |
 
 ## 11. Packaging and updates
 
-- electron-builder targets: macOS `dmg` + `zip` (universal or per-arch),
-  Windows `nsis`, Linux `AppImage` + `deb`.
-- `electron-updater` with the GitHub provider; channels `stable` and `beta`
-  (pre-releases). Download in background, install on quit, "Restart to update"
-  button.
-- **DECISION**: code signing. macOS auto-update requires a signed and
-  notarized app (Apple Developer account); unsigned Windows builds show a
-  SmartScreen warning. v1 can ship unsigned with instructions in the README;
-  the release workflow takes signing secrets when they exist.
-- CI release workflow on a version tag: build all three OSes, publish a draft
-  release with update metadata. v2 adds the runner image to GHCR.
+- Tauri bundler targets: macOS `.app` + `.dmg` (Apple Silicon and Intel),
+  Windows NSIS installer (and/or MSI), Linux AppImage + `.deb` (+ `.rpm`).
+  WebView2 is bootstrapped by the Windows installer if missing.
+- Linux builds need WebKitGTK 4.1 and friends on the build machine; the
+  `.deb` declares them as dependencies; the AppImage bundles what it can.
+  **VERIFY** the current dependency list in T01/T13.
+- `tauri-plugin-updater` with a static `latest.json` on GitHub Releases;
+  `stable` and `beta` channels (separate endpoints). Update artifacts are
+  signed with the Tauri updater key (private key as a CI secret; public key in
+  the app config). Download in background, "Restart to update".
+- **DECISION**: OS code signing. Unsigned builds work but show Gatekeeper
+  (macOS) and SmartScreen (Windows) warnings on first install. v1 can ship
+  unsigned with instructions in the README; the release workflow takes signing
+  secrets when they exist. **VERIFY** in T13 how updates behave for an
+  unsigned macOS app.
+- CI release workflow (`tauri-action`) on a version tag: build all targets,
+  publish a draft release with `latest.json`. v2 adds the runner image to
+  GHCR.
 
 ## 12. Configuration outside the UI
 
 Only for development and tests: `ALGOTUTOR_DATA_DIR`, `ALGOTUTOR_FAKE_TUTOR`,
-`ALGOTUTOR_LOG_LEVEL`, and `ANTHROPIC_API_KEY` (4.4). Nothing a normal user
-needs.
+`ALGOTUTOR_LOG` (log filter), and `ANTHROPIC_API_KEY` (4.4). Nothing a normal
+user needs.
 
 ## 13. Quality bar
 
-- `npm test` (Vitest) for core and main; `npm run typecheck`; `npm run lint`.
-- `npm run validate:content`: every curated problem validates and its
-  reference passes in Pyodide (runs in CI via Electron headless or Node +
-  Pyodide for the check only).
-- One Playwright-for-Electron end-to-end test with the fake tutor: onboarding,
-  next problem, edit, run, submit, hint, progress.
-- No test calls a real AI provider. A manual `npm run smoke:ai` makes one real
-  call when `ANTHROPIC_API_KEY` is set.
+- Rust: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D
+  warnings`, `cargo test --workspace`.
+- UI: `npm run typecheck`, `npm run lint`, `npm test` (Vitest + Testing
+  Library) in `apps/desktop/ui`.
+- Content: `cargo run -p tutor-cli -- validate-content`: every curated problem
+  validates and its reference passes in `wasi-python`. Runs headless in CI.
+- One end-to-end test with the fake tutor using `tauri-driver` (WebDriver) on
+  Linux CI: onboarding, next problem, edit, run, submit, hint, progress.
+  (`tauri-driver` does not support macOS; **VERIFY** current support.)
+- No test calls a real AI provider. A manual `cargo run -p tutor-cli --
+  smoke-ai` makes one real call when `ANTHROPIC_API_KEY` is set.
 - CI runs on Linux, macOS and Windows.
+- Convenience: a root `justfile` or npm script `check` that runs all of the
+  above that apply.
 
 ## 14. Open items
 
 | Item | Where | Default until decided |
 |---|---|---|
 | **DECISION** default tutor model | 4.3, T10 | chosen in T10 from current models |
-| **DECISION** Pyodide time limits | 6.2, T07 | `max(2 s, 3 × slowest reference)` |
+| **DECISION** time limits under WASI | 6.2, T07 | `max(2 s, 3 × slowest reference)` |
 | **DECISION** Rust `int` width | 5.2, T15 | `i64` |
-| **DECISION** code signing | 11, T13 | ship unsigned, document it |
-| **VERIFY** Electron `safeStorage` API and Linux fallback | 4.4, T09 | |
-| **VERIFY** Anthropic API behaviour notes | 7.3, T10 | |
-| **VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login | 7.3, T11 | API key only if unclear |
-| **VERIFY** Pyodide can be fully network-blocked and package loading disabled | 6.2, T07 | |
+| **DECISION** OS code signing | 11, T13 | ship unsigned, document it |
+| **VERIFY** typed bindings crate for Tauri 2 | 3.2, T02 | |
+| **VERIFY** `keyring` platform support and missing-provider behaviour | 4.4, T09 | file fallback with warning |
+| **VERIFY** CPython WASI build: source, version, licence, size, stdlib modules | 6.2, T07 | |
+| **VERIFY** recursion depth and wasm stack for deep problems | 6.2, T07 | |
+| **VERIFY** official Anthropic Rust SDK; API behaviour notes | 7.3, T10 | own `reqwest` client |
+| **VERIFY** Claude Code CLI flags, `rmcp` API, terms for using a user's login | 7.3, T11 | API key only if unclear |
+| **VERIFY** Linux build/runtime dependencies | 11, T01, T13 | |
+| **VERIFY** updater behaviour for unsigned macOS builds | 11, T13 | |
+| **VERIFY** `tauri-driver` platform support | 13, T14 | Linux only |

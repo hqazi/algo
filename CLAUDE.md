@@ -1,6 +1,6 @@
 # Algorithm Tutor
 
-A desktop app (Electron + React + TypeScript) for practising data structures
+A desktop app (Tauri 2: Rust backend, React + TypeScript UI) for practising data structures
 and algorithms with an AI tutor. Second version of `hqazi/dsa-tutor`. The
 project is in planning: no app code exists yet.
 
@@ -21,11 +21,14 @@ requests).
 
 ## Ground rules
 
-- `packages/core` never imports Electron or Node-only modules.
+- `tutor-core` never depends on Tauri and does no I/O except through its
+  traits.
+- The web view gets only this app's typed commands, channels and events; no
+  plugin that gives it file, shell or network access.
 - Code written by the model (problem references, brute forces) runs only in
-  the Pyodide executor.
-- Hidden test data never leaves the main process unredacted.
-- The API key lives only in the main process and the OS keychain.
+  the `wasi-python` executor (CPython on WASI in wasmtime).
+- Hidden test data and expected values never leave the Rust backend.
+- The API key lives only in the Rust backend and the OS keychain.
 - No test calls a real AI provider. Never commit credentials or user data.
 - Pass/fail always comes from running tests.
 - Report honestly what was not done or not tested.
