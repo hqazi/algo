@@ -208,7 +208,8 @@ execution host, logs, the database or code under test; Settings shows only
 
 ```
 <problem>/
-  problem.md        statement (Markdown), examples generated from visible tests
+  problem.md        statement (Markdown), examples generated from visible tests;
+                    language-neutral (D-19)
   meta.json         below
   tests.json        unchanged from dsa-tutor except schema_version 2
   reference.py      optimal reference solution (Python, always)

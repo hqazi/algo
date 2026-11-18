@@ -54,7 +54,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T01 | Repository scaffold | v1 | 2d | — | done |
 | T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | done |
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
-| T04 | Port the curated problems and references | v1 | 2d | T03, T07 | in-progress |
+| T04 | Port the curated problems and references | v1 | 2d | T03, T07 | done |
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | todo |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
@@ -353,11 +353,49 @@ verified.
 - Set `time_limit_ms` per problem from measured reference times (T07's rule).
 
 **Acceptance.**
-- [ ] 50 problems under `content/problems/<topic>/<slug>/`, all valid.
+- [x] 50 problems under `content/problems/<topic>/<slug>/`, all valid.
 - [ ] `npm run validate:content` passes and runs in CI.
-- [ ] Any type that did not map cleanly is listed in the done notes with how it was resolved.
+- [x] Any type that did not map cleanly is listed in the done notes with how it was resolved.
 
 **Notes.**
+
+Built (DECISIONS D-19 has the details and reasons):
+- `scripts/convert-dsa-tutor.ts` (CLI) and `scripts/convert/dsa-tutor.ts`
+  (pure conversion, unit-tested): 50 problems from `dsa-tutor` commit
+  `50cdcd3` into `content/problems/<topic>/<slug>/`. Each is loaded back
+  through core's `loadProblem` with the topic list. Re-running it with
+  `--force` reproduces the committed files exactly (checked).
+- Types: **every hint mapped cleanly** (`str` → `string`, nodes →
+  `linked_list<int>` / `tree<int>`, lists, `int`, `bool`); nothing needed a
+  special case. The converter throws on anything else.
+- `problem.md` made language-neutral: JSON literals in examples (regenerated
+  from visible tests), Python signature and script instructions dropped, a
+  Notes section for trees/linked lists/order, ten Python-only phrases
+  reworded. The converter verifies the v1 examples and tail against
+  `dsa-tutor`'s renderer before replacing them.
+- `content/references/`: all five ported, script commands → SPEC §7.1 tool
+  names, language-aware wording (idioms, costs, neutral types in
+  `problem_spec.md`).
+- `npm run validate:content` (`scripts/validate-content.ts`): references
+  present and free of script commands; every problem loads; folder = topic;
+  every topic has a problem; each reference passes every test in Pyodide (Node
+  worker threads, same pool/runtime/harness as the host); `time_limit_ms` ≥
+  the measured rule. All 50 pass locally in about 70 s; slowest test 62 ms
+  (`min-daily-pages`), so 2000 ms stands for every problem.
+
+Wiring outside **Owns**: `scripts/content/topics.ts` (topics.md parser, until
+T06), a `scripts` project in the root `vitest.config.ts` for the script
+tests, a CI step, `content/problems/**/tests.json` in `.prettierignore`, one
+line in SPEC §5.1.
+
+Not done / not tested:
+- `validate:content` runs Pyodide on Node, not inside the Electron execution
+  host; the host was already checked against the same 50 references in T07
+  (D-15) with `check:exec-host --measure`, but that is not re-run in CI on
+  the converted files.
+- Statements were reviewed by spot checks, not one by one; `len(x)` notation in
+  constraints is kept.
+- The T03 fixture `level-lists` still has the old v1-style statement.
 
 ### T05 — SQLite storage and migrations
 

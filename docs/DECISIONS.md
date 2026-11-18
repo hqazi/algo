@@ -358,3 +358,51 @@ finish starting.
 | @electron/fuses | 2.1.3 | Desktop dev dependency (`packaging/fuses.ts`). Covers all nine Electron 45 fuses. |
 | zod | 4.6.7 | Now also a direct desktop dependency (IPC contract); same version as core. |
 
+**D-19 Curated problems in v2: neutral statements, compact tests**
+(2026-11-18, T04)
+
+`scripts/convert-dsa-tutor.ts` converted all 50 `dsa-tutor` curated problems
+(at `dsa-tutor` commit `50cdcd3`) to `content/problems/<topic>/<slug>/`.
+
+- **Types.** Every Python hint mapped cleanly: `int`, `bool`, `str` →
+  `string` (no parameter or return is a single character, so none became
+  `char`), `list[...]` → `list<...>`, `ListNode | None` → `linked_list<int>`,
+  `TreeNode | None` → `tree<int>`. No floats, tuples, maps or optionals occur.
+  Any other hint makes the converter stop.
+- **`problem.md` is language-neutral**, since the same statement serves
+  Python now and Rust and Go in v2. Examples are regenerated from the visible
+  tests with JSON literals (`null`, `true`, `false`); the Python signature
+  block and the "Your solution" script instructions are dropped (the app shows
+  the stub in the chosen language); a "## Notes" section says how trees and
+  linked lists are written and when order does not matter. Ten sentences were
+  reworded (`True` → true, `None` → "an empty list (no node)", `e // 2`,
+  "Python's three-argument `pow`" as an example of what not to use). Before
+  regenerating anything, the converter re-renders the v1 examples and tail
+  with `dsa-tutor`'s own renderer logic and stops if the file differs, so no
+  hand edit was lost. `len(x)` in constraints is kept as readable in any
+  language. The T03 fixture `level-lists` keeps its older v1-style statement;
+  it only exercises the loader.
+- **`tests.json` stays compact** (one line, `stringifyJson`, as `dsa-tutor`
+  wrote it) and is excluded from Prettier: 3.6 MB of mostly generated large
+  inputs would grow several times and slow `format:check` for no reader.
+  `meta.json` is Prettier-formatted.
+- **`time_limit_ms` is 2000 for all 50.** `npm run validate:content` measures
+  every reference on each run and fails if a stored limit is below
+  `timeLimitFromReference(slowest)`. On Node Pyodide here the slowest test was
+  62 ms (`min-daily-pages`), then 23 ms (`count-islands`), in line with D-15.
+- **`npm run validate:content`** runs the references in Pyodide on Node worker
+  threads through the execution host's own pool, runtime and harness (the
+  path the executor tests use), not in Electron: no display or sandbox setup
+  needed, so it runs in CI on all three OSes. About 70 s for the 50 problems,
+  mostly worker start-up (each job gets fresh workers, D-14). It also checks
+  that the references parse and no longer mention `dsa-tutor`'s scripts, and
+  that every topic has a curated problem.
+- **References** (`content/references/`): copied and adapted. Script commands
+  became the tool names of SPEC §7.1 (`take_hint`, `read_solution`,
+  `run_tests`, `record_attempt`, `set_profile`, `create_problem`,
+  `render_explanation`...); "idiomatic Python" became idioms of the attempt's
+  language (Python, Rust, Go examples); `problem_spec.md` uses neutral types
+  and says references and brute forces are always Python. `topics.md` is
+  unchanged but for one word; `scripts/content/topics.ts` parses it for the
+  content scripts until T06 ports the catalog.
+
