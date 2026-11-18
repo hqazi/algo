@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "number", "const": 2 },
+    "tests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+          "visibility": { "type": "string", "enum": ["visible", "hidden"] },
+          "category": { "type": "string" },
+          "input": {
+            "type": "object",
+            "propertyNames": { "type": "string" },
+            "additionalProperties": {}
+          },
+          "expected": {},
+          "explanation": { "type": "string" }
+        },
+        "required": ["id", "visibility", "input", "expected"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "tests"],
+  "additionalProperties": false,
+  "$id": "https://github.com/hqazi/algorithm-tutor/blob/main/content/schema/tests.v2.schema.json",
+  "title": "Algorithm Tutor problem tests.json (v2)"
+}

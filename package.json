@@ -15,11 +15,12 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/desktop",
     "build": "npm run build --workspace apps/desktop",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p tsconfig.scripts.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "schema:export": "tsx scripts/export-schemas.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -28,6 +29,7 @@
     "eslint-plugin-react-refresh": "0.5.8",
     "globals": "17.14.0",
     "prettier": "3.10.1",
+    "tsx": "4.23.15",
     "typescript": "6.0.3",
     "typescript-eslint": "8.73.0",
     "vitest": "5.1.0"

@@ -1,0 +1,627 @@
+{
+  "source": "dsa-tutor dsa_tutor/core/grading.py compare(); regenerate with gen-dsa-tutor-cases.py",
+  "cases": [
+    {
+      "name": "int equal",
+      "actual": 3,
+      "expected": 3,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "int differs",
+      "actual": 3,
+      "expected": 4,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "int vs float same value",
+      "actual": 2,
+      "expected": 2.0,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "float exact differs slightly",
+      "actual": 0.30000000000000004,
+      "expected": 0.3,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "bool equal",
+      "actual": true,
+      "expected": true,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "bool differs",
+      "actual": true,
+      "expected": false,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "true is not 1",
+      "actual": true,
+      "expected": 1,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "1 is not true",
+      "actual": 1,
+      "expected": true,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "false is not 0",
+      "actual": false,
+      "expected": 0,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "string equal",
+      "actual": "abc",
+      "expected": "abc",
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "string differs",
+      "actual": "abc",
+      "expected": "abd",
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "string vs number",
+      "actual": "1",
+      "expected": 1,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "null equal",
+      "actual": null,
+      "expected": null,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "null vs 0",
+      "actual": null,
+      "expected": 0,
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "null vs empty list",
+      "actual": null,
+      "expected": [],
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "missing spec is exact",
+      "actual": [1, 2],
+      "expected": [2, 1],
+      "spec": null,
+      "equal": false
+    },
+    {
+      "name": "list equal",
+      "actual": [1, [2, 3]],
+      "expected": [1, [2, 3]],
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "list order matters",
+      "actual": [1, 2],
+      "expected": [2, 1],
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "list length differs",
+      "actual": [1, 2],
+      "expected": [1, 2, 3],
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "list vs object",
+      "actual": [],
+      "expected": {},
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "object equal any key order",
+      "actual": {
+        "a": 1,
+        "b": [1]
+      },
+      "expected": {
+        "b": [1],
+        "a": 1
+      },
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": true
+    },
+    {
+      "name": "object extra key",
+      "actual": {
+        "a": 1,
+        "b": 2
+      },
+      "expected": {
+        "a": 1
+      },
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "object missing key",
+      "actual": {
+        "a": 1
+      },
+      "expected": {
+        "a": 1,
+        "b": 2
+      },
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "object value differs",
+      "actual": {
+        "a": 1
+      },
+      "expected": {
+        "a": 2
+      },
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "nested bool vs int",
+      "actual": [true],
+      "expected": [1],
+      "spec": {
+        "mode": "exact"
+      },
+      "equal": false
+    },
+    {
+      "name": "unordered permutation",
+      "actual": [3, 1, 2],
+      "expected": [1, 2, 3],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": true
+    },
+    {
+      "name": "unordered duplicates count",
+      "actual": [1, 1, 2],
+      "expected": [1, 2, 2],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": false
+    },
+    {
+      "name": "unordered length differs",
+      "actual": [1, 2],
+      "expected": [1, 2, 2],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": false
+    },
+    {
+      "name": "unordered strings",
+      "actual": ["b", "a"],
+      "expected": ["a", "b"],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": true
+    },
+    {
+      "name": "unordered top level only",
+      "actual": [[2, 1], [3]],
+      "expected": [[3], [1, 2]],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": false
+    },
+    {
+      "name": "unordered whole items",
+      "actual": [[1, 2], [3]],
+      "expected": [[3], [1, 2]],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": true
+    },
+    {
+      "name": "unordered mixed types",
+      "actual": [1, "1", null, true],
+      "expected": [true, null, "1", 1],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": true
+    },
+    {
+      "name": "unordered objects",
+      "actual": [
+        {
+          "a": 1,
+          "b": 2
+        },
+        {
+          "a": 0
+        }
+      ],
+      "expected": [
+        {
+          "a": 0
+        },
+        {
+          "b": 2,
+          "a": 1
+        }
+      ],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": true
+    },
+    {
+      "name": "unordered non-list falls back to exact",
+      "actual": 5,
+      "expected": 5,
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": true
+    },
+    {
+      "name": "unordered non-list differs",
+      "actual": "ab",
+      "expected": "ba",
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": false
+    },
+    {
+      "name": "unordered list vs non-list",
+      "actual": [1],
+      "expected": 1,
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": false
+    },
+    {
+      "name": "unordered bool vs int items",
+      "actual": [true, 0],
+      "expected": [1, 0],
+      "spec": {
+        "mode": "unordered"
+      },
+      "equal": false
+    },
+    {
+      "name": "deep nested permutation",
+      "actual": [[2, 1], [3]],
+      "expected": [[3], [1, 2]],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": true
+    },
+    {
+      "name": "deep subsets",
+      "actual": [[], [2], [1], [1, 2]],
+      "expected": [[], [1], [2], [2, 1]],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": true
+    },
+    {
+      "name": "deep three levels",
+      "actual": [[[2, 1]], [[0]]],
+      "expected": [[[0]], [[1, 2]]],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": true
+    },
+    {
+      "name": "deep inner multiplicity",
+      "actual": [[1, 1, 2]],
+      "expected": [[1, 2, 2]],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": false
+    },
+    {
+      "name": "deep lists inside objects keep order",
+      "actual": [
+        {
+          "k": [2, 1]
+        }
+      ],
+      "expected": [
+        {
+          "k": [1, 2]
+        }
+      ],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": false
+    },
+    {
+      "name": "deep objects in any order",
+      "actual": [
+        {
+          "k": [1]
+        },
+        {
+          "j": 2
+        }
+      ],
+      "expected": [
+        {
+          "j": 2
+        },
+        {
+          "k": [1]
+        }
+      ],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": true
+    },
+    {
+      "name": "deep group anagrams",
+      "actual": [["tea", "eat"], ["bat"]],
+      "expected": [["bat"], ["eat", "tea"]],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": true
+    },
+    {
+      "name": "deep different groups",
+      "actual": [["a", "b"], ["c"]],
+      "expected": [["a"], ["b", "c"]],
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": false
+    },
+    {
+      "name": "deep non-list exact",
+      "actual": 1,
+      "expected": 1,
+      "spec": {
+        "mode": "unordered_deep"
+      },
+      "equal": true
+    },
+    {
+      "name": "float within default tol",
+      "actual": 1.0000001,
+      "expected": 1.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float outside default tol",
+      "actual": 1.00001,
+      "expected": 1.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": false
+    },
+    {
+      "name": "float relative to expected",
+      "actual": 1000000.5,
+      "expected": 1000000.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float relative outside",
+      "actual": 1000002.0,
+      "expected": 1000000.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": false
+    },
+    {
+      "name": "float small absolute floor",
+      "actual": 1e-7,
+      "expected": 0.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float small absolute outside",
+      "actual": 2e-6,
+      "expected": 0.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": false
+    },
+    {
+      "name": "float custom tolerance inside",
+      "actual": 1.0009,
+      "expected": 1.0,
+      "spec": {
+        "mode": "float",
+        "tolerance": 0.001
+      },
+      "equal": true
+    },
+    {
+      "name": "float custom tolerance outside",
+      "actual": 1.002,
+      "expected": 1.0,
+      "spec": {
+        "mode": "float",
+        "tolerance": 0.001
+      },
+      "equal": false
+    },
+    {
+      "name": "float in lists",
+      "actual": [0.30000000000000004, 1.0],
+      "expected": [0.3, 1.0],
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float in objects",
+      "actual": {
+        "x": 0.30000000000000004
+      },
+      "expected": {
+        "x": 0.3
+      },
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float int values",
+      "actual": 3,
+      "expected": 3,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float bool still strict",
+      "actual": true,
+      "expected": 1,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": false
+    },
+    {
+      "name": "float order matters",
+      "actual": [1.0, 2.0],
+      "expected": [2.0, 1.0],
+      "spec": {
+        "mode": "float"
+      },
+      "equal": false
+    },
+    {
+      "name": "float negative",
+      "actual": -2.0000001,
+      "expected": -2.0,
+      "spec": {
+        "mode": "float"
+      },
+      "equal": true
+    },
+    {
+      "name": "float exact boundary",
+      "actual": 1.5,
+      "expected": 1.0,
+      "spec": {
+        "mode": "float",
+        "tolerance": 0.5
+      },
+      "equal": true
+    },
+    {
+      "name": "exact ignores tolerance",
+      "actual": 1.0000001,
+      "expected": 1.0,
+      "spec": {
+        "mode": "exact",
+        "tolerance": 0.5
+      },
+      "equal": false
+    }
+  ]
+}

@@ -22,7 +22,12 @@ export default tseslint.config(
     languageOptions: { ecmaVersion: 2023, sourceType: 'module' },
   },
   {
-    files: ['*.{js,ts}', '**/*.config.{js,ts}', 'apps/desktop/src/{main,preload}/**/*.ts'],
+    files: [
+      '*.{js,ts}',
+      'scripts/**/*.ts',
+      '**/*.config.{js,ts}',
+      'apps/desktop/src/{main,preload}/**/*.ts',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
