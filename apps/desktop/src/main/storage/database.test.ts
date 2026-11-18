@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import Database from 'better-sqlite3';
+import { DatabaseSync as Database } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   DatabaseTooNewError,
@@ -39,7 +39,7 @@ beforeEach(() => {
   dbPath = join(dir, 'tutor.db');
 });
 afterEach(() => {
-  for (const db of open.splice(0)) if (db.open) db.close();
+  for (const db of open.splice(0)) if (db.isOpen) db.close();
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -98,8 +98,8 @@ describe('openDatabase', () => {
     expect(r.db.prepare("SELECT value FROM meta WHERE key = 'install_id'").get()).toEqual({
       value: 'install-1',
     });
-    expect(r.db.pragma('foreign_keys', { simple: true })).toBe(1);
-    expect(r.db.pragma('journal_mode', { simple: true })).toBe('wal');
+    expect(r.db.prepare('PRAGMA foreign_keys').get()).toEqual({ foreign_keys: 1 });
+    expect(r.db.prepare('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
     expect(readdirSync(dir).some((f) => f.includes('.bak-'))).toBe(false);
   });
 
@@ -131,7 +131,7 @@ describe('openDatabase', () => {
     ]);
 
     // The backup is the v1 database as it was.
-    const bak = track(new Database(`${dbPath}.bak-1`, { readonly: true }));
+    const bak = track(new Database(`${dbPath}.bak-1`, { readOnly: true }));
     expect(schemaVersion(bak)).toBe(1);
     expect(tables(bak)).not.toContain('notes');
     expect(bak.prepare('SELECT slug FROM attempts').all()).toEqual([{ slug: 'two-sum' }]);
@@ -146,7 +146,7 @@ describe('openDatabase', () => {
     const r = openDatabase(dbPath, { migrations: [MIGRATIONS[0]!, V2] });
     track(r.db);
     expect(r.backupPath).toBe(`${dbPath}.bak-1-2`);
-    expect(tables(track(new Database(`${dbPath}.bak-1`, { readonly: true })))).toEqual(['marker']);
+    expect(tables(track(new Database(`${dbPath}.bak-1`, { readOnly: true })))).toEqual(['marker']);
   });
 
   it('rolls a failed migration back and leaves the database at the last good version', () => {

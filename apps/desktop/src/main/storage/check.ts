@@ -1,7 +1,8 @@
 /**
  * `npm run check:storage`: open storage inside the real Electron main
  * process, as the app does, and exercise it (T05). Unit tests run on plain
- * Node; this proves better-sqlite3 loads under Electron's Node too.
+ * Node; this proves Node's built-in SQLite (`node:sqlite`) works under Electron's
+ * Node too.
  *
  *   electron out/main/storage-check.js
  *
@@ -12,7 +13,7 @@ import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { app } from 'electron';
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import { openDatabase } from './database';
 import { MIGRATIONS } from './migrations';
 import { DatabaseTooNewError, openAppStorage } from '.';
@@ -36,10 +37,10 @@ async function checks(dir: string): Promise<void> {
   // The app's own path: fresh data folder, latest schema, a write and a read.
   const s = openAppStorage(join(dir, 'data'));
   check('fresh database at the latest schema', s.database.to === MIGRATIONS.length, s.database);
-  const mem = new Database(':memory:');
+  const mem = new DatabaseSync(':memory:');
   const sqlite = (mem.prepare('SELECT sqlite_version() AS v').get() as { v: string }).v;
   mem.close();
-  check('better-sqlite3 loads under Electron', typeof sqlite === 'string', { sqlite });
+  check('node:sqlite works under Electron', typeof sqlite === 'string', { sqlite });
   const attempt = await s.storage.write((db) =>
     db.createAttempt({ slug: 'two-sum', language: 'python', startedAt: new Date().toISOString() }),
   );

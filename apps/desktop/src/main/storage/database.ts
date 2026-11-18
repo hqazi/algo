@@ -11,10 +11,28 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import { MIGRATIONS, type Migration } from './migrations';
 
-export type Db = Database.Database;
+/** Node's built-in SQLite (D-20): nothing native to install or rebuild. */
+export type Db = DatabaseSync;
+
+/**
+ * Runs `fn` in a transaction (a savepoint if one is already open): committed
+ * if it returns, rolled back if it throws.
+ */
+export function transaction<T>(db: Db, fn: () => T): T {
+  const nested = db.isTransaction;
+  db.exec(nested ? 'SAVEPOINT nested' : 'BEGIN IMMEDIATE');
+  try {
+    const result = fn();
+    db.exec(nested ? 'RELEASE nested' : 'COMMIT');
+    return result;
+  } catch (e) {
+    db.exec(nested ? 'ROLLBACK TO nested; RELEASE nested' : 'ROLLBACK');
+    throw e;
+  }
+}
 
 export class DatabaseTooNewError extends Error {
   constructor(
@@ -112,16 +130,16 @@ export function openDatabase(
   const inMemory = path === ':memory:';
   if (!inMemory) mkdirSync(dirname(path), { recursive: true });
 
-  const db = new Database(path);
+  const db = new DatabaseSync(path);
   try {
     // Read the version before changing anything, so a newer database is left as it was.
     const from = schemaVersion(db, path);
     if (from > latest) throw new DatabaseTooNewError(path, from, latest);
 
-    db.pragma('journal_mode = WAL');
-    db.pragma('synchronous = NORMAL');
-    db.pragma('foreign_keys = ON');
-    db.pragma('busy_timeout = 5000');
+    db.exec(
+      'PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; ' +
+        'PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;',
+    );
 
     let backupPath: string | null = null;
     if (from > 0 && from < latest && !inMemory) {
@@ -131,7 +149,7 @@ export function openDatabase(
 
     for (const m of migrations.slice(from)) {
       try {
-        db.transaction(() => {
+        transaction(db, () => {
           db.exec(m.sql);
           db.prepare(
             "INSERT INTO meta (key, value) VALUES ('schema_version', ?) " +
@@ -142,13 +160,13 @@ export function openDatabase(
               (opts.newInstallId ?? randomUUID)(),
             );
           }
-        })();
+        });
       } catch (e) {
         throw new MigrationError(m, backupPath, e);
       }
     }
 
-    const fk = db.pragma('foreign_key_check') as unknown[];
+    const fk = db.prepare('PRAGMA foreign_key_check').all();
     if (fk.length)
       throw new Error(`foreign key check failed after migrating: ${JSON.stringify(fk)}`);
 

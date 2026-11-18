@@ -22,7 +22,8 @@ import {
   type ThreadRecord,
   type TopicProgressRecord,
 } from '@algorithm-tutor/core';
-import type { Db } from './database';
+import type { SQLInputValue, StatementSync } from 'node:sqlite';
+import { transaction, type Db } from './database';
 
 type Row = Record<string, unknown>;
 type Params = Record<string, unknown> | unknown[];
@@ -109,6 +110,13 @@ const toTestRun = (r: Row): TestRunRecord => ({
   createdAt: str(r.created_at),
 });
 
+type Named = Record<string, SQLInputValue>;
+
+/** Splits `params` into node:sqlite's named object and positional values. */
+function bind<T>(params: Params, call: (named: Named, anon: SQLInputValue[]) => T): T {
+  return Array.isArray(params) ? call({}, params as SQLInputValue[]) : call(params as Named, []);
+}
+
 export class StorageClosedError extends Error {
   constructor() {
     super('storage is closed');
@@ -117,7 +125,7 @@ export class StorageClosedError extends Error {
 }
 
 export class SqliteStorage implements Storage {
-  private readonly statements = new Map<string, ReturnType<Db['prepare']>>();
+  private readonly statements = new Map<string, StatementSync>();
   private readonly reader: StorageReader;
   private readonly writer: StorageWriter;
   private tail: Promise<unknown> = Promise.resolve();
@@ -179,34 +187,36 @@ export class SqliteStorage implements Storage {
 
   private transaction<T>(fn: (db: StorageWriter) => T): T {
     this.checkOpen();
-    return this.db.transaction(() => {
+    return transaction(this.db, () => {
       const result = fn(this.writer);
       if (result instanceof Promise) {
         throw new Error('a storage write function must be synchronous');
       }
       return result;
-    })();
+    });
   }
 
   private stmt(sql: string) {
     let s = this.statements.get(sql);
     if (!s) {
       s = this.db.prepare(sql);
+      // Records carry fields a statement does not use.
+      s.setAllowUnknownNamedParameters(true);
       this.statements.set(sql, s);
     }
     return s;
   }
 
   private get(sql: string, params: Params = []): Row | undefined {
-    return this.stmt(sql).get(params) as Row | undefined;
+    return bind(params, (named, anon) => this.stmt(sql).get(named, ...anon)) as Row | undefined;
   }
 
   private all(sql: string, params: Params = []): Row[] {
-    return this.stmt(sql).all(params) as Row[];
+    return bind(params, (named, anon) => this.stmt(sql).all(named, ...anon)) as Row[];
   }
 
   private run(sql: string, params: Params = []) {
-    return this.stmt(sql).run(params);
+    return bind(params, (named, anon) => this.stmt(sql).run(named, ...anon));
   }
 
   private makeReader(): StorageReader {
