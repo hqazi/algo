@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Core must run in both Node and the browser: only the ECMAScript
+    // standard library, no DOM and no @types/node. Using a Node or browser
+    // global here is a type error; importing `node:*` or `electron` is a
+    // lint error (eslint.config.js).
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src"]
+}

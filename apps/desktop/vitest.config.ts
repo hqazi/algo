@@ -1,0 +1,6 @@
+import { defineProject } from 'vitest/config';
+
+export default defineProject({
+  test: { name: 'desktop', environment: 'node', include: ['src/**/*.test.{ts,tsx}'] },
+  oxc: { jsx: { runtime: 'automatic' } },
+});

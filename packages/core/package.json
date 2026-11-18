@@ -1,0 +1,14 @@
+{
+  "name": "@algorithm-tutor/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pure tutor logic shared by every shell. No Electron, no Node built-ins.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  }
+}
