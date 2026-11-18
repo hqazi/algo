@@ -55,7 +55,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | done |
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | done |
-| T05 | SQLite storage and migrations | v1 | 2d | T01 | in-progress |
+| T05 | SQLite storage and migrations | v1 | 2d | T01 | done |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | todo |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | todo |
@@ -415,11 +415,58 @@ Not done / not tested:
 - `settings.json` load/save with zod, defaults, unknown keys kept, change events.
 
 **Acceptance.**
-- [ ] Tests: fresh DB, migrate from v1 to v2 with a sample migration, refuse a newer DB, backup file created.
-- [ ] Tests: invalid `settings.json` values fall back to defaults and are reported.
+- [x] Tests: fresh DB, migrate from v1 to v2 with a sample migration, refuse a newer DB, backup file created.
+- [x] Tests: invalid `settings.json` values fall back to defaults and are reported.
 - [ ] Storage runs under Electron's Node (rebuild verified in CI).
 
 **Notes.**
+
+Built (decisions in D-20):
+- `packages/core/src/storage.ts`: record types for every SPEC §4.2 table
+  and the `Storage` interface: synchronous `read(fn)`; `write(fn)` (queued,
+  one transaction, synchronous `fn`); `serial(task)` (queued async task that
+  holds the queue, writing through the function it is given).
+- `packages/core/src/settings.ts` (outside **Owns**, but pure and needed by
+  the Settings UI later): the §4.3 schema and defaults, `parseSettings`
+  (lenient, reports issues), `applySettingsPatch` (strict),
+  `settingsForFile` (keeps unknown keys), `changedSettings`.
+- `apps/desktop/src/main/storage/`: `paths.ts` (`ALGOTUTOR_DATA_DIR` or
+  `userData`; the §4.1 layout), `database.ts` (open + migration runner:
+  transaction per migration, `tutor.db.bak-<version>` via `VACUUM INTO`,
+  refuses newer and foreign databases), `migrations/0001-initial.sql` (the
+  §4.2 schema, `STRICT` tables with `CHECK`s), `sqlite-storage.ts`
+  (`SqliteStorage`, the single write queue), `settings-store.ts`
+  (`SettingsStore`: load, atomic save, change events), `index.ts`
+  (`openAppStorage`), `check.ts` (`npm run check:storage`).
+- SQLite is Node's built-in `node:sqlite`, not better-sqlite3 as scoped
+  (owner's choice after CI showed `npm ci` compiles better-sqlite3 from
+  source and fails on Windows; D-20). Nothing native to install or rebuild:
+  it is part of Node 22 and of Electron 45's Node 24.
+
+Tests: 48 new (migrations 11, storage 13, settings store 10, core settings
+11, paths 3); `npm test` 374 pass. Typecheck, lint, format check and
+`validate:content` pass. `npm run check:storage` (8 checks in the real
+Electron main process: `node:sqlite` works, fresh schema, write/read with a
+64-bit integer, settings round trip, migrate with backup, refuse newer)
+passes here on Linux and runs in CI on all three OSes.
+
+Wiring outside **Owns**: `apps/desktop/src/main/index.ts` opens storage
+before the window (error dialog and quit if the database is newer, foreign
+or a migration fails; settings issues are logged); `electron.vite.config.ts`
+(`storage-check` entry); `check:storage` scripts in both `package.json`s;
+the CI step; SPEC §3.2 and §4.3 wording (D-20).
+
+Not done / not tested:
+- Nothing uses `Storage` yet (T06), and no IPC exposes settings (T09).
+  Settings issues are only logged until T09 shows them.
+- The error dialog for an unusable database was not seen: a manual launch
+  with schema version 99 blocked on the modal dialog and left the file
+  untouched, but nobody looked at the dialog.
+- `settings.json` is not watched for edits made while the app runs.
+- Export (SQLite backup API, SPEC §4.5) is not built; `node:sqlite`'s
+  `backup()` or `VACUUM INTO` will do it.
+- Packaged builds are T13's to check (nothing native is involved now).
+- Node 22 prints an `ExperimentalWarning` for `node:sqlite` in unit tests.
 
 ### T06 — Port the core teaching logic
 

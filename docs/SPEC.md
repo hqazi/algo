@@ -110,7 +110,7 @@ shell, not a rewrite.
 
 electron-vite (build), electron-builder (packaging, auto-update), Vitest (unit),
 Playwright for Electron (end-to-end), ESLint + Prettier, `zod` for IPC and file
-schemas, `better-sqlite3` (rebuilt for Electron by electron-builder),
+schemas, `node:sqlite` (Node's built-in SQLite, nothing native to rebuild: D-20),
 `@anthropic-ai/sdk`. Pyodide is pinned and bundled with the app (works offline).
 Exact versions are chosen in T01 and pinned in the lockfile.
 
@@ -141,8 +141,9 @@ app watches the open problem's file and reloads it when it changes on disk.
 
 ### 4.2 Database (`tutor.db`)
 
-Numbered SQL migrations in `apps/desktop/src/main/storage/migrations/`, applied
-at start inside a transaction; a backup copy `tutor.db.bak-<version>` is made
+SQLite through `node:sqlite` (D-20). Numbered SQL migrations in
+`apps/desktop/src/main/storage/migrations/`, applied at start inside a
+transaction; a backup copy `tutor.db.bak-<version>` is made
 before any migration. The app refuses to open a database newer than it knows.
 
 | Table | Columns (main) |
@@ -163,12 +164,13 @@ tool calls and UI actions are serialised (one write queue), as in `dsa-tutor`.
 ### 4.3 Settings (`settings.json`)
 
 Validated with a `zod` schema; unknown keys are kept, invalid values fall back
-to defaults with a notice. Changes apply immediately (no restart).
+to defaults with a notice. Changes apply immediately (no restart). Keys are
+nested in the file: `tutor.backend` is `{"tutor": {"backend": "auto"}}`.
 
 | Key | Default | Notes |
 |---|---|---|
 | `tutor.backend` | `auto` | `auto` / `anthropic` / `claude-code` / `none`. `auto`: Anthropic if a key is stored, else Claude Code if found, else none. |
-| `tutor.model` | (T10) | **DECISION**: default model, chosen in T10 from the current models list. |
+| `tutor.model` | `null` (T10) | **DECISION**: default model, chosen in T10 from the current models list. `null` means the backend's default. |
 | `tutor.effort` | `medium` | |
 | `execution.runtime` | `local` | v2: `local` / `podman` / `docker` for Rust and Go. Python always uses Pyodide. |
 | `execution.timeScale` | `1.0` | Multiplier on per-test time limits (slow machines). |

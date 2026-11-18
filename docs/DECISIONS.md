@@ -406,3 +406,74 @@ finish starting.
   unchanged but for one word; `scripts/content/topics.ts` parses it for the
   content scripts until T06 ports the catalog.
 
+
+**D-20 SQLite storage: `node:sqlite`, schema version in `meta`, one write
+queue** (2026-11-18, T05)
+
+- **`node:sqlite`, Node's built-in SQLite, not better-sqlite3** (owner's
+  choice, changing SPEC §3.2). better-sqlite3 13.1.1 was tried first. It is a
+  Node-API addon with prebuilt binaries for every OS inside the npm package,
+  and the same binary loaded under Node 22 (ABI 127) and Electron 45 (ABI
+  150), so Electron never needed a rebuild. But npm 10.9 and 11.21 both
+  ignore its `gypfile: false` and run `node-gyp rebuild` on `npm ci`
+  because the package ships a `binding.gyp`. That failed CI on Windows (no
+  Visual Studio found), and every developer would need a C++ toolchain.
+  `node:sqlite` has nothing to install, compile, rebuild, or unpack from the
+  asar in T13. It works unflagged in both runtimes (Node 22.23 for unit
+  tests, Electron 45.3.4's Node 24.22 in the app; both bundle SQLite
+  3.54.1), and everything storage uses exists in both: `DatabaseSync`,
+  `isTransaction`, `setAllowUnknownNamedParameters`, `VACUUM INTO`.
+  `npm run check:storage` proves it inside the real Electron main process
+  on all three OSes in CI.
+  Costs accepted: the API is still marked release candidate (stability
+  1.2), so a Node or Electron upgrade may need small changes, which
+  `check:storage` will catch; and Node 22 prints one `ExperimentalWarning`
+  per test worker (Electron prints none). It has no `db.transaction()`
+  helper, so `database.ts` has `transaction()`: `BEGIN IMMEDIATE` /
+  `COMMIT` / `ROLLBACK`, with savepoints when nested. Rejected: keeping
+  better-sqlite3 with `npm ci --ignore-scripts` plus selective rebuilds
+  (every install becomes two steps), and installing Visual Studio on the CI
+  runner (slower CI; developers still need a toolchain).
+- **Schema version** is `meta.schema_version` (0 for an empty file), bumped
+  in the same transaction as each migration. `meta.install_id` (a random
+  UUID) is written by migration 1. A file with tables but no `meta` is
+  refused as not ours. Migrations are `migrations/NNNN-name.sql`, imported
+  as text (`?raw`) so they are bundled into the main process; a test checks
+  the list in `migrations/index.ts` matches the folder.
+- **Backup** before migrating an existing database, with `VACUUM INTO`
+  (a consistent copy even in WAL mode) to `tutor.db.bak-<from-version>`; if
+  that name is taken (an earlier attempt that rolled back) the next is
+  `-2`, `-3`…, so an older backup is never overwritten. A newer database is
+  refused before any pragma runs, so its file is byte-for-byte unchanged
+  (tested). The app shows an error dialog with the data folder and quits.
+- **Connection:** WAL, `synchronous = NORMAL`, `foreign_keys = ON`,
+  `busy_timeout = 5000`; tables are `STRICT` with `CHECK`s on every enum
+  column. `attempts.slug` has no foreign key to `problems` (curated problems
+  come and go with updates; history stays). Hints, test runs and messages
+  cascade from their attempt or thread. Upserts use `ON CONFLICT DO UPDATE`,
+  not `INSERT OR REPLACE`, so re-saving a thread keeps its messages. JSON
+  columns go through core's `stringifyJson`/`parseJson` (D-11), so a test
+  report keeps exact 64-bit integers.
+- **The `Storage` interface** (`packages/core/src/storage.ts`): synchronous
+  reads (`read(fn)`); `write(fn)` queues a synchronous function and runs it
+  in one transaction; `serial(task)` queues an async task (run tests, then
+  record) and holds the queue until it settles, writing through the function
+  it is given. Calling `write`/`serial` from inside a serial task throws
+  (detected with `AsyncLocalStorage`) rather than deadlocking; an async
+  function passed to `write` is refused and rolled back. Storage keeps records
+  as given: validation and timestamps are the caller's (core injects time).
+  The profile has the columns `dsa-tutor` used (`interview_date`,
+  `hint_preference`) besides SPEC §4.2's main ones.
+- **`settings.json`** is nested as the keys read (`{"ui": {"theme":
+  "dark"}}`). The schema and lenient parsing are in core
+  (`packages/core/src/settings.ts`) so the Settings UI can share them.
+  Loading never fails: missing keys take defaults silently, invalid values
+  take defaults and are reported (logged now, shown in Settings in T09), a
+  file that is not JSON is copied to `settings.json.invalid` first. Changes
+  from the app are strict (unknown or invalid keys refuse the whole change),
+  written atomically (temp file + rename), keep unknown keys, and notify
+  listeners with the changed keys. `tutor.model` is `null` (the backend's
+  default) until T10 decides; `tutor.effort` is `low`/`medium`/`high` for now
+  (T10 may widen it); `execution.timeScale` is limited to 0.5–10 like the
+  clamp in D-15; `editor.fontSize` is an integer 8–40. The file is not
+  watched for edits made while the app runs.
