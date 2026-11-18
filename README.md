@@ -22,8 +22,7 @@ be easy to install, configure and update:
 - **Honest feedback.** Pass or fail comes from running the tests, never from
   the model.
 - **Sandboxed Python.** Your code, and any code the tutor writes, runs in a
-  sandboxed Python inside the app (CPython compiled to WebAssembly) with no
-  file or network access.
+  sandboxed in-app Python (Pyodide) with no file or network access.
 - **Works without AI.** Browsing, editing, running, submitting and progress
   need no key; the tutor chat and making new problems do.
 - **Python first.** Rust and Go are planned (v2).
