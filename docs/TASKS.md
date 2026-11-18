@@ -52,7 +52,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | Ticket | Title | Milestone | Size | Depends on | Status |
 |---|---|---|---|---|---|
 | T01 | Repository scaffold | v1 | 2d | — | done |
-| T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | todo |
+| T02 | Electron security baseline and typed IPC | v1 | 1d | T01 | in-progress |
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | todo |
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | todo |
