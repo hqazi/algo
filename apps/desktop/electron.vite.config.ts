@@ -63,6 +63,8 @@ export default defineConfig({
           'exec-check': src('main/exec/check.ts'),
           // `npm run check:security`: the security baseline in the real window.
           'security-check': src('main/security-check.ts'),
+          // `npm run check:storage`: SQLite storage under Electron's Node.
+          'storage-check': src('main/storage/check.ts'),
         },
       },
     },

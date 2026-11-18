@@ -22,6 +22,7 @@
     "test": "vitest run",
     "check:exec-host": "npm run check:exec-host --workspace apps/desktop --",
     "check:security": "npm run check:security --workspace apps/desktop --",
+    "check:storage": "npm run check:storage --workspace apps/desktop",
     "check:fuses": "npm run check:fuses --workspace apps/desktop",
     "schema:export": "tsx scripts/export-schemas.ts",
     "validate:content": "tsx scripts/validate-content.ts"

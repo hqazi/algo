@@ -13,7 +13,8 @@
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
     "check:exec-host": "electron-vite build && electron out/main/exec-check.js",
     "check:fuses": "tsx packaging/fuses.ts --check",
-    "check:security": "electron-vite build && electron out/main/security-check.js"
+    "check:security": "electron-vite build && electron out/main/security-check.js",
+    "check:storage": "electron-vite build && electron out/main/storage-check.js"
   },
   "dependencies": {
     "@algorithm-tutor/core": "*",

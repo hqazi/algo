@@ -46,5 +46,11 @@ jobs:
       - name: check security baseline
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run check:security
+      # SQLite storage inside the real Electron main process: better-sqlite3's
+      # prebuilt binary loads under Electron's Node, migrations and settings work.
+      - name: check storage under Electron
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Linux ]; then xvfb-run -a npm run check:storage; else npm run check:storage; fi
       # Flip the packaged-build fuses on a copy of Electron and read them back.
       - run: npm run check:fuses
