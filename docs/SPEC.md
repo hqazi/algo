@@ -455,14 +455,20 @@ in the local toolchain or a container, in every version.
   `running` (+ version).
 - Settings → Code execution shows the runtime choice for Rust/Go
   (`local` / `podman` / `docker`); only detected and running runtimes are
-  selectable. Not found: a **How to install →** link to the README section.
+  selectable (main refuses the setting for one that is not running; D-32).
+  Not found: a **How to install →** link to the README section.
   Installed but stopped: the command to start it (e.g. `podman machine start`).
+  **Recheck runtimes** detects again. The local choice says plainly that it
+  has no sandbox.
 - The app never installs or starts anything. The only commands it runs are
   detection, `pull` of the runner image, and job runs.
-- If the selected runtime disappears, fall back to `local` with a notice.
+- If the selected runtime disappears, fall back to `local` with a notice
+  (shown in Settings → Code execution while it lasts).
 - **Runner image** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`, built
   and published by CI with Python, Rust and Go toolchains. **Pull / Update**
-  and **Test sandbox** buttons (hello-world per language).
+  (with progress, per running runtime) and **Test sandbox** buttons
+  (hello-world in Rust and Go in that runtime's container, never falling
+  back to local).
 - Each run (D-31): one container per job, `--rm --network none --read-only
   --cap-drop ALL --security-opt no-new-privileges --user 65534:65534
   --pids-limit 128 --memory <limit, at least 512m> --memory-swap <same>
@@ -560,8 +566,8 @@ Home, Problems (browse, filter by topic/difficulty/source), Practice
 Explanations (sandboxed iframe, version picker), Settings.
 
 Settings sections: **Tutor** (backend, key entry with test-connection button,
-model, effort, status line), **Code execution** (6.5; v1 shows Python/Pyodide
-status only), **Profile** (questionnaire answers, focus), **Data** (open data
+model, effort, status line), **Code execution** (Python/Pyodide status, time
+limits, and the Rust/Go runtime choice of 6.5), **Profile** (questionnaire answers, focus), **Data** (open data
 folder, export, import, reset), **Updates** (version, channel, check now),
 **About** (licences, including Pyodide and imported sets).
 

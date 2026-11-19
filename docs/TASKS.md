@@ -68,7 +68,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | done |
 | T16 | Local toolchain executor | v2 | 2d | T15 | done |
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | done |
-| T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | in-progress |
+| T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | todo |
 
@@ -1266,10 +1266,16 @@ and Go.
 - Runtime choice (`local` / `podman` / `docker`), detected list with states, Recheck, start-command hint for stopped runtimes, **How to install →** links to README anchors, Pull/Update image, Test sandbox.
 
 **Acceptance.**
-- [ ] UI tests for each detection state.
-- [ ] Only running runtimes are selectable.
+- [x] UI tests for each detection state.
+- [x] Only running runtimes are selectable.
 
 **Notes.**
+
+- Built: `renderer/src/pages/SettingsCodeExecution.tsx` (`ExecutionSection`, moved out of `SettingsPage.tsx`; the Settings pages live flat in `renderer/src/pages/`, so the Owns path `pages/settings/CodeExecution*` became `pages/SettingsCodeExecution*`): Python status and time limits as before, plus **Rust and Go** — a radio choice of Local toolchains (cargo/go versions, "No sandbox" wording, **How to install →** when missing) / Podman / Docker, each with its state (`Running · version · endpoint`, `Installed, not running` with the start command and the runtime's reason, `Not found` with **How to install →**). Only running runtimes are enabled; a running one shows the runner image (on this computer / not pulled), **Pull image** / **Update image** with streamed progress (layers, last line, cancel) and **Test sandbox** (one line per language; disabled until the image is present). **Recheck runtimes**, the fallback notice, and a warning when the saved runtime is not running. Main: `main/exec/code-execution.ts` (`CodeExecution`: `view(recheck)`, `refusal`, `pull`, `test`, `notice`; `helloJob`), `main/ipc/handlers/code-execution.ts` (`exec:runtimes`, `exec:pull` stream, `exec:test`, `exec:install-help` with fixed README URLs). `settings:set` refuses a non-running runtime (`runtime_not_running`). Decisions in D-32; SPEC §6.5 and §8 updated.
+- Tests: `SettingsCodeExecution.test.tsx` (not found, installed-not-running, running, refused choice, local toolchains + install link, Recheck sends `recheck: true` and enables a runtime that started, fallback notice and "runs locally" warning, pull progress / finish / cancel / re-detect, Test sandbox lines); `main/exec/code-execution.test.ts` (view per state, image checked only when running, Recheck, refusal rule, notice lifetime, Test sandbox uses the no-fallback executor for Rust then Go, IPC schemas, install-help only takes a topic, pull stream; hello world passes with the real local cargo/go and in real Docker with the stand-in image); `settings.test.ts` (runtime refusal). e2e (`settings.e2e.ts`): real detection here showed Podman not found (How to install opened the README URL, `shell.openExternal` stubbed) and Docker running (selectable, saved, Pull/Test offered; then back to local), Recheck.
+- Checks here (Linux, Docker 29.10.0, cargo 1.97.0, go 1.24.7): typecheck, lint, format:check, `npm test` with `ALGOTUTOR_TEST_RUNNER_IMAGE=algorithm-tutor-runner:test` (828 passed, 1 skipped), `validate:content`, `xvfb-run -a npm run e2e` passed (the first full run failed once on the unrelated practice check "progress shows the solve"; `practice.e2e.ts` then passed twice alone and the full suite passed on rerun).
+- Wiring outside Owns: `main/practice/index.ts` (`codeExecution`, per-runtime container executors, a no-fallback one for Test sandbox, notices kept), `main/setup.ts`, `main/ipc/handlers/settings.ts` (+ test), `shared/{settings,ipc,channels}.ts`, `renderer/src/pages/SettingsPage.tsx`, `styles.css`, `e2e/settings.e2e.ts`, SPEC, DECISIONS.
+- Not done / not tested: Podman not tested (not installed here; only fakes). macOS and Windows not tested. A real Pull was not run (the published image does not exist until T19; the e2e does not click Pull or Test sandbox, the real-Docker Test sandbox is covered by the Vitest suite with the stand-in image). The README headings the install links point to are T20's to write. The fallback notice shows only in Settings, not in the practice view. Detection is not re-run on a timer while Settings is open.
 
 ### T19 — Runner image in CI
 

@@ -1150,3 +1150,38 @@ DECISION in SPEC §6.5)
   go 1.24.13 in the stand-in image. Not checked: Podman (no Podman here;
   rootless Podman on cgroup v1 cannot apply `--memory`), Docker Desktop on
   macOS/Windows (bind mounts of the app's data folder).
+
+**D-32 Settings → Code execution: detection on open and on Recheck, choice
+checked in main, README links by topic, Test sandbox without fallback**
+(2026-11-19, T18)
+
+- **Channels:** `exec:runtimes {recheck}` (cargo/go, Podman and Docker as
+  detected now, the runner image's presence for running runtimes only, the
+  last fallback notice), `exec:pull` (stream: each output line, Docker layer
+  counts, then `{ok, message}`; cancellable), `exec:test {runtime}`,
+  `exec:install-help {topic}`. Runtimes are detected every time Settings
+  opens (never cached); **Recheck runtimes** also forgets the local
+  toolchain cache (`LocalExecutor.recheck`). The button is named "Recheck
+  runtimes" because the Tutor section already has a "Recheck".
+- **Only running runtimes are selectable:** the UI disables the others, and
+  `settings:set` refuses a change of `execution.runtime` to a runtime that is
+  not running (`refused` / `runtime_not_running`), so a stale page cannot
+  choose one. Local is always selectable. A value already in
+  `settings.json` is kept; jobs fall back to local (D-31) and Settings says so.
+- **Fallback notice:** the container executors' `onNotice` is kept in main
+  and shown in Settings while the chosen runtime is down; it is dropped once
+  that runtime runs again or another runtime is chosen. It is not pushed to
+  the practice view.
+- **How to install →** opens a fixed README URL in the system browser
+  (`shell.openExternal`): `#optional-a-container-sandbox` for runtimes,
+  `#installing-rust-and-go` for toolchains. The renderer names a topic, never
+  a URL. T20 must keep those two headings (or update `INSTALL_HELP`).
+- **Test sandbox:** hello world (`greet(name: string) -> string`, one test)
+  in Rust then Go, with a container executor for that runtime that has no
+  fallback, so it never passes by running locally. It needs the image (the
+  button is disabled until it is on this computer). Pull / Update is offered
+  for each running runtime (Podman and Docker keep separate image stores).
+- **Checked with** Docker 29.10.0 and the T17 stand-in image (the real
+  hello world passes in both languages), cargo 1.97.0 and go 1.24.7
+  locally, and `xvfb-run npm run e2e`. Not checked: Podman, macOS, Windows,
+  a real pull of the published image (T19 has not published it).

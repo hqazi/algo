@@ -208,15 +208,20 @@ try {
       );
     }
     if (running) {
-      await radio.check();
-      await page.waitForTimeout(500);
+      // The choice is saved in main first (it detects again), then the radio follows.
+      await radio.click();
+      await row.locator('input[type=radio]:checked').waitFor({ timeout: 30_000 });
       check(`${runtime}: choosing a running runtime saves it`, await radio.isChecked());
       check(
         `${runtime}: pull and test sandbox are offered`,
         (await row.getByRole('button', { name: /^(Pull|Update) image/ }).count()) === 1 &&
           (await row.getByRole('button', { name: /^Test sandbox/ }).count()) === 1,
       );
-      await rustGo.getByRole('radio', { name: /Local toolchains/ }).check();
+      await rustGo.getByRole('radio', { name: /Local toolchains/ }).click();
+      await page
+        .getByTestId('runtime-local')
+        .locator('input[type=radio]:checked')
+        .waitFor({ timeout: 30_000 });
     }
   }
   await page.getByRole('button', { name: 'Recheck runtimes' }).click();
