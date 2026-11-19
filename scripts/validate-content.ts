@@ -12,6 +12,8 @@
  *   D-14), and must pass every test.
  * - `time_limit_ms` must be at least `timeLimitFromReference(slowest test)`
  *   (DECISIONS D-15).
+ * - `content/open-sets/exercism/` (T12): the pinned index loads (known
+ *   topics, difficulties and description files) and the licence is MIT.
  *
  *   npm run validate:content [-- <slug> ...]
  */
@@ -20,6 +22,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  ExercismImporter,
   loadProblem,
   timeLimitFromReference,
   type Problem,
@@ -90,6 +93,26 @@ for (const topic of (await readdir(PROBLEMS)).sort()) {
 if (!only.size) {
   const covered = new Set(problems.map((p) => p.meta.topic));
   for (const t of topics) if (!covered.has(t)) fail(`topic ${t}`, 'has no curated problem');
+}
+
+// ---------------------------------------------------------------- open sets
+
+try {
+  const dir = join(ROOT, 'content', 'open-sets', 'exercism');
+  const license = await readFile(join(dir, 'LICENSE.txt'), 'utf8');
+  if (!license.startsWith('The MIT License')) fail('open-sets/exercism', 'LICENSE.txt is not MIT');
+  const index = JSON.parse(
+    await readFile(join(dir, 'index.json'), 'utf8'),
+  ) as ConstructorParameters<typeof ExercismImporter>[0];
+  const importer = new ExercismImporter(
+    index,
+    license,
+    () => Promise.reject(new Error('offline')),
+    topics,
+  );
+  if (!importer.list().length) fail('open-sets/exercism', 'index.json lists no entries');
+} catch (e) {
+  fail('open-sets/exercism', e instanceof Error ? e.message : String(e));
 }
 
 // ----------------------------------------------------- references in Pyodide

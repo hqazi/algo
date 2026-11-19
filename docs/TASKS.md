@@ -62,7 +62,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T09 | Onboarding and Settings | v1 | 2d | T08 | done |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | done |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | done |
-| T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | in-progress |
+| T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | done |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | todo |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | todo |
@@ -996,10 +996,71 @@ Not done or not tested:
 - New Problem dialog and Import panel (port from `dsa-tutor/web/src/intake/`).
 
 **Acceptance.**
-- [ ] Fake-backend tests for generate, paste, import, self-check failure, not-a-problem, refused import (port the intake fixtures).
-- [ ] Model-written code runs only in the Pyodide executor (test: intake with the executor registry asserts which executor ran).
+- [x] Fake-backend tests for generate, paste, import, self-check failure, not-a-problem, refused import (port the intake fixtures). `packages/core/src/intake/intake.test.ts` asserts each job's events equal the ported recordings `fixtures/events/{generate,paste,import,repair,self-check-failed,not-a-problem,import-refused}.json`; the UI test replays them; `apps/desktop/src/main/intake/intake.test.ts` runs generate and import over IPC with real Pyodide.
+- [x] Model-written code runs only in the Pyodide executor (test: intake with the executor registry asserts which executor ran). `create.test.ts` (registry with `pyodide`, `local`, `container`: only `pyodide` asked and run; a non-Pyodide executor is refused) and the main intake test (real Pyodide next to spies for `local` and `container`, while the learner's own `executorFor` points at `local`).
 
 **Notes.**
+
+Built (DECISIONS D-26):
+- `packages/core/src/intake/`: `createProblem` (spec checks, brute force
+  fills expected values, self-check of the reference in Pyodide only, files
+  loaded back with `loadProblem` before writing, neutral `problem.md` via
+  `render.ts`), the authoring prompt (`problem_spec` and `topics` guides,
+  pasted/fetched text inside `<problem_text>`), `IntakeService` and jobs
+  (ported rules: 4 calls, repair turns, topic/difficulty enforced, app-only
+  origin, `NOT_A_PROBLEM`, one job at a time, time-out, cancel, replayable
+  events, `publicFailure`), the Exercism importer and `OpenSets`.
+- `apps/desktop/src/main/intake/`: the problem factory over the catalog,
+  Pyodide and the data folder (staged then renamed; catalog reload), the
+  fetcher (`raw.githubusercontent.com` only, same-host redirects, caps,
+  cache in `<data>/cache/open-sets/`), `openIntake`.
+- IPC (`shared/intake.ts`, `main/ipc/handlers/intake.ts`): `intake:start`,
+  `intake:current`, `intake:cancel`, `open-sets:list`, `open-sets:entries`,
+  and the `intake:events` stream (replays from the start).
+- UI `apps/desktop/src/renderer/src/intake/` (the renderer's code lives
+  under `renderer/src/`, not the `renderer/intake/` named in Owns): New
+  Problem dialog (Generate, Paste, Import; progress with the self-check
+  attempt; failures by test id and category; Stop; keeps working when
+  closed and reattaches after a reload), Import panel (licence and
+  attribution, search, "imported as").
+- `content/open-sets/exercism/`: pinned index and `LICENSE.txt`, copied
+  unchanged; the licence re-checked against the pinned commit online. Each
+  imported problem keeps `NOTICE.md`; the licence shows under its title
+  (existing T08 origin line).
+- `npm run e2e` gains `e2e/intake.e2e.ts` (real app, fake tutor
+  `e2e/fake-intake.json`): generate with one failing self-check then a pass in
+  the real execution host, the problem opens and its starter fails Run;
+  paste of a non-problem is refused.
+
+Wiring outside Owns: `main/setup.ts` (factory, open sets, intake,
+handlers), `main/tutor/index.ts` (`createProblem` dep, so the chat tutor
+also offers `create_problem`; `references` exposed), `main/practice/index.ts`
+(`executors`), `shared/channels.ts`, `shared/ipc.ts`, `renderer/src/App.tsx`
+("New problem" button; a `generate` recommendation from Next problem opens
+the dialog prefilled), `scripts/validate-content.ts` (open-set index check),
+`apps/desktop/package.json` (e2e chain), `.prettierignore` (keep the index
+as pinned), `packages/core/src/index.ts`. SPEC §10 gains a row for open-set
+fetching.
+
+Checks: `npm run typecheck`, `npm run lint`, `npm test` (716 passed, 1
+skipped), `npm run format:check`, `npm run validate:content` (50 problems),
+`xvfb-run -a npm run check:security`, `xvfb-run -a npm run e2e` (practice,
+tutor and intake passed; one settings check, "after import, progress shows
+the solve again", failed once in the full chain and passed when
+`settings.e2e.ts` was rerun alone: looks timing-related, not touched here).
+
+Not done or not tested:
+- No real AI provider was called: authoring with the Anthropic or Claude
+  Code backend (intake threads `intake-<job>`, the one-tool registry over
+  MCP) is untested; only the fake backend ran.
+- The fetcher was not run against the live host from the app; it uses
+  Node's `fetch`, which ignores the system proxy (D-26). Only the licence
+  file was fetched live (with curl) to verify it.
+- No Settings → About listing of the imported sets' licences (SPEC §8);
+  left for T14's release check.
+- The chat tutor's own `create_problem` (outside intake) has no dedicated
+  test beyond the shared factory; generated problems are not deletable from
+  the UI (not in scope).
 
 ### T13 — Packaging, auto-update and release workflow
 

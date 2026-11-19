@@ -853,3 +853,60 @@ relay, own MCP server** (2026-11-19, T11; resolves the §14 Claude Code VERIFY)
   CLI, and `npm run e2e:claude-code` runs it in the real app.
 - **Data:** `<data>/agent-home/` holds the CLI's sessions; never exported,
   removed by "reset everything".
+
+**D-26 New problems: intake ported as-is, self-check through the executor,
+Exercism pinned, Node `fetch`** (2026-11-19, T12)
+
+- **Ported as-is** from `dsa-tutor/dsa_tutor/intake/` and `core/problems.py`
+  (`create`): one authoring conversation per job with only an intake
+  `create_problem` (no `origin` in its schema; `source`, `origin`,
+  `origin_text` dropped from the model's spec), topic and difficulty
+  enforced, 4 calls in all (first + 3 repairs), a repair turn when a turn
+  ends without a problem, `NOT_A_PROBLEM:` ends a paste or import, one job
+  at a time, 15-minute limit, events replayable from the start. The
+  recordings of `web/tests/fixtures/intake/*.sse` live on as
+  `packages/core/src/intake/fixtures/events/*.json`: core's tests assert the
+  jobs produce them exactly, the UI tests replay them.
+- **Self-check** (`core/intake/create.ts`): shape checks, then the brute
+  force fills missing expected values (10 s per test), then the reference
+  must pass every test at the base limit (2000 ms per test); the stored
+  `time_limit_ms` is `timeLimitFromReference(slowest)` (D-15). The files are
+  then loaded back with the catalog's own `loadProblem` before anything is
+  written, so a saved problem always loads. Every test is sent to the
+  executor as `visible` so the report keeps each actual value; that report
+  never leaves the self-check. Folders are staged under
+  `problems/.staging/` and renamed into `problems/generated/<slug>/` or
+  `problems/imported/<slug>/` (pasted and imported, with `origin.md` or
+  `NOTICE.md`), then the catalog reloads.
+- **Pyodide only:** `createProblem` asks its executor registry for
+  `pyodide` and refuses an executor whose `id` is anything else, so v2's
+  local and container executors can never run model-written code. Tests:
+  core (`create.test.ts`, a registry with all three ids) and main
+  (`intake/intake.test.ts`, the real Pyodide pool next to spies for `local`
+  and `container`; the learner's own `executorFor` points at `local` there
+  and is never used).
+- **What the UI sees of a failure:** test id, category, status and error
+  type; the final error adds the message of visible tests only (a message
+  can quote an input). The IPC schemas (`shared/intake.ts`) are strict, so
+  the router drops anything else.
+- **The chat tutor** gets `create_problem` too (SPEC §7.1), over the same
+  factory and slug guard; an `origin` it passes must match `originSchema`.
+- **Exercism:** the index (35 entries at commit `84a9685…`) and `LICENSE`
+  are copied unchanged from `dsa-tutor` to `content/open-sets/exercism/`.
+  Re-checked on 2026-11-19: the `LICENSE` at the pinned commit on
+  `raw.githubusercontent.com` is byte-identical to the shipped copy (MIT,
+  "Copyright (c) 2014, 2019, 2021 Exercism"), and the pinned files are
+  served there. Imported problems record `license: "MIT"` and the copyright
+  line in `meta.origin` and keep the full licence in `NOTICE.md`.
+  `validate:content` checks the index loads against the topics.
+- **Fetching** (`main/intake/fetch.ts`) keeps every rule of `dsa-tutor`'s
+  fetcher (https on `raw.githubusercontent.com` only, same-host redirects
+  only, at most 3, 15 s per request and 30 s per fetch, 1 MB cap, cache in
+  `<data>/cache/open-sets/`). It uses Node's `fetch` (undici) in the main
+  process with `redirect: 'manual'`, which returns the 3xx response with its
+  `Location` header, so redirects are checked by hand as the tests assume.
+  Electron's `net.fetch` was not used: it follows Chromium's fetch, where a
+  manual redirect may come back as an opaque response without the header
+  (not checked). Node's `fetch` does not use the system proxy settings;
+  behind a proxy that needs configuring, an import fails with a
+  `fetch` error. Not checked against the live host from the app.

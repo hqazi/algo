@@ -1,6 +1,6 @@
 /**
  * The app shell (ported from `dsa-tutor/web/src/App.tsx`): top bar, routes,
- * toasts, and the chat's app-wide effects (T10). New problem arrives in T12.
+ * toasts, the chat's app-wide effects (T10) and the New Problem dialog (T12).
  */
 import { APP_NAME } from '@algorithm-tutor/core';
 import { useCallback, useEffect, useState } from 'react';
@@ -8,6 +8,7 @@ import { ChatEffects } from './chat/ChatEffects';
 import { useChatStore, useTutorStatus } from './chat/store';
 import { Link } from './components/Link';
 import { Toasts } from './components/Toasts';
+import { NewProblemDialog } from './intake/NewProblemDialog';
 import { invoke, isRefusal } from './ipc';
 import { AppProvider } from './lib/app';
 import { errorText, useApp } from './lib/app-context';
@@ -41,6 +42,12 @@ export function Shell() {
   const app = useApp();
   const route = useRoute();
   const [nextBusy, setNextBusy] = useState(false);
+  const [newOpen, setNewOpen] = useState(false);
+  const [suggestion, setSuggestion] = useState<{
+    topic: string;
+    difficulty: string;
+    reason: string;
+  } | null>(null);
   const onboarded = app.profile?.onboarded;
   const chat = useChatStore();
   const tutor = useTutorStatus(chat);
@@ -67,8 +74,8 @@ export function Shell() {
         app.notify(r.reason, 'info');
         navigate(`/p/${r.slug}`);
       } else {
-        // Generating a problem arrives with T12.
-        app.notify(`${r.reason} New problems can be generated once the tutor is set up.`, 'info');
+        setSuggestion({ topic: r.topic, difficulty: r.difficulty, reason: r.reason });
+        setNewOpen(true);
       }
       void app.refresh();
     } catch (err) {
@@ -78,6 +85,21 @@ export function Shell() {
       setNextBusy(false);
     }
   }
+
+  const onCreated = useCallback(
+    (slug: string, title: string | null, open: boolean) => {
+      void app.refresh();
+      app.notify(`New problem ready: ${title ?? slug}.`, 'success');
+      if (open) {
+        setNewOpen(false);
+        setSuggestion(null);
+        void invoke('problems:start', { slug })
+          .catch(() => undefined)
+          .then(() => navigate(`/p/${slug}`));
+      }
+    },
+    [app],
+  );
 
   let page;
   if (app.loadError && !app.profile) {
@@ -143,6 +165,16 @@ export function Shell() {
           >
             {nextBusy ? 'Picking…' : 'Next problem'}
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSuggestion(null);
+              setNewOpen(true);
+            }}
+            disabled={!onboarded}
+          >
+            New problem
+          </button>
           <NavLink to="/problems" route={route} name="problems">
             Problems
           </NavLink>
@@ -166,6 +198,14 @@ export function Shell() {
           ))}
       </header>
       {page}
+      <NewProblemDialog
+        open={newOpen}
+        tutorOff={tutor && !tutor.available ? (tutor.reason ?? 'The tutor is off.') : null}
+        suggestion={suggestion}
+        topics={app.topics}
+        onClose={() => setNewOpen(false)}
+        onCreated={onCreated}
+      />
       <ChatEffects onRefresh={onRefresh} />
       <Toasts />
     </div>

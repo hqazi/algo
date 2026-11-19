@@ -1,0 +1,157 @@
+[
+  {
+    "match": "Job: write a new",
+    "steps": [
+      {
+        "tool": "create_problem",
+        "input": {
+          "spec": {
+            "slug": "count-even-readings",
+            "title": "Even Readings",
+            "topic": "arrays-strings",
+            "difficulty": "easy",
+            "statement": "A sensor logs whole-number readings. Return how many of them are even.",
+            "constraints": ["0 <= len(readings) <= 10^4"],
+            "signature": {
+              "function": "count_even",
+              "params": [
+                {
+                  "name": "readings",
+                  "type": "list<int>"
+                }
+              ],
+              "returns": "int"
+            },
+            "compare": {
+              "mode": "exact"
+            },
+            "expected_complexity": {
+              "time": "O(n)",
+              "space": "O(1)"
+            },
+            "tests": [
+              {
+                "visibility": "visible",
+                "input": {
+                  "readings": [1, 2, 3, 4]
+                }
+              },
+              {
+                "visibility": "visible",
+                "input": {
+                  "readings": [7]
+                }
+              },
+              {
+                "visibility": "hidden",
+                "category": "empty input",
+                "input": {
+                  "readings": []
+                }
+              },
+              {
+                "visibility": "hidden",
+                "category": "negative numbers",
+                "input": {
+                  "readings": [-2, -3, -4, 0]
+                }
+              },
+              {
+                "visibility": "hidden",
+                "category": "all even",
+                "input": {
+                  "readings": [24680, 13579, 86420]
+                }
+              }
+            ],
+            "reference_solution": "def count_even(readings):\n    return len(readings)\n",
+            "brute_force": "def count_even(readings):\n    n = 0\n    for r in readings:\n        if r % 2 == 0:\n            n += 1\n    return n\n"
+          }
+        }
+      },
+      {
+        "tool": "create_problem",
+        "input": {
+          "spec": {
+            "slug": "count-even-readings",
+            "title": "Even Readings",
+            "topic": "arrays-strings",
+            "difficulty": "easy",
+            "statement": "A sensor logs whole-number readings. Return how many of them are even.",
+            "constraints": ["0 <= len(readings) <= 10^4"],
+            "signature": {
+              "function": "count_even",
+              "params": [
+                {
+                  "name": "readings",
+                  "type": "list<int>"
+                }
+              ],
+              "returns": "int"
+            },
+            "compare": {
+              "mode": "exact"
+            },
+            "expected_complexity": {
+              "time": "O(n)",
+              "space": "O(1)"
+            },
+            "tests": [
+              {
+                "visibility": "visible",
+                "input": {
+                  "readings": [1, 2, 3, 4]
+                }
+              },
+              {
+                "visibility": "visible",
+                "input": {
+                  "readings": [7]
+                }
+              },
+              {
+                "visibility": "hidden",
+                "category": "empty input",
+                "input": {
+                  "readings": []
+                }
+              },
+              {
+                "visibility": "hidden",
+                "category": "negative numbers",
+                "input": {
+                  "readings": [-2, -3, -4, 0]
+                }
+              },
+              {
+                "visibility": "hidden",
+                "category": "all even",
+                "input": {
+                  "readings": [24680, 13579, 86420]
+                }
+              }
+            ],
+            "reference_solution": "def count_even(readings):\n    return sum(1 for r in readings if r % 2 == 0)\n",
+            "brute_force": "def count_even(readings):\n    n = 0\n    for r in readings:\n        if r % 2 == 0:\n            n += 1\n    return n\n"
+          }
+        }
+      },
+      {
+        "text": "Done."
+      }
+    ]
+  },
+  {
+    "match": "Job: convert the pasted",
+    "steps": [
+      {
+        "text": "NOT_A_PROBLEM: it describes no inputs or outputs."
+      }
+    ]
+  },
+  [
+    {
+      "text": "This is the fake tutor."
+    }
+  ]
+]
