@@ -13,6 +13,11 @@ const HARNESS_SUPPORTS: Partial<Record<Language, (t: NeutralType) => boolean>> =
   python: () => true,
 };
 
+/** Languages that have a harness at all (Python in v1). */
+export function languagesWithHarness(): Language[] {
+  return (Object.keys(HARNESS_SUPPORTS) as Language[]).filter((l) => HARNESS_SUPPORTS[l]);
+}
+
 /** True if `language` has a harness that supports every type in `sig`. */
 export function languageSupports(language: Language, sig: Signature): boolean {
   const supports = HARNESS_SUPPORTS[language];

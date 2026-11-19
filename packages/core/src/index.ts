@@ -12,3 +12,5 @@ export * from './problems';
 export * from './exec';
 export * from './storage';
 export * from './settings';
+export * from './teaching';
+export * from './tools';
