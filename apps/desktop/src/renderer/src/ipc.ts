@@ -18,6 +18,8 @@ export class IpcError extends Error {
   constructor(
     readonly code: IpcErrorCode,
     message: string,
+    /** For code `refused`: why, e.g. `busy`, `locked`, `not_onboarded`. */
+    readonly reason?: string,
   ) {
     super(message);
     this.name = 'IpcError';
@@ -26,7 +28,12 @@ export class IpcError extends Error {
 
 function unwrap<T>(r: IpcResult<T>): T {
   if (r.ok) return r.value;
-  throw new IpcError(r.error.code, r.error.message);
+  throw new IpcError(r.error.code, r.error.message, r.error.reason);
+}
+
+/** True if `err` is a refusal with this reason. */
+export function isRefusal(err: unknown, reason: string): boolean {
+  return err instanceof IpcError && err.code === 'refused' && err.reason === reason;
 }
 
 export async function invoke<C extends InvokeChannel>(

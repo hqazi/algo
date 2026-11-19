@@ -27,6 +27,14 @@ async function refusing<T>(fn: () => T | Promise<T>): Promise<T> {
   }
 }
 
+/** Core results carry `ok: true`; the IPC envelope already says that. */
+type WithoutOk<T> = T extends unknown ? Omit<T, 'ok'> : never;
+function withoutOk<T extends { ok: true }>(value: T): WithoutOk<T> {
+  const out: Partial<T> = { ...value };
+  delete out.ok;
+  return out as WithoutOk<T>;
+}
+
 const profileOut = (p: { onboarded: boolean; profile: ProfileView | null }) => ({
   onboarded: p.onboarded,
   profile: p.profile ? { ...p.profile, comfort: { ...p.profile.comfort } } : null,
@@ -62,17 +70,12 @@ export function registerPracticeHandlers(router: IpcRouter, deps: PracticeHandle
   );
   router.handle('problems:get', ({ slug }) => refusing(() => practice.problem(slug)));
   router.handle('problems:next', (req) =>
-    refusing(async () => {
-      const rec = await t.nextProblem({ topic: req.topic, difficulty: req.difficulty });
-      const { ok: _ok, ...rest } = rec;
-      return rest;
-    }),
+    refusing(async () =>
+      withoutOk(await t.nextProblem({ topic: req.topic, difficulty: req.difficulty })),
+    ),
   );
   router.handle('problems:start', ({ slug }) =>
-    refusing(async () => {
-      const { ok: _ok, ...rest } = await t.start(slug);
-      return rest;
-    }),
+    refusing(async () => withoutOk(await t.start(slug))),
   );
   router.handle('problems:reference', ({ slug }) => refusing(() => practice.reference(slug)));
 
