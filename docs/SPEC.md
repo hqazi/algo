@@ -463,12 +463,15 @@ in the local toolchain or a container, in every version.
 - **Runner image** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`, built
   and published by CI with Python, Rust and Go toolchains. **Pull / Update**
   and **Test sandbox** buttons (hello-world per language).
-- Each run: `--rm --network none --read-only --cap-drop ALL
-  --security-opt no-new-privileges --user 65534:65534 --pids-limit 128
-  --memory <limit> --cpus 1 --tmpfs /tmp:rw,noexec,size=64m`, the job folder
-  mounted read-only, results on stdout. Rust builds need a writable target
-  directory: a per-job tmpfs or a cache volume owned by the runner user
-  (decided in T17).
+- Each run (D-31): one container per job, `--rm --network none --read-only
+  --cap-drop ALL --security-opt no-new-privileges --user 65534:65534
+  --pids-limit 128 --memory <limit, at least 512m> --memory-swap <same>
+  --cpus 1 --tmpfs /tmp:rw,noexec,size=64m --pull never`, the job folder
+  mounted read-only at `/job`, results on stdout. Rust and Go build in a
+  per-job tmpfs `/build` (`rw,exec,size=256m`): nothing persists, every run
+  builds from scratch. Build and harness are `exec`s in the container; a
+  timed-out harness is killed inside it; the container is removed after the
+  job. A missing image is `runtime-missing` (runs never pull).
 
 ## 7. Tutor
 

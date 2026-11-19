@@ -1095,3 +1095,58 @@ always** (2026-11-19, T16)
   (no new CodeMirror language packages); Go indents with tabs.
 - **Checked with** cargo 1.97.0 and go 1.24.7 on Linux (Vitest suites that
   run when the toolchain is on PATH). Not checked: macOS and Windows.
+
+**D-31 Container executor: one hardened container per job, a per-job
+`exec` tmpfs for the build** (2026-11-19, T17; resolves the Rust target-dir
+DECISION in SPEC §6.5)
+
+- **Detection** (`main/runtimes/`): `podman info --format json` and
+  `docker version --format json`, with the app's environment (minus
+  `ANTHROPIC_*`, `ELECTRON_*`, `NODE_OPTIONS`) and PATH plus the installers'
+  folders (Docker Desktop's and Podman's on macOS and Windows), so Docker
+  itself honours `DOCKER_HOST`, `DOCKER_CONTEXT` and the current context.
+  `running` needs exit 0 and a server version (Docker prints `Server: null`
+  when the daemon is down); a program that is found but does not answer is
+  `installed-not-running` with its first stderr lines and a start hint
+  (`podman machine start`, `systemctl --user start podman.socket`, Docker
+  Desktop, `sudo systemctl start docker`). Reported endpoint: `DOCKER_HOST`
+  else the context name; Podman: `CONTAINER_HOST` / `CONTAINER_CONNECTION`.
+  Not cached: each job and each Settings check detects again (one command).
+- **Target dir: a per-job tmpfs**, not a cache volume. `/tmp` must be
+  `noexec`, so the build goes to `/build` (`rw,exec,size=256m,mode=1777`),
+  where `/job` (read-only bind mount) is copied, built and run. Nothing
+  persists between jobs and there is no volume to own, clean up or migrate,
+  and no host folder writable by uid 65534. Cost: every run builds from
+  scratch (a few seconds for Rust; the projects have no dependencies).
+  `HOME`, `CARGO_HOME`, `GOCACHE`, `GOPATH` point into `/build`;
+  `GOTOOLCHAIN=local`, `GOPROXY=off`, `GOFLAGS=-buildvcs=false`,
+  `CGO_ENABLED=0`.
+- **One container per job, work done with `exec`:** started `--detach`
+  running `sleep <budget + 60 s>` (so a leaked container ends by itself),
+  removed with `rm --force` at the end. Flags: SPEC §6.5's list plus
+  `--detach --name algorithm-tutor-job-<hex> --label algorithm-tutor.job=1
+  --pull never --memory-swap <same as --memory>` (no swap beyond the limit),
+  the tmpfs `/build`, `--volume <job>:/job:ro`, `--workdir /build` and the
+  `--env` values above. Runs never pull; a missing image is
+  `runtime-missing` ("pull it in Settings → Code execution").
+- **Memory:** `--memory` is the job's limit with a 512 MB floor so the
+  compilers fit; the build tmpfs counts against it. So the solution's real
+  cap is `max(limit, 512 MB)` minus what the build left in `/build`.
+- **Timeouts:** the local executor's per-test timer and respawn
+  (`runHarnessBatches`, now shared), 5 s start-up for `exec`. Killing the
+  `exec` client does not stop the process inside, so the harness is started
+  by `sh -c 'echo $$ > /build/run-<n>.pid && exec "$@"'` and killed with
+  `kill -KILL` inside the container on timeout, cancel or too much output.
+- **Fallback:** when the chosen runtime is not running at the start of a
+  job, the job runs with the local executor and `onNotice` fires once per
+  outage (logged by main for now; Settings shows it in T18). A missing image
+  does not fall back.
+- **Image:** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`; its
+  contract for T19: `cargo`, `go`, `sh`, `cp`, `sleep` on PATH, usable by
+  uid 65534 with a read-only root. Tests use a local stand-in
+  (`exec/container/test-image/Dockerfile`: `rust:1-slim-bookworm` plus Go
+  from `golang:1.24-bookworm`), never pushed.
+- **Checked with** Docker 29.10.0 on Linux (cgroup v1), cargo 1.100.0,
+  go 1.24.13 in the stand-in image. Not checked: Podman (no Podman here;
+  rootless Podman on cgroup v1 cannot apply `--memory`), Docker Desktop on
+  macOS/Windows (bind mounts of the app's data folder).

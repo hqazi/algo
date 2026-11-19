@@ -67,7 +67,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | done |
 | T16 | Local toolchain executor | v2 | 2d | T15 | done |
-| T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | in-progress |
+| T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | done |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | todo |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | todo |
@@ -1240,10 +1240,17 @@ and Go.
 - Fallback to local with a notice when the runtime disappears.
 
 **Acceptance.**
-- [ ] Tests with a fake runtime binary for detection states and the exact run flags.
-- [ ] Real run on Linux CI with Docker: pass, timeout, no network (a solution that tries to connect fails).
+- [x] Tests with a fake runtime binary for detection states and the exact run flags.
+- [ ] Real run on Linux CI with Docker: pass, timeout, no network (a solution that tries to connect fails). (Passed here on Linux with a real Docker 29.10.0, Rust and Go; the new CI `container` job runs the same suite but has not run yet.)
 
 **Notes.**
+
+- Built: `main/runtimes/` — `detectRuntime(s)` (`podman info --format json`, `docker version --format json`; states `not-found` / `installed-not-running` / `running` with path, version, endpoint (`DOCKER_HOST` else the Docker context; `CONTAINER_HOST` for Podman), reason and start hint), `runtimeEnv` (app env minus secrets, PATH plus the installers' folders). `main/exec/container/` — `ContainerExecutor` (`id: 'container'`; `detect`, `status`, `statusFor`, `hasImage`, `pull(onProgress, signal)` with Docker layer counts and every output line, `run`), `containerRunArgs` (the exact hardened flags), `runnerImage(version)`, and `test-image/Dockerfile` (a local stand-in for the T19 image, tests only). Per job: project written to `<data>/cache/container-jobs/<id>` (0755/0644), one detached container, build and harness via `exec` in a per-job `exec` tmpfs `/build`, in-container `kill -KILL` on timeout/cancel, `rm --force` and folder removal after. Fallback to the local executor with one notice per outage when the runtime is not running. Decisions in D-31 (Rust target dir: per-job tmpfs); SPEC §6.5 run bullet updated.
+- Tests: `runtimes/detect.test.ts` (fake `docker`/`podman` shell scripts: not-found, running, installed-not-running, garbage output, `DOCKER_HOST` passed and reported, context, Podman `CONTAINER_HOST`, start hints, env filtering). `exec/container/container-executor.test.ts`: exact run flags and memory floor; with a fake `docker`: the exact command sequence (version, image inspect, run, exec build, rm), compile error with line, files readable when the container starts, job folder removed; missing image → `runtime-missing` without `run`; fallback runs the local executor with one notice; pull progress; Python refused. Real Docker (when `ALGOTUTOR_TEST_RUNNER_IMAGE` names a local image): Rust and Go pass, one test times out and the rest pass in a second process, a solution that connects to 1.1.1.1:80 fails with "network unreachable", no container or job folder left.
+- Shared with T16: the per-test timer/respawn loop moved from `LocalExecutor` to `exec/local/batches.ts` (`runHarnessBatches`), used by both; `runProcess` got `onStderr` (Podman prints pull progress there).
+- Checks here (Linux, Docker 29.10.0 started in this sandbox, stand-in image with cargo 1.100.0 / go 1.24.13): typecheck, lint, format:check, `npm test` with `ALGOTUTOR_TEST_RUNNER_IMAGE` set (804 passed, 1 skipped; the real-Docker suite ran), `validate:content`, `build`.
+- Wiring outside Owns: `exec/local/{batches.ts (new), local-executor.ts, process.ts}`, `main/practice/index.ts` (Rust/Go go to the container executor when `execution.runtime` is `podman`/`docker`, else local; the language picker asks local when the runtime is stopped; `executors('container')`), `main/setup.ts` (app version for the image tag), `.github/workflows/ci.yml` (new `container` job: builds the stand-in image locally, runs the container and runtime tests; pushes nothing), SPEC, DECISIONS.
+- Not done / not tested: Podman not tested at all (not installed here; only the fake); Docker Desktop on macOS/Windows not tested (bind-mounting the data folder, Windows paths in `--volume`). The runner image does not exist yet (T19), so a real user's run reports the image missing until T19 publishes it; no UI for pull, runtime choice, Recheck or the fallback notice (T18; the notice is only logged by main). Memory: `--memory` has a 512 MB floor and the build tmpfs counts against it, so the solution's limit is not exactly the job's; out-of-memory kills are reported as a crash, not as memory. Every container run rebuilds from scratch (no cache). The CI `container` job and the real-Docker suite in CI have not run yet. Not checked under rootless Docker/Podman or cgroup v2 here (this host is cgroup v1).
 
 ### T18 — Settings → Code execution panel
 
