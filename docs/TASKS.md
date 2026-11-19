@@ -59,7 +59,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T06 | Port the core teaching logic | v1 | 3d | T05 | done |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | done |
-| T09 | Onboarding and Settings | v1 | 2d | T08 | in-progress |
+| T09 | Onboarding and Settings | v1 | 2d | T08 | done |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | done |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | todo |
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | todo |
@@ -705,11 +705,87 @@ restart; the API key in the OS keychain.
 - Export / import / reset per §4.5.
 
 **Acceptance.**
-- [ ] Changing model/effort/theme applies immediately (test or e2e).
-- [ ] The key never appears in the renderer, logs, DB or settings.json (test greps the data dir after storing a known fake key).
-- [ ] Export then import round-trips progress and workspace files.
+- [x] Changing model/effort/theme applies immediately (test or e2e).
+- [x] The key never appears in the renderer, logs, DB or settings.json (test greps the data dir after storing a known fake key).
+- [x] Export then import round-trips progress and workspace files.
 
 **Notes.**
+
+Done 2026-11-19. Decisions in D-24 (resolves the §14 `safeStorage` VERIFY).
+
+Built:
+- `main/secrets/`: `SecretStore` (the key in `secrets.bin` through
+  `safeStorage`'s asynchronous API, `ANTHROPIC_API_KEY` first and
+  read-only, status with `…abcd` only, weak-backend flag on Linux) and the
+  Electron adapter. The tutor's `apiKey()` now reads it.
+- `main/data/`: export zip, validated import and "reset everything" staged
+  in `pending/` and applied at the next start before storage opens (called
+  from `index.ts`), reset progress at once; an automatic export to
+  `backups/` before each. `DataService` takes injected dialogs; the app's
+  are native Electron dialogs (`setup.ts`).
+- IPC (`shared/settings.ts`, `ipc/handlers/settings.ts`): `profile:set`,
+  `settings:get` / `settings:set` (replacing `settings:theme` /
+  `settings:set-theme`), `secrets:status` / `set-key` / `clear-key`,
+  `tutor:test` (no-token `GET /v1/models/{model}`), `exec:status`,
+  `data:info` / `open-folder` / `export` / `import` / `reset`.
+- Renderer: `OnboardingPage` (the five questions or defaults, then
+  "Connect the tutor" unless a tutor is already on; replaces
+  `WelcomePage`), `SettingsPage` with Tutor, Code execution, Appearance and
+  editor, Profile, Data, Updates, About (`SettingsTutor`, `SettingsData`,
+  `SettingsShared`), `components/ProfileForm` (port; groups from the
+  topics), a Settings link in the top bar (the theme picker moved there).
+  The editor takes font size and Vim/Emacs keymaps from the settings.
+
+Wiring outside **Owns**: `storage/paths.ts` (`secrets`, `backups`,
+`pending`), `SqliteStorage.snapshot` and `resetProgress` (+ core's
+`Storage` interface and `MemoryStorage`), `AnthropicBackend.testConnection`
+and `AppTutor.anthropic`, `setup.ts` / `index.ts`, the practice handlers
+(theme channels removed), `App.tsx`, `lib/app*.ts*` (settings instead of
+theme), `router.ts` (`/settings`), `Editor.tsx`, `PracticePage.tsx`,
+`styles.css`, UI test fixtures, `e2e/practice.e2e.ts` (answers the
+questions, skips the tutor step, theme via Settings), new
+`e2e/settings.e2e.ts` and the `e2e` script. SPEC §4.1, §4.4, §4.5, §12, §14
+updated. New dependencies: fflate, @replit/codemirror-vim,
+@replit/codemirror-emacs (D-24).
+
+Evidence (Linux, this session): `npm run typecheck`, `npm run lint`,
+`npm run format:check`, `npm test` (41 files, 620 tests) pass;
+`npm run validate:content` (50 problems valid). `npm run e2e`
+under Xvfb: practice, tutor and the new settings script all pass. The
+settings e2e stores a fake key through onboarding with real `safeStorage`
+(this machine has no keyring: `basic_text`, warning shown), checks the
+connection test against a local stand-in API (`ANTHROPIC_BASE_URL`; no AI
+provider called), changes model and effort and sees the next request use
+the new model without a restart, solves a problem, exports, resets
+progress, imports, relaunches, and finds progress, settings and the
+solution file back and the key still stored; then searches every file in
+the data folder and Electron's `userData` (170 files), the export and the
+app's stdout/stderr for the key: none. Unit tests do the same search over
+IPC replies, console output, the data folder and the export (a mutation
+writing the key in plain text makes it fail), cover export → import
+round-trips with a real `tutor.db` (64-bit integers kept), refusals of bad
+archives, both resets, and settings applying at once (model, effort,
+backend, theme). `check:security` and `check:storage` still pass.
+
+Not done / not tested:
+- Only Linux was run, and only without a keyring (`basic_text`). macOS
+  Keychain, Windows DPAPI and GNOME/KDE keyrings are untested here; CI
+  runs the unit tests on all three OSes but not the e2e.
+- The connection test was never run against the real API (by rule); the
+  stand-in only checks the request shape. The SDK 1.5 bearer-token auth was
+  observed, not checked against the live API.
+- Native dialogs (save, open, confirm) are replaced in the e2e; their real
+  look was not checked. "Open data folder" (`shell.openPath`) was not
+  exercised.
+- A failed apply at start-up (e.g. a file locked on Windows midway) shows
+  an error and may leave the data half replaced; the export in `backups/`
+  holds the earlier data, but there is no automatic roll-back. Backups are
+  never pruned.
+- Import and export hold the whole archive in memory (fine for expected
+  sizes; limits are 256 MB per file, 1 GB in all).
+- Claude Code in onboarding and the backend list: T11. Update checks: T13.
+- Vim/Emacs keymaps were checked only for being switched on (attribute and
+  font size in the e2e), not for key-by-key behaviour.
 
 ### T10 — Tutor: Anthropic backend and chat
 

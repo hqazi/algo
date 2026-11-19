@@ -4,10 +4,10 @@
  * with Playwright for Electron over the built app (`npm run build` first,
  * which the script does). A fresh data folder each run; no tutor.
  *
- * Welcome → use defaults → Next problem → the starter fails Run → the file
+ * Welcome → answer the questions → skip the tutor step → Next problem → the starter fails Run → the file
  * is edited in "another editor" and the open editor follows → Run passes →
  * Submit records the attempt → Progress shows the solve. Also: the theme
- * setting drives prefers-color-scheme.
+ * setting in Settings drives prefers-color-scheme at once.
  *
  *   npm run e2e [-- --shots <dir>]   (Linux without a display: xvfb-run -a npm run e2e)
  */
@@ -49,9 +49,13 @@ try {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
 
-  await page.getByRole('button', { name: 'Use defaults and start' }).click();
+  await page.getByLabel('Intermediate').check();
+  await page.getByLabel('Let me struggle first').check();
+  await page.getByRole('button', { name: 'Save and continue' }).click();
+  await page.getByRole('heading', { name: 'Connect the tutor' }).waitFor();
+  await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByRole('heading', { name: 'Practice' }).waitFor();
-  check('welcome → home', true);
+  check('welcome → questions → skip the tutor → home', true);
 
   await page.getByRole('button', { name: 'Next problem' }).first().click();
   await page.locator('.statement-title').waitFor();
@@ -110,10 +114,13 @@ try {
   check('progress shows the solve', progress.includes('1/3 unaided') && progress.includes(slug));
   await shot(page, '3-progress');
 
+  await page.getByRole('link', { name: 'Settings' }).click();
+  check('Settings shows the saved answers', await page.getByLabel('Intermediate').isChecked());
   await page.getByRole('combobox', { name: 'Theme' }).selectOption('dark');
   await page.waitForFunction(() => matchMedia('(prefers-color-scheme: dark)').matches, null, {
     timeout: 5_000,
   });
+  await page.getByRole('link', { name: 'Progress' }).click();
   await page.getByRole('link', { name: slug }).first().click();
   await page.locator('.cm-editor').waitFor();
   check(

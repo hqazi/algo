@@ -104,9 +104,9 @@ export function KeyForm({ status, onStatus, onConnected }: KeyFormProps) {
       {status?.problem && <p className="error-text small">{status.problem}</p>}
       {status?.storage.weak && (
         <p className="warning small" role="note" data-testid="weak-storage">
-          No system keyring was found, so the key is stored with weak encryption that any program
-          running as you could undo. Install and unlock a keyring (GNOME Keyring or KWallet), or set
-          ANTHROPIC_API_KEY instead.
+          No system keyring was found, so a stored key is protected only by weak encryption that any
+          program running as you could undo. Install and unlock a keyring (GNOME Keyring or
+          KWallet), or set ANTHROPIC_API_KEY instead.
         </p>
       )}
       {status && !status.storage.available && !fromEnv && (

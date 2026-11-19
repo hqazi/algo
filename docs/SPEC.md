@@ -125,12 +125,15 @@ and development):
 ```
 tutor.db                    SQLite: profile, progress, attempts, hints, chats, problem index
 settings.json               preferences (4.3), human-readable
+secrets.bin                 the API key, encrypted with safeStorage (4.4); never exported
 workspace/<slug>/solution.<ext>   the user's code, plain files
 problems/generated/<slug>/  problems the tutor made
 problems/imported/<slug>/   pasted and imported problems (+ origin.md / NOTICE.md)
 explanations/<slug>/        explanation pages, one file per version
 cache/                      downloaded open-set files, runner image metadata
 logs/                       app log (no credentials, no chat bodies)
+backups/                    automatic exports made before an import or reset (4.5)
+pending/                    an import or reset waiting for the next start (4.5)
 ```
 
 Curated problems live inside the app bundle (`content/`) and are replaced
@@ -187,7 +190,9 @@ The Anthropic API key is stored with Electron `safeStorage` (backed by the OS
 keychain / DPAPI / libsecret) in `secrets.bin`. On Linux without a keyring,
 `safeStorage` falls back to a weak backend: the app detects this
 (`getSelectedStorageBackend()` is `basic_text`), warns in Settings and still
-works. **VERIFY** the API names against the Electron version chosen in T01.
+works. Only the asynchronous `safeStorage` API is used: the synchronous one is
+deprecated in Electron 45 and reports no encryption on Linux without a
+keyring (D-24).
 
 `ANTHROPIC_API_KEY` in the environment, if set, is used and shown in Settings
 as "from environment" (read-only). The key never reaches the renderer, the
@@ -199,10 +204,13 @@ execution host, logs, the database or code under test; Settings shows only
 - **Export** writes a zip: `tutor.db` (via SQLite backup API), `settings.json`,
   `workspace/`, `problems/generated/`, `problems/imported/`, `explanations/`.
   Never secrets.
-- **Import** validates the zip, backs up current data, replaces it, restarts
-  the app.
+- **Import** validates the zip, backs up current data (an export to
+  `backups/`), stages the files in `pending/` and restarts; the swap happens
+  at start-up before the database opens (D-24).
 - **Reset progress** and **Reset everything** with a confirm dialog and an
-  automatic export first.
+  automatic export first. Progress is attempts, hints, test runs and topic
+  levels; everything is all of the app's data plus the stored key, applied at
+  the next start.
 
 ## 5. Problems
 
@@ -582,7 +590,9 @@ language).
 ## 12. Configuration outside the UI
 
 Only for development and tests: `ALGOTUTOR_DATA_DIR`, `ALGOTUTOR_FAKE_TUTOR`,
-`ALGOTUTOR_LOG_LEVEL`, and `ANTHROPIC_API_KEY` (4.4). Nothing a normal user
+`ALGOTUTOR_LOG_LEVEL`, and `ANTHROPIC_API_KEY` (4.4). The Anthropic SDK's own
+`ANTHROPIC_BASE_URL` also applies; the Settings e2e uses it to point the
+connection test at a local stand-in. Nothing a normal user
 needs.
 
 ## 13. Quality bar
@@ -605,7 +615,7 @@ needs.
 | ~~**DECISION** Pyodide time limits~~ | 6.2, T07 | Resolved: default kept, measured (D-15) |
 | **DECISION** Rust `int` width | 5.2, T15 | `i64` |
 | **DECISION** code signing | 11, T13 | ship unsigned, document it |
-| **VERIFY** Electron `safeStorage` API and Linux fallback | 4.4, T09 | |
+| ~~**VERIFY** Electron `safeStorage` API and Linux fallback~~ | 4.4, T09 | Resolved: async API, `basic_text` warning (D-24) |
 | ~~**VERIFY** Anthropic API behaviour notes~~ | 7.3, T10 | Resolved: checked against current docs and SDK 1.5.0 (D-23) |
 | **VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login | 7.3, T11 | API key only if unclear |
 | ~~**VERIFY** Pyodide can be fully network-blocked and package loading disabled~~ | 6.2, T07 | Resolved: yes, with `connect-src 'self'` for workers (D-14) |

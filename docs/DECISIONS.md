@@ -672,3 +672,92 @@ VERIFY)
   | Package | Version | Note |
   |---|---|---|
   | @anthropic-ai/sdk | 1.5.0 | 1.6.0 and later were under two weeks old. |
+
+**D-24 Settings, keychain and data: async safeStorage, staged import and
+reset, export layout** (2026-11-19, T09; resolves the §14 safeStorage VERIFY)
+
+- **`safeStorage`, checked against Electron 45.3.4** (its bundled API docs,
+  `electron.d.ts`, and a probe run in the real app): the synchronous
+  `isEncryptionAvailable` / `encryptString` / `decryptString` are
+  deprecated in favour of `isAsyncEncryptionAvailable`,
+  `encryptStringAsync` and `decryptStringAsync` (which also says when to
+  re-encrypt, after a key rotation). On Linux without a keyring (Xvfb, no
+  D-Bus) the old `isEncryptionAvailable()` returned `false` while the
+  asynchronous API worked, with `getSelectedStorageBackend()` =
+  `basic_text` (ciphertext prefix `v10`, plain key not in it), and the
+  synchronous `decryptString` could not read what the asynchronous one
+  wrote. So the app uses the asynchronous API only (`main/secrets/`).
+  `getSelectedStorageBackend()` is called only on Linux and only after
+  ready (it returns `unknown` before); `basic_text` shows the weak-storage
+  warning in Settings and onboarding, and storing still works (SPEC
+  §4.4). If the asynchronous encryptor is unavailable, storing is refused
+  and Settings points to `ANTHROPIC_API_KEY`.
+- **The key** is a JSON object encrypted whole into `secrets.bin` (mode
+  0600, written atomically). `ANTHROPIC_API_KEY` wins over a stored key
+  and is shown read-only. Main sends the renderer only `source`, `…abcd`,
+  whether a key is also stored, and the storage backend; the key crosses
+  IPC once, renderer to main, when the user saves it, and the field is
+  cleared. A file that cannot be decrypted is reported without quoting the
+  error. Shape check only (20–400 printable ASCII characters); the API
+  decides.
+- **Test connection** is `GET /v1/models/{model}` with the key in use
+  (spends no tokens, checks key and model together); 404 says the model
+  is unknown. `@anthropic-ai/sdk` 1.5.0 sends the API key as
+  `Authorization: Bearer`, not `x-api-key` (seen in the e2e's stand-in
+  server; the API accepts both).
+- **Settings apply at once** without new plumbing: the tutor already reads
+  backend, model and effort for every turn, practice reads the time scale
+  for every run, and a settings listener sets `nativeTheme.themeSource`.
+  `settings:get` / `settings:set` replace T08's `settings:theme` channels,
+  and the theme picker moved from the top bar to Settings. An empty model
+  means the default (`null`). Settings shows the `settings.json` problems
+  found at start (D-20).
+- **Editor settings:** font size through a CodeMirror theme compartment;
+  Vim and Emacs bindings from `@replit/codemirror-vim` /
+  `@replit/codemirror-emacs` in a compartment placed before the default
+  keymaps. `execution.runtime` is not shown (v2); the Updates section
+  saves channel and auto-update, and says checking is not set up yet (T13).
+- **Export** is one zip (fflate, in memory; fine at this data size):
+  `manifest.json` (`format: algorithm-tutor-export`, `version: 1`, app
+  version, schema version, time), `tutor.db` from `SqliteStorage.snapshot`
+  (`VACUUM INTO`, queued behind writes, consistent in WAL mode; used rather
+  than the SQLite online-backup API, which `node:sqlite` exposes only on
+  newer Nodes, and already used for migration backups in D-20),
+  `settings.json`, `workspace/`, `problems/generated/`,
+  `problems/imported/`, `explanations/`. Never `secrets.bin`, `backups/`,
+  `pending/`, `cache/` or `logs/`; symlinks and temp files are skipped.
+- **Import** reads the whole zip and refuses it unless every name is a
+  plain relative path inside that layout (no `..`, `\`, `:`, absolute
+  paths), counts and sizes are within limits (20 000 entries, 256 MB per
+  file, 1 GB in all, checked on the declared sizes before inflating and
+  again after), the manifest is ours and not newer, `tutor.db` passes
+  `PRAGMA quick_check` and has a schema version this app knows, and
+  `settings.json` is JSON. Then it exports the current data to
+  `backups/<time>-before-import.zip`, writes the files to
+  `pending/data/` with `pending/op.json` last, and restarts. At the next
+  start, before the database opens, `applyPending` removes the current
+  items and moves the staged ones in (no file is replaced while open,
+  which matters on Windows). A stage without `op.json` is discarded; one
+  without `tutor.db` is refused and changes nothing. The stored key stays
+  (it is per machine).
+- **Reset progress** (live, `Storage.resetProgress`): deletes attempts
+  (hints and test runs cascade) and topic levels; keeps the profile,
+  chats, solutions, settings and problems. **Reset everything** is staged
+  like an import and at the next start removes the database, settings,
+  workspace, own problems, explanations, cache, `tutor.db.bak-*` and the
+  stored key. Both confirm with a native dialog in main (a compromised
+  renderer cannot skip it) and export to `backups/` first; backups are
+  never pruned or reset. Only the app's own items are removed: the data
+  folder is Electron's `userData` by default, which also holds Chromium's
+  files.
+- **Onboarding** saves the five answers in one `profile:set` (mapped to
+  core's `setProfile` pairs; comfort groups come from the topics) or the
+  defaults, then offers "Connect the tutor" unless a tutor is already
+  available (e.g. `ANTHROPIC_API_KEY`). Claude Code joins that step in T11.
+- **Versions pinned:**
+
+  | Package | Version | Note |
+  |---|---|---|
+  | fflate | 0.8.3 | Zip for export / import; pure JS, no dependencies. |
+  | @replit/codemirror-vim | 6.3.0 | 6.4.0 pulls a new `-vim-core` package; 6.3.0 has none. |
+  | @replit/codemirror-emacs | 6.1.0 | |
