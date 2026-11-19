@@ -411,6 +411,18 @@ export class SqliteStorage implements Storage {
       deleteThread: (id) => {
         this.run('DELETE FROM threads WHERE id = ?', [id]);
       },
+      archiveThread: (id, archivedId, archivedAt) => {
+        if (!this.get('SELECT 1 AS x FROM threads WHERE id = ?', [id]))
+          throw new Error(`no thread ${id}`);
+        // The new row first, so the messages' foreign key always has a parent.
+        this.run(
+          'INSERT INTO threads (id, backend, backend_state, created_at, archived_at) ' +
+            'SELECT ?, backend, backend_state, created_at, ? FROM threads WHERE id = ?',
+          [archivedId, archivedAt, id],
+        );
+        this.run('UPDATE messages SET thread_id = ? WHERE thread_id = ?', [archivedId, id]);
+        this.run('DELETE FROM threads WHERE id = ?', [id]);
+      },
       addTestRun: (t) => {
         const { lastInsertRowid } = this.run(
           'INSERT INTO test_runs (attempt_id, kind, report, created_at) VALUES (?, ?, ?, ?)',

@@ -164,6 +164,12 @@ export interface StorageWriter extends StorageReader {
   appendMessage(message: Omit<MessageRecord, 'seq'>): MessageRecord;
   /** Deletes the thread and its messages. */
   deleteThread(id: string): void;
+  /**
+   * Moves thread `id` and its messages to the new id `archivedId` with
+   * `archivedAt` set ("Reset chat"); `id` is then free for a new thread.
+   * Throws if `id` does not exist or `archivedId` does.
+   */
+  archiveThread(id: string, archivedId: string, archivedAt: string): void;
 
   addTestRun(run: Omit<TestRunRecord, 'id'>): TestRunRecord;
 }

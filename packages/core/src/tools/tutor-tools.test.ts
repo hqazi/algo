@@ -14,6 +14,7 @@ import { MemoryStorage } from '../teaching/memory-storage';
 import { Teaching } from '../teaching/teaching';
 import {
   curatedCatalog,
+  hiddenNeedles,
   curatedProblems,
   ScriptedExecutor,
   tickingClock,
@@ -543,29 +544,10 @@ describe('tools', () => {
 });
 
 describe('no hidden test data in tool output (threat T6)', () => {
-  function needles(p: Problem): string[] {
-    const visible = stringifyJson(p.tests.filter((t) => t.visibility === 'visible'));
-    const out: string[] = [];
-    for (const t of p.tests) {
-      if (t.visibility !== 'hidden') continue;
-      for (const value of [t.input, t.expected]) {
-        const text = stringifyJson(value);
-        if (
-          text.length >= 8 &&
-          !visible.includes(text) &&
-          !p.statement.includes(text) &&
-          !p.reference.includes(text)
-        )
-          out.push(text, JSON.stringify(value, null, 1));
-      }
-    }
-    return out;
-  }
-
   it.each(SAMPLE)('%s', async (slug) => {
     await onboard();
     const p = problem(slug);
-    const hidden = needles(p);
+    const hidden = hiddenNeedles(p);
     expect(hidden.length, `${slug}: no distinctive hidden data to look for`).toBeGreaterThan(0);
     const results = [
       await call('get_status'),

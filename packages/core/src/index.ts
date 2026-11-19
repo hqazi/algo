@@ -14,3 +14,4 @@ export * from './storage';
 export * from './settings';
 export * from './teaching';
 export * from './tools';
+export * from './tutor';

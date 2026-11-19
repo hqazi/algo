@@ -116,3 +116,26 @@ export function tickingClock(start = Date.UTC(2026, 10, 19, 9, 0, 0)): () => str
     return s;
   };
 }
+
+/**
+ * Distinctive hidden test inputs and expected values of `p` (text that
+ * appears nowhere visible), to search tool output and API requests for.
+ */
+export function hiddenNeedles(p: Problem): string[] {
+  const visible = stringifyJson(p.tests.filter((t) => t.visibility === 'visible'));
+  const out: string[] = [];
+  for (const t of p.tests) {
+    if (t.visibility !== 'hidden') continue;
+    for (const value of [t.input, t.expected]) {
+      const text = stringifyJson(value);
+      if (
+        text.length >= 8 &&
+        !visible.includes(text) &&
+        !p.statement.includes(text) &&
+        !p.reference.includes(text)
+      )
+        out.push(text, JSON.stringify(value, null, 1));
+    }
+  }
+  return out;
+}

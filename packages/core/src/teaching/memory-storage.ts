@@ -235,6 +235,14 @@ export class MemoryStorage implements Storage {
         s().threads.delete(id);
         s().messages = s().messages.filter((m) => m.threadId !== id);
       },
+      archiveThread: (id, archivedId, archivedAt) => {
+        const t = s().threads.get(id);
+        if (!t) throw new Error(`no thread ${id}`);
+        if (s().threads.has(archivedId)) throw new Error(`thread ${archivedId} exists`);
+        s().threads.delete(id);
+        s().threads.set(archivedId, { ...t, id: archivedId, archivedAt });
+        for (const m of s().messages) if (m.threadId === id) m.threadId = archivedId;
+      },
       addTestRun: (r) => {
         if (!attempt(r.attemptId)) throw new Error(`no attempt with id ${r.attemptId}`);
         const rec = { ...copy(r), id: s().nextRunId++ };

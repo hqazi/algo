@@ -14,6 +14,7 @@
     "src/preload",
     "src/exec-host/preload.ts",
     "src/exec-host/testing",
-    "src/exec-host/**/*.test.ts"
+    "src/exec-host/**/*.test.ts",
+    "../../packages/core/src/raw.d.ts"
   ]
 }
