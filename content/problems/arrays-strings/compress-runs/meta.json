@@ -15,5 +15,5 @@
     "params": [{ "name": "log", "type": "string" }],
     "returns": "string"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

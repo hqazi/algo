@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "tests": [
+    {
+      "id": "example-1",
+      "visibility": "visible",
+      "category": "example",
+      "input": {
+        "scores": [
+          ["a", 3],
+          ["b", 7],
+          ["c", 5]
+        ]
+      },
+      "expected": ["b", 7]
+    },
+    {
+      "id": "example-2",
+      "visibility": "visible",
+      "category": "example",
+      "input": {
+        "scores": []
+      },
+      "expected": null
+    },
+    {
+      "id": "hidden-3",
+      "visibility": "hidden",
+      "category": "ties keep the first",
+      "input": {
+        "scores": [
+          ["x", 2],
+          ["y", 2]
+        ]
+      },
+      "expected": ["x", 2]
+    },
+    {
+      "id": "hidden-4",
+      "visibility": "hidden",
+      "category": "negative and large",
+      "input": {
+        "scores": [
+          ["p", -5],
+          ["q", -9223372036854775807],
+          ["r", 9223372036854775807]
+        ]
+      },
+      "expected": ["r", 9223372036854775807]
+    },
+    {
+      "id": "hidden-5",
+      "visibility": "hidden",
+      "category": "non-ascii",
+      "input": {
+        "scores": [
+          ["ß", 1],
+          ["€", 4]
+        ]
+      },
+      "expected": ["€", 4]
+    }
+  ]
+}

@@ -18,5 +18,5 @@
     ],
     "returns": "bool"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

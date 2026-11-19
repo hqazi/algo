@@ -66,3 +66,18 @@ jobs:
         run: |
           npm run package:dir
           xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algorithm-tutor
+
+  # Rust and Go harnesses (T15) with the toolchains preinstalled on the runner
+  # image: hand-written solutions pass, failure modes, every type round-trips,
+  # golden projects compile.
+  harnesses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: cargo --version && go version
+      - run: npm run check:harnesses

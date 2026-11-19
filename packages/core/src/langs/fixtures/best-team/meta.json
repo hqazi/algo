@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "slug": "best-team",
+  "title": "Best Team",
+  "topic": "arrays-strings",
+  "difficulty": "easy",
+  "source": "curated",
+  "content_version": 1,
+  "expected_complexity": {
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  "compare": {
+    "mode": "exact"
+  },
+  "time_limit_ms": 2000,
+  "signature": {
+    "function": "best_team",
+    "params": [
+      {
+        "name": "scores",
+        "type": "list<tuple<char,int>>"
+      }
+    ],
+    "returns": "optional<tuple<char,int>>"
+  },
+  "languages": ["python", "rust", "go"]
+}

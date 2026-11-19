@@ -15,5 +15,5 @@
     "params": [{ "name": "steps", "type": "int" }],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

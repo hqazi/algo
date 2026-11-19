@@ -18,5 +18,5 @@
     "params": [{ "name": "players", "type": "list<int>" }],
     "returns": "list<list<int>>"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

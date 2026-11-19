@@ -15,5 +15,5 @@
     "params": [{ "name": "meetings", "type": "list<list<int>>" }],
     "returns": "bool"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

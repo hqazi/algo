@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "slug": "group-lengths",
+  "title": "Group by Length",
+  "topic": "hashing",
+  "difficulty": "easy",
+  "source": "curated",
+  "content_version": 1,
+  "expected_complexity": {
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  "compare": {
+    "mode": "exact"
+  },
+  "time_limit_ms": 2000,
+  "signature": {
+    "function": "group_lengths",
+    "params": [
+      {
+        "name": "words",
+        "type": "list<string>"
+      }
+    ],
+    "returns": "map<int,list<string>>"
+  },
+  "languages": ["python", "rust", "go"]
+}

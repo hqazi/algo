@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "slug": "basket-average",
+  "title": "Basket Average",
+  "topic": "arrays-strings",
+  "difficulty": "easy",
+  "source": "curated",
+  "content_version": 1,
+  "expected_complexity": {
+    "time": "O(n)",
+    "space": "O(n)"
+  },
+  "compare": {
+    "mode": "float",
+    "tolerance": 1e-6
+  },
+  "time_limit_ms": 2000,
+  "signature": {
+    "function": "basket_average",
+    "params": [
+      {
+        "name": "prices",
+        "type": "map<string,float>"
+      },
+      {
+        "name": "counts",
+        "type": "map<string,int>"
+      }
+    ],
+    "returns": "float"
+  },
+  "languages": ["python", "rust", "go"]
+}

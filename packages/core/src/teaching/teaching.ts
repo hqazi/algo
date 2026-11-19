@@ -319,9 +319,10 @@ export class Teaching {
       const open = db.getOpenAttempt(slug);
       if (open) return { attempt: open, resumed: true };
       const lang = language ?? this.loadOrDefault(db).language;
-      if (!problem.meta.languages.includes(lang))
+      const offered = problem.meta.languages.filter((l) => languagesWithHarness().includes(l));
+      if (!offered.includes(lang))
         throw new TutorError(
-          `${slug} is not available in ${lang}; languages: ${problem.meta.languages.join(', ')}`,
+          `${slug} is not available in ${lang}; languages: ${offered.join(', ')}`,
           'no_language',
         );
       const created = db.createAttempt({ slug, language: lang, startedAt: this.deps.now() });

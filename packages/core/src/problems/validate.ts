@@ -3,29 +3,39 @@
  * value matches the signature's neutral types, the compare mode fits the
  * return type, and every listed language can run the signature.
  */
-import { parseType, someType, type NeutralType } from '../types/neutral';
+import { goUnsupported } from '../langs/go';
+import { rustUnsupported } from '../langs/rust';
+import { parseType, someType } from '../types/neutral';
 import { checkValue } from '../types/values';
 import type { Language, Signature } from '../types/signature';
 import type { ProblemMeta, TestCase } from './schema';
 
-/** Languages with a harness, and whether it supports a type. Rust and Go arrive in T15. */
-const HARNESS_SUPPORTS: Partial<Record<Language, (t: NeutralType) => boolean>> = {
-  python: () => true,
+/**
+ * Languages with a harness, and why one cannot run a signature (`null` when
+ * it can). Python runs everything; Rust and Go need one node element type
+ * per signature (T15, DECISIONS D-29).
+ */
+const HARNESS_LIMIT: Record<Language, (sig: Signature) => string | null> = {
+  python: () => null,
+  rust: rustUnsupported,
+  go: goUnsupported,
 };
 
-/** Languages that have a harness at all (Python in v1). */
+/**
+ * Languages the app can run solutions in today: what profiles, the tutor's
+ * tools and new problems may use. Rust and Go have harnesses (T15) but no
+ * executor until T16/T17, so they are not offered yet.
+ */
+const RUNNABLE: readonly Language[] = ['python'];
+
 export function languagesWithHarness(): Language[] {
-  return (Object.keys(HARNESS_SUPPORTS) as Language[]).filter((l) => HARNESS_SUPPORTS[l]);
+  return [...RUNNABLE];
 }
 
 /** True if `language` has a harness that supports every type in `sig`. */
 export function languageSupports(language: Language, sig: Signature): boolean {
-  const supports = HARNESS_SUPPORTS[language];
-  if (!supports) return false;
-  return [...sig.params.map((p) => p.type), sig.returns].every((s) => {
-    const t = parseType(s);
-    return !someType(t, (x) => !supports(x));
-  });
+  const limit = HARNESS_LIMIT[language];
+  return limit !== undefined && limit(sig) === null;
 }
 
 /** Errors in a problem whose files each passed their schema. Empty when valid. */
@@ -37,10 +47,9 @@ export function crossCheckProblem(meta: ProblemMeta, tests: readonly TestCase[])
   const names = params.map((p) => p.name);
 
   for (const language of meta.languages) {
-    if (!languageSupports(language, sig)) {
-      errors.push(
-        `meta.json: languages: ${language} cannot run this signature (no harness support yet)`,
-      );
+    const limit = HARNESS_LIMIT[language](sig);
+    if (limit !== null) {
+      errors.push(`meta.json: languages: ${language} cannot run this signature (${limit})`);
     }
   }
 

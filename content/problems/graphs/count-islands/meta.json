@@ -15,5 +15,5 @@
     "params": [{ "name": "grid", "type": "list<list<int>>" }],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

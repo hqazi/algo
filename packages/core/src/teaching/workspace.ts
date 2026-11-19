@@ -4,6 +4,8 @@
  * when a problem is started. Ported from `dsa-tutor/dsa_tutor/core/problems.py`
  * (`scaffold_source`, `scaffold_workspace`).
  */
+import { goStub } from '../langs/go';
+import { rustStub } from '../langs/rust';
 import type { ProblemMeta } from '../problems/schema';
 import { pythonNodeClasses, pythonSignatureLine } from '../types/python';
 import type { Language } from '../types/signature';
@@ -44,8 +46,15 @@ const NODE_CLASSES = {
 
 /** The starter file for a problem in `language` (Python only until T15). */
 export function starterCode(meta: ProblemMeta, language: Language, topicName: string): string {
-  if (language !== 'python') throw new Error(`no starter code for ${language} yet`);
   const sig = meta.signature;
+  if (language !== 'python') {
+    const header = [
+      `${meta.title} (${topicName}, ${meta.difficulty})`,
+      '',
+      'Write your solution here; Run tests in the app checks it.',
+    ];
+    return language === 'rust' ? rustStub(sig, { header }) : goStub(sig, { header });
+  }
   const lines = [
     `"""${meta.title} (${topicName}, ${meta.difficulty})`,
     '',

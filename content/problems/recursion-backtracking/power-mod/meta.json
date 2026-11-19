@@ -19,5 +19,5 @@
     ],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

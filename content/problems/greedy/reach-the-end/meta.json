@@ -15,5 +15,5 @@
     "params": [{ "name": "jumps", "type": "list<int>" }],
     "returns": "bool"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

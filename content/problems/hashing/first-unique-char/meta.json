@@ -15,5 +15,5 @@
     "params": [{ "name": "s", "type": "string" }],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

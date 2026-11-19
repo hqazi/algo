@@ -165,8 +165,18 @@ describe('loadProblem: errors', () => {
     ],
     ['no languages', (m: Record<string, unknown>) => (m.languages = []), /languages/],
     [
-      'language without a harness',
-      (m: Record<string, unknown>) => (m.languages = ['python', 'rust']),
+      'language whose harness cannot run the signature',
+      (m: Record<string, unknown>) => {
+        m.languages = ['python', 'rust'];
+        m.signature = {
+          function: 'levels',
+          params: [
+            { name: 'root', type: 'tree<int>' },
+            { name: 'other', type: 'tree<string>' },
+          ],
+          returns: 'list<list<int>>',
+        };
+      },
       /rust cannot run this signature/,
     ],
     ['missing time limit', (m: Record<string, unknown>) => delete m.time_limit_ms, /time_limit_ms/],

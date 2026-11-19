@@ -15,5 +15,5 @@
     "params": [{ "name": "head", "type": "linked_list<int>" }],
     "returns": "linked_list<int>"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

@@ -15,5 +15,5 @@
     "params": [{ "name": "nums", "type": "list<int>" }],
     "returns": "list<int>"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

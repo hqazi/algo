@@ -15,5 +15,5 @@
     "params": [{ "name": "stalls", "type": "list<int>" }],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

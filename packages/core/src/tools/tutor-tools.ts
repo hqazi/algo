@@ -249,7 +249,7 @@ async function getProblem(ctx: TutorToolContext, args: Args): Promise<ToolOutput
     signature: m.signature,
     language,
     ...(language === 'python' ? { code_signature: pythonSignatureLine(m.signature) } : {}),
-    languages: m.languages,
+    languages: m.languages.filter((l) => languagesWithHarness().includes(l)),
     compare: m.compare,
     expected_complexity: m.expected_complexity,
   };

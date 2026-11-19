@@ -15,5 +15,5 @@
     "params": [{ "name": "weights", "type": "list<int>" }],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }

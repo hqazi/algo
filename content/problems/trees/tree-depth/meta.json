@@ -15,5 +15,5 @@
     "params": [{ "name": "root", "type": "tree<int>" }],
     "returns": "int"
   },
-  "languages": ["python"]
+  "languages": ["python", "rust", "go"]
 }
