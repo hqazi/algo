@@ -70,7 +70,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | done |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
-| T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | todo |
+| T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | in-progress |
 
 ## Order
 
