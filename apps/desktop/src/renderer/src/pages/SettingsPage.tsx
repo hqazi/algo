@@ -12,6 +12,7 @@ import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { DataSection } from './SettingsData';
 import { TutorSection } from './SettingsTutor';
+import { UpdatesSection } from './SettingsUpdates';
 
 const TIME_SCALES = [0.5, 1, 1.5, 2, 3, 5, 10];
 const THEMES = [
@@ -193,43 +194,6 @@ function ProfileSection() {
       ) : (
         <p className="muted">Not onboarded yet.</p>
       )}
-    </section>
-  );
-}
-
-function UpdatesSection({ version }: { version: string | null }) {
-  const app = useApp();
-  const s = app.settings?.settings.updates;
-  if (!s) return null;
-  return (
-    <section className="card" aria-labelledby="settings-updates">
-      <h2 id="settings-updates">Updates</h2>
-      <dl className="kv">
-        <dt>Version</dt>
-        <dd>{version ?? '…'}</dd>
-      </dl>
-      <label className="field">
-        Channel
-        <select
-          aria-label="Update channel"
-          value={s.channel}
-          onChange={(e) =>
-            void app.updateSettings({ updates: { channel: e.target.value as typeof s.channel } })
-          }
-        >
-          <option value="stable">Stable</option>
-          <option value="beta">Beta (pre-releases)</option>
-        </select>
-      </label>
-      <label className="radio">
-        <input
-          type="checkbox"
-          checked={s.auto}
-          onChange={(e) => void app.updateSettings({ updates: { auto: e.target.checked } })}
-        />{' '}
-        Download updates in the background and install them when the app quits
-      </label>
-      <p className="muted small">Checking for updates is not set up in this build yet.</p>
     </section>
   );
 }

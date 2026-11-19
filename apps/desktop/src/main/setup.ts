@@ -28,6 +28,7 @@ import { SecretStore } from './secrets';
 import { electronCrypto } from './secrets/electron-crypto';
 import type { AppStorage } from './storage';
 import { DEFAULT_MODEL, openTutor, type AppTutor } from './tutor';
+import { openUpdater, registerUpdateHandlers, type UpdateService } from './updater';
 import {
   APP_SCHEME_PRIVILEGES,
   guardAllWebContents,
@@ -134,7 +135,9 @@ export async function startPractice(
   ui: UiOptions,
   mainDir: string,
   dataUi: DataUi = electronDataUi(),
-): Promise<AppPractice & { tutor: AppTutor; secrets: SecretStore; intake: AppIntake }> {
+): Promise<
+  AppPractice & { tutor: AppTutor; secrets: SecretStore; intake: AppIntake; updates: UpdateService }
+> {
   const content = contentDir(app.isPackaged, process.resourcesPath, mainDir);
   const practice = await openPractice(storage, {
     content,
@@ -196,12 +199,22 @@ export async function startPractice(
       ui: dataUi,
     }),
   });
+  // Updates (T13): only installed builds have an updater.
+  const updates = await openUpdater({
+    packaged: app.isPackaged,
+    settings: storage.settings,
+    now: isoNow,
+    log: (m) => console.warn(m),
+  });
+  registerUpdateHandlers(router, updates);
   return {
     ...practice,
     tutor,
     secrets,
     intake,
+    updates,
     dispose: () => {
+      updates.stop();
       void tutor.close();
       practice.dispose();
     },

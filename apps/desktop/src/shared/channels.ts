@@ -45,12 +45,17 @@ export const INVOKE_CHANNELS = [
   'intake:cancel',
   'open-sets:list',
   'open-sets:entries',
+  'updates:status',
+  'updates:check',
+  'updates:download',
+  'updates:restart',
 ] as const;
 export const STREAM_CHANNELS = [
   'example:count',
   'workspace:watch',
   'chat:send',
   'intake:events',
+  'updates:watch',
 ] as const;
 
 /** Internal Electron channels used to carry streams. */

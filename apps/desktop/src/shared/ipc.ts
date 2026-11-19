@@ -21,6 +21,7 @@ import * as P from './practice';
 import * as S from './settings';
 import * as T from './tutor';
 import * as I from './intake';
+import * as U from './updates';
 
 export {
   INVOKE_CHANNELS,
@@ -135,6 +136,16 @@ export const invokeChannels = {
   'open-sets:list': { request: z.undefined(), response: I.openSetsResponse },
   /** A set's entries (no network), each with the slug it was imported as, if any. */
   'open-sets:entries': { request: I.entriesRequest, response: I.entriesResponse },
+
+  // ---- updates (T13)
+  /** Where the updater is (`unsupported` in development builds). */
+  'updates:status': { request: z.undefined(), response: U.updateState },
+  /** "Check now"; returns at once with `checking` (follow `updates:watch`). */
+  'updates:check': { request: z.undefined(), response: U.updateState },
+  /** Download the update found, when automatic updates are off. */
+  'updates:download': { request: z.undefined(), response: U.updateState },
+  /** "Restart to update": quits, installs and starts again; false if nothing is downloaded. */
+  'updates:restart': { request: z.undefined(), response: U.restartResponse },
 } as const;
 
 export const streamChannels = {
@@ -172,6 +183,12 @@ export const streamChannels = {
    * `intake:cancel`). Refused: `not_found`.
    */
   'intake:events': { request: I.jobRequest, event: I.intakeEvent, result: I.intakeOutcome },
+  /** The updater's state: the current one first, then every change, until cancelled. */
+  'updates:watch': {
+    request: z.undefined(),
+    event: U.updateState,
+    result: z.strictObject({ closed: z.literal(true) }),
+  },
 } as const;
 
 export type InvokeChannel = keyof typeof invokeChannels;
