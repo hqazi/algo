@@ -22,6 +22,8 @@ export interface ProcessOptions {
    * re-arms the kill timer with that many ms from now.
    */
   onStdout?: (stdout: string) => number | undefined;
+  /** Called with all of stderr so far after each chunk. */
+  onStderr?: (stderr: string) => void;
   platform?: NodeJS.Platform;
 }
 
@@ -101,7 +103,9 @@ export function runProcess(cmd: readonly string[], opts: ProcessOptions): Promis
       if (tooMuch()) {
         result.overflowed = true;
         kill();
+        return;
       }
+      opts.onStderr?.(result.stderr);
     });
     let settled = false;
     const finish = (): void => {

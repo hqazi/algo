@@ -19,18 +19,13 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
-  encodeHarnessInput,
   goProject,
   gradeRun,
-  newNonce,
-  parseHarnessStream,
-  RECORD_MARK,
   rustProject,
   toHarnessRequest,
   type CancelSignal,
   type Executor,
   type ExecutorStatus,
-  type HarnessCaseResult,
   type HarnessOutput,
   type HarnessProject,
   type Language,
@@ -45,6 +40,7 @@ import {
   type Toolchain,
   type ToolchainStatus,
 } from './detect';
+import { cancelled, harnessError, missing, runHarnessBatches } from './batches';
 import { runProcess } from './process';
 
 export interface LocalExecutorOptions {
@@ -255,68 +251,24 @@ export class LocalExecutor implements Executor {
     job: RunJob,
     signal?: CancelSignal,
   ): Promise<HarnessOutput> {
-    const inputs = toHarnessRequest(job).inputs;
     const binary = join(dir, this.binaryPath(project));
-    const perTest = job.timeLimitMs + KILL_SLACK_MS;
-    const cases: HarnessCaseResult[] = [];
-    while (cases.length < inputs.length) {
-      const batch = inputs.slice(cases.length);
-      const nonce = newNonce();
-      const mark = `${RECORD_MARK}${nonce} `;
-      let records = 0;
-      let scanned = 0;
-      this.opts.onEvent?.({ kind: 'spawn', language, tests: batch.length });
-      const r = await runProcess([binary, ...project.run.slice(1)], {
-        cwd: dir,
-        env: this.env,
-        input: encodeHarnessInput(nonce, batch),
-        timeoutMs: STARTUP_MS + perTest,
-        signal,
-        platform: this.platform,
-        // Each result line gives the next test its full limit.
-        onStdout: (out) => {
-          const before = records;
-          for (;;) {
-            const at = out.indexOf(mark, scanned);
-            if (at < 0) {
-              // A mark cut in half by the chunk boundary is found next time.
-              scanned = Math.max(scanned, out.length - mark.length + 1);
-              break;
-            }
-            if (out.indexOf('\n', at) < 0) {
-              scanned = at;
-              break;
-            }
-            records += 1;
-            scanned = at + mark.length;
-          }
-          return records > before ? perTest : undefined;
-        },
-      });
-      if (r.spawnError) return harnessError(`the harness could not start: ${r.spawnError}`, cases);
-      const stderr = r.overflowed
-        ? `${r.stderr}\nprinted more output than the app keeps (32 MB)`
-        : r.stderr;
-      const parsed = parseHarnessStream(
-        r.stdout,
-        nonce,
-        batch.length,
-        r.timedOut ? { kind: 'timeout' } : { kind: 'exited', code: r.code, stderr },
-      );
-      if (r.cancelled) {
-        const done = parsed.kind === 'ran' || parsed.kind === 'failed' ? (parsed.cases ?? []) : [];
-        return cancelled([...cases, ...done.slice(0, records)]);
-      }
-      if (parsed.kind !== 'ran') {
-        return parsed.kind === 'failed'
-          ? { ...parsed, cases: [...cases, ...(parsed.cases ?? [])] }
-          : parsed;
-      }
-      const skipped = parsed.cases.findIndex((c) => c.status === 'skipped');
-      cases.push(...(skipped < 0 ? parsed.cases : parsed.cases.slice(0, skipped)));
-      if (skipped === 0) return harnessError('the harness stopped without running a test', cases);
-    }
-    return { kind: 'ran', cases };
+    return runHarnessBatches({
+      inputs: toHarnessRequest(job).inputs,
+      perTestMs: job.timeLimitMs + KILL_SLACK_MS,
+      startupMs: STARTUP_MS,
+      signal,
+      onSpawn: (tests) => this.opts.onEvent?.({ kind: 'spawn', language, tests }),
+      spawn: (run) =>
+        runProcess([binary, ...project.run.slice(1)], {
+          cwd: dir,
+          env: this.env,
+          input: run.input,
+          timeoutMs: run.timeoutMs,
+          signal: run.signal,
+          platform: this.platform,
+          onStdout: run.onStdout,
+        }),
+    });
   }
 }
 
@@ -380,18 +332,6 @@ export function compileError(
   const file = language === 'rust' ? 'solution\\.rs' : 'solution\\.go';
   const m = new RegExp(`${file}:(\\d+)`).exec(kept);
   return { message: kept, line: m ? Number(m[1]) : undefined };
-}
-
-function missing(message: string): HarnessOutput {
-  return { kind: 'failed', error: { kind: 'runtime-missing', message } };
-}
-
-function cancelled(cases: HarnessCaseResult[]): HarnessOutput {
-  return { kind: 'failed', error: { kind: 'cancelled', message: 'the run was cancelled' }, cases };
-}
-
-function harnessError(message: string, cases: HarnessCaseResult[] = []): HarnessOutput {
-  return { kind: 'failed', error: { kind: 'harness', message }, cases };
 }
 
 async function readText(path: string): Promise<string | null> {

@@ -5,6 +5,7 @@
 import { join } from 'node:path';
 import { isoNow, type Executor, type ExecutorId } from '@algorithm-tutor/core';
 import { ExecHost, type ExecHostOptions } from '../exec/host-window';
+import { ContainerExecutor, runnerImage } from '../exec/container';
 import { LocalExecutor } from '../exec/local';
 import { PyodideExecutor } from '../exec/pyodide-executor';
 import type { AppStorage } from '../storage';
@@ -35,7 +36,7 @@ export function contentDir(packaged: boolean, resourcesPath: string, mainDir: st
 
 export async function openPractice(
   app: AppStorage,
-  opts: { content: string; host: ExecHostOptions },
+  opts: { content: string; host: ExecHostOptions; appVersion?: string },
 ): Promise<AppPractice> {
   const catalog = await FileCatalog.open(
     { content: opts.content, dataDir: app.paths.root },
@@ -45,18 +46,44 @@ export async function openPractice(
   for (const issue of catalog.issues) console.warn(`problem ${issue.where}: ${issue.message}`);
   const host = new ExecHost(opts.host);
   const pyodide: Executor = new PyodideExecutor(host);
-  // Rust and Go with the user's own toolchains (T16; the container runtime is T17).
+  // Rust and Go with the user's own toolchains (T16), or in a container
+  // runtime when Settings chooses one (T17), falling back to local if it stops.
   const local = new LocalExecutor({
     buildDir: join(app.paths.cache, 'build'),
     runnersDir: join(opts.content, 'runners'),
   });
+  const containers = new Map<'podman' | 'docker', ContainerExecutor>();
+  const container = (): ContainerExecutor | null => {
+    const runtime = app.settings.get().execution.runtime;
+    if (runtime === 'local') return null;
+    let c = containers.get(runtime);
+    if (!c) {
+      c = new ContainerExecutor({
+        runtime,
+        image: runnerImage(opts.appVersion ?? '0.0.0'),
+        jobsDir: join(app.paths.cache, 'container-jobs'),
+        runnersDir: join(opts.content, 'runners'),
+        fallback: local,
+        onNotice: (message) => console.warn(`code execution: ${message}`),
+      });
+      containers.set(runtime, c);
+    }
+    return c;
+  };
+  const compiled = (): Executor => container() ?? local;
   const practice = new Practice({
     storage: app.storage,
     catalog,
     workspace: new FileWorkspace(app.paths.workspace),
-    executorFor: (language) => (language === 'python' ? pyodide : local),
-    languageStatus: (language) =>
-      language === 'python' ? Promise.resolve({ available: true }) : local.statusFor(language),
+    executorFor: (language) => (language === 'python' ? pyodide : compiled()),
+    languageStatus: async (language) => {
+      if (language === 'python') return { available: true };
+      const c = container();
+      if (!c) return local.statusFor(language);
+      // A stopped runtime falls back to local, so local decides then.
+      const rt = await c.detect();
+      return rt.state === 'running' ? c.statusFor(language) : local.statusFor(language);
+    },
     timeScale: () => app.settings.get().execution.timeScale,
     now: isoNow,
   });
@@ -64,7 +91,8 @@ export async function openPractice(
     practice,
     catalog,
     host,
-    executors: (id) => (id === 'pyodide' ? pyodide : id === 'local' ? local : null),
+    executors: (id) =>
+      id === 'pyodide' ? pyodide : id === 'local' ? local : id === 'container' ? container() : null,
     dispose: () => host.dispose(),
   };
 }

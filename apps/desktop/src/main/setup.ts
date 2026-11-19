@@ -141,6 +141,7 @@ export async function startPractice(
   const content = contentDir(app.isPackaged, process.resourcesPath, mainDir);
   const practice = await openPractice(storage, {
     content,
+    appVersion: app.getVersion(),
     host: {
       rendererDir: ui.rendererDir,
       preloadPath: join(mainDir, '../preload/exec-host.cjs'),

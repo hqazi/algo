@@ -81,3 +81,21 @@ jobs:
       - run: npm ci
       - run: cargo --version && go version
       - run: npm run check:harnesses
+
+  # Container executor (T17) with the runner's Docker: builds a local stand-in
+  # for the runner image (never pushed) and runs the real-Docker suite: pass,
+  # timeout, no network, cleanup.
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: docker version
+      - run: docker build -t algorithm-tutor-runner:test apps/desktop/src/main/exec/container/test-image
+      - run: npx vitest run apps/desktop/src/main/exec/container apps/desktop/src/main/runtimes
+        env:
+          ALGOTUTOR_TEST_RUNNER_IMAGE: algorithm-tutor-runner:test
