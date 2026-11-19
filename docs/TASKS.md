@@ -58,7 +58,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | done |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | done |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
-| T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | todo |
+| T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | in-progress |
 | T09 | Onboarding and Settings | v1 | 2d | T08 | todo |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | todo |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | todo |
