@@ -22,8 +22,14 @@ export const INVOKE_CHANNELS = [
   'attempts:list',
   'settings:theme',
   'settings:set-theme',
+  'tutor:status',
+  'chat:thread',
+  'chat:reset',
+  'explanations:list',
+  'explanations:page',
+  'explanations:viewed',
 ] as const;
-export const STREAM_CHANNELS = ['example:count', 'workspace:watch'] as const;
+export const STREAM_CHANNELS = ['example:count', 'workspace:watch', 'chat:send'] as const;
 
 /** Internal Electron channels used to carry streams. */
 export const STREAM_START = 'ipc:stream:start';

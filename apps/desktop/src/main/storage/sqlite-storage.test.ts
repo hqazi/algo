@@ -274,6 +274,58 @@ describe('records round-trip', () => {
 });
 
 describe('writes', () => {
+  it('archives a thread under a new id with its messages', async () => {
+    await s.write((db) => {
+      db.saveThread({
+        id: 'home',
+        backend: 'fake',
+        backendState: { n: 1 },
+        createdAt: T(1),
+        archivedAt: null,
+      });
+      db.appendMessage({ threadId: 'home', role: 'user', content: { text: 'a' }, createdAt: T(2) });
+      db.appendMessage({
+        threadId: 'home',
+        role: 'assistant',
+        content: { text: 'b' },
+        createdAt: T(3),
+      });
+    });
+    await s.write((db) => db.archiveThread('home', 'home~1', T(4)));
+    expect(s.read((db) => db.getThread('home'))).toBeNull();
+    expect(s.read((db) => db.getThread('home~1'))).toEqual({
+      id: 'home~1',
+      backend: 'fake',
+      backendState: { n: 1 },
+      createdAt: T(1),
+      archivedAt: T(4),
+    });
+    expect(s.read((db) => db.listMessages('home~1')).map((m) => m.seq)).toEqual([1, 2]);
+    expect(s.read((db) => db.listMessages('home'))).toEqual([]);
+    // The id is free again, and numbering starts afresh.
+    await s.write((db) => {
+      db.saveThread({
+        id: 'home',
+        backend: 'fake',
+        backendState: {},
+        createdAt: T(5),
+        archivedAt: null,
+      });
+      return db.appendMessage({
+        threadId: 'home',
+        role: 'user',
+        content: { text: 'c' },
+        createdAt: T(6),
+      });
+    });
+    expect(s.read((db) => db.listMessages('home')).map((m) => m.seq)).toEqual([1]);
+    await expect(s.write((db) => db.archiveThread('nope', 'nope~1', T(7)))).rejects.toThrow(
+      /no thread/,
+    );
+    await expect(s.write((db) => db.archiveThread('home', 'home~1', T(7)))).rejects.toThrow();
+    expect(s.read((db) => db.listMessages('home')).length).toBe(1);
+  });
+
   it('a write that throws keeps nothing it wrote', async () => {
     await expect(
       s.write((db) => {

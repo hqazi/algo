@@ -4,12 +4,15 @@
  */
 import { join } from 'node:path';
 import { app, ipcMain, nativeTheme, protocol, session } from 'electron';
+import { isoNow } from '@algorithm-tutor/core';
 import { EXEC_SCHEME_PRIVILEGES } from './exec/host-window';
 import { registerHandlers } from './ipc/handlers';
 import { registerPracticeHandlers } from './ipc/handlers/practice';
+import { registerTutorHandlers } from './ipc/handlers/tutor';
 import { IpcRouter } from './ipc/router';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import type { AppStorage } from './storage';
+import { openTutor, type AppTutor } from './tutor';
 import {
   APP_SCHEME_PRIVILEGES,
   guardAllWebContents,
@@ -55,17 +58,19 @@ export function afterReady(ui: UiOptions): IpcRouter {
 
 /**
  * After `app.whenReady()` and storage: load the problems, start the executor
- * behind the execution host, and register the practice channels (T08). The
- * theme setting drives `prefers-color-scheme` in every window.
+ * behind the execution host, and register the practice channels (T08) and
+ * the tutor's (T10). The theme setting drives `prefers-color-scheme` in
+ * every window.
  */
 export async function startPractice(
   router: IpcRouter,
   storage: AppStorage,
   ui: UiOptions,
   mainDir: string,
-): Promise<AppPractice> {
+): Promise<AppPractice & { tutor: AppTutor }> {
+  const content = contentDir(app.isPackaged, process.resourcesPath, mainDir);
   const practice = await openPractice(storage, {
-    content: contentDir(app.isPackaged, process.resourcesPath, mainDir),
+    content,
     host: {
       rendererDir: ui.rendererDir,
       preloadPath: join(mainDir, '../preload/exec-host.cjs'),
@@ -84,5 +89,16 @@ export async function startPractice(
       },
     },
   });
-  return practice;
+  const tutor = await openTutor({
+    practice: practice.practice,
+    settings: () => storage.settings.get(),
+    // T09 adds the key stored in the keychain; until then, the environment's.
+    apiKey: () => process.env['ANTHROPIC_API_KEY']?.trim() || null,
+    contentDir: content,
+    explanationsDir: storage.paths.explanations,
+    env: process.env,
+    now: isoNow,
+  });
+  registerTutorHandlers(router, { tutor, practice: practice.practice });
+  return { ...practice, tutor };
 }

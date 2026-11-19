@@ -1,62 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { STREAM_CANCEL, STREAM_EVENT, STREAM_START, type IpcResult } from '../../shared/ipc';
+import { STREAM_CANCEL, STREAM_START, type IpcResult } from '../../shared/ipc';
 import { registerHandlers } from './handlers';
-import { IpcRouter, type IpcEventLike, type IpcMainLike } from './router';
-
-const APP_URL = 'tutor-app://app/renderer/index.html';
-
-type Listener = (event: IpcEventLike, ...args: unknown[]) => unknown;
-
-class FakeIpcMain implements IpcMainLike {
-  readonly handlers = new Map<string, Listener>();
-  readonly listeners = new Map<string, Listener>();
-  handle(channel: string, listener: Listener): void {
-    if (this.handlers.has(channel)) throw new Error(`second handler for ${channel}`);
-    this.handlers.set(channel, listener);
-  }
-  removeHandler(channel: string): void {
-    this.handlers.delete(channel);
-  }
-  on(channel: string, listener: Listener): void {
-    this.listeners.set(channel, listener);
-  }
-  removeListener(channel: string): void {
-    this.listeners.delete(channel);
-  }
-  invoke(event: IpcEventLike, channel: string, payload?: unknown): Promise<unknown> {
-    const h = this.handlers.get(channel);
-    if (!h) throw new Error(`no handler for ${channel}`);
-    return Promise.resolve(h(event, payload));
-  }
-  send(event: IpcEventLike, channel: string, payload: unknown): void {
-    this.listeners.get(channel)?.(event, payload);
-  }
-}
-
-let nextSender = 1;
-function page(url = APP_URL, parent: unknown = null) {
-  const sent: { channel: string; args: unknown[] }[] = [];
-  let onDestroyed: (() => void) | undefined;
-  let destroyed = false;
-  const event: IpcEventLike = {
-    sender: {
-      id: nextSender++,
-      send: (channel, ...args) => sent.push({ channel, args }),
-      isDestroyed: () => destroyed,
-      once: (_e, l) => (onDestroyed = l),
-    },
-    senderFrame: { url, parent },
-  };
-  return {
-    event,
-    sent,
-    events: () => sent.filter((s) => s.channel === STREAM_EVENT).map((s) => s.args[0]),
-    destroy: () => {
-      destroyed = true;
-      onDestroyed?.();
-    },
-  };
-}
+import { IpcRouter } from './router';
+import { APP_URL, FakeIpcMain, page } from './testing';
 
 function setup() {
   const ipc = new FakeIpcMain();

@@ -18,6 +18,7 @@
 import { z } from 'zod';
 import { INVOKE_CHANNELS, STREAM_CHANNELS } from './channels';
 import * as P from './practice';
+import * as T from './tutor';
 
 export {
   INVOKE_CHANNELS,
@@ -78,6 +79,20 @@ export const invokeChannels = {
   },
   'settings:theme': { request: z.undefined(), response: P.themeView },
   'settings:set-theme': { request: P.themeView, response: P.themeView },
+
+  // ---- tutor (T10): status, chat threads, explanation pages
+  /** Which backend is in use and whether it can run. */
+  'tutor:status': { request: z.undefined(), response: T.tutorStatus },
+  /** A thread's current transcript. */
+  'chat:thread': { request: T.threadRequest, response: T.threadResponse },
+  /** Archive the thread ("Reset chat"). Refused (`busy`) while a reply streams. */
+  'chat:reset': { request: T.threadRequest, response: T.resetResponse },
+  /** A problem's explanation versions, newest first. */
+  'explanations:list': { request: P.slugRequest, response: T.explanationsResponse },
+  /** One version's HTML (the latest without `version`); shown only in a sandboxed iframe. */
+  'explanations:page': { request: T.pageRequest, response: T.pageResponse },
+  /** The learner opened an explanation: an open attempt counts as explained. */
+  'explanations:viewed': { request: P.slugRequest, response: T.viewedResponse },
 } as const;
 
 export const streamChannels = {
@@ -103,6 +118,12 @@ export const streamChannels = {
     event: P.watchEvent,
     result: P.watchResult,
   },
+  /**
+   * One chat turn: the tutor's events (text, tool chips, UI events), ending
+   * with `done` or `error`; the result is the stored reply. Cancel stops the
+   * turn. Refused before it starts: `busy`, `unavailable`, `empty`…
+   */
+  'chat:send': { request: T.sendRequest, event: T.chatEvent, result: T.sendResult },
 } as const;
 
 export type InvokeChannel = keyof typeof invokeChannels;

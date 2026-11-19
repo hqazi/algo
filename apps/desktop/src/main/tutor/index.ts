@@ -1,0 +1,202 @@
+/**
+ * The tutor in the main process (SPEC §7, T10): picks the backend from the
+ * settings, builds the tool registry over the practice service (same guard,
+ * same teaching state as the buttons), the system prompt from
+ * `content/references/`, the per-turn context, and the explanation pages.
+ *
+ * Backend choice (`tutor.backend`): `auto` is Anthropic when a key is set,
+ * else none (Claude Code joins `auto` in T11); `none` turns the tutor off.
+ * `ALGOTUTOR_FAKE_TUTOR=<script.json>` (development and tests only, SPEC §12)
+ * replaces all of it with the scripted fake backend.
+ *
+ * The API key comes from `apiKey()` (the environment's `ANTHROPIC_API_KEY`
+ * here; T09 adds the keychain). It stays in this process.
+ */
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import {
+  buildSystemPrompt,
+  buildTutorRegistry,
+  ChatService,
+  FakeBackend,
+  HOME_THREAD,
+  parseFakeScript,
+  renderExplanationPage,
+  UnavailableBackend,
+  type BackendStatus,
+  type Settings,
+  type Sleep,
+  type ToolOutput,
+  type ToolRegistry,
+  type TurnContext,
+  type TutorBackend,
+  type TutorToolContext,
+} from '@algorithm-tutor/core';
+import type { Practice } from '../practice/service';
+import { AnthropicBackend } from './anthropic/backend';
+import { ExplanationStore } from './explanations';
+
+export { AnthropicBackend, DEFAULT_MODEL } from './anthropic/backend';
+export { ExplanationStore } from './explanations';
+
+export const FAKE_TUTOR_ENV = 'ALGOTUTOR_FAKE_TUTOR';
+
+export interface TutorStatus extends BackendStatus {
+  /** The backend in use, or `none`. */
+  backend: 'anthropic' | 'claude-code' | 'fake' | 'none';
+}
+
+export interface TutorDeps {
+  practice: Practice;
+  settings: () => Settings;
+  /** The Anthropic API key, or `null`. */
+  apiKey: () => string | null;
+  contentDir: string;
+  explanationsDir: string;
+  env?: Record<string, string | undefined>;
+  now: () => string;
+  log?: (message: string, error?: unknown) => void;
+}
+
+export interface AppTutor {
+  chat: ChatService;
+  tools: ToolRegistry<TutorToolContext>;
+  explanations: ExplanationStore;
+  systemPrompt: string;
+  backend(): TutorBackend;
+  status(): Promise<TutorStatus>;
+}
+
+const sleep: Sleep = async (ms, signal) => {
+  try {
+    await delay(ms, undefined, { signal: signal as AbortSignal });
+  } catch {
+    // aborted: resolve, the backend checks the signal
+  }
+};
+
+/** The guides in `content/references/`, by name. */
+export async function readReferences(contentDir: string): Promise<Record<string, string>> {
+  const dir = join(contentDir, 'references');
+  const out: Record<string, string> = {};
+  for (const name of (await readdir(dir)).filter((n) => n.endsWith('.md')).sort())
+    out[name.slice(0, -3)] = await readFile(join(dir, name), 'utf8');
+  return out;
+}
+
+async function fakeFromEnv(path: string): Promise<TutorBackend> {
+  try {
+    return new FakeBackend(parseFakeScript(JSON.parse(await readFile(path, 'utf8'))), { sleep });
+  } catch (e) {
+    return new UnavailableBackend(
+      'fake',
+      `${FAKE_TUTOR_ENV} could not be read (${e instanceof Error ? e.message : String(e)})`,
+    );
+  }
+}
+
+export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
+  const { practice } = deps;
+  const log = deps.log ?? ((m: string, e?: unknown) => console.error(m, e ?? ''));
+  const explanations = new ExplanationStore(deps.explanationsDir);
+  const teaching = practice.teaching;
+
+  const renderExplanation = async (content: Record<string, unknown>): Promise<ToolOutput> => {
+    const slug = String(content.slug);
+    const problem = teaching.summary(slug);
+    const topic = practice.topics().find((t) => t.id === problem.topic)?.name ?? problem.topic;
+    const html = renderExplanationPage(
+      content,
+      {
+        title: problem.title,
+        topic,
+        difficulty: problem.difficulty,
+        language: teaching.languageFor(slug),
+      },
+      deps.now().slice(0, 10),
+    );
+    const version = await explanations.save(slug, html);
+    return { ok: true, slug, version };
+  };
+
+  const ctx: TutorToolContext = { ...practice.toolContext, renderExplanation };
+  const tools = buildTutorRegistry(ctx, (m, e) => log(m, e));
+  const systemPrompt = buildSystemPrompt(
+    tools.anthropicTools(),
+    await readReferences(deps.contentDir),
+  );
+
+  const anthropic = new AnthropicBackend({
+    apiKey: deps.apiKey,
+    model: () => deps.settings().tutor.model,
+    effort: () => deps.settings().tutor.effort,
+    log: (m) => console.warn(m),
+  });
+  const fakePath = deps.env?.[FAKE_TUTOR_ENV]?.trim();
+  const fake = fakePath ? await fakeFromEnv(fakePath) : null;
+
+  const backend = (): TutorBackend => {
+    if (fake) return fake;
+    const choice = deps.settings().tutor.backend;
+    if (choice === 'none')
+      return new UnavailableBackend('anthropic', 'The tutor is turned off in Settings.');
+    if (choice === 'claude-code')
+      return new UnavailableBackend(
+        'claude-code',
+        'Claude Code is not supported in this version yet.',
+      );
+    if (choice === 'auto' && !deps.apiKey())
+      return new UnavailableBackend(
+        'anthropic',
+        'No tutor is set up. Add an Anthropic API key to use the tutor.',
+        anthropic.model(),
+      );
+    return anthropic;
+  };
+
+  const context = async (thread: string, code: string | undefined): Promise<TurnContext> => {
+    if (thread === HOME_THREAD) return {};
+    const summary = teaching.summary(thread);
+    const language = teaching.languageFor(thread);
+    const out: TurnContext = { slug: thread, title: summary.title, language };
+    const saved = code ?? (await ctx.workspace.read(thread, language));
+    if (saved !== null && saved !== undefined) out.code = saved;
+    const report = ctx.storage.read((db) => {
+      const open = db.getOpenAttempt(thread);
+      return open ? (db.listTestRuns(open.id).at(-1)?.report ?? null) : null;
+    });
+    if (report !== null) out.lastReport = report;
+    return out;
+  };
+
+  const chat = new ChatService({
+    storage: ctx.storage,
+    backend,
+    tools,
+    systemPrompt,
+    context,
+    now: deps.now,
+    log: (m, e) => log(m, e),
+  });
+
+  return {
+    chat,
+    tools,
+    explanations,
+    systemPrompt,
+    backend,
+    async status() {
+      const b = backend();
+      let s: BackendStatus;
+      try {
+        s = await b.status();
+      } catch (e) {
+        log('tutor status failed', e);
+        s = { available: false, reason: 'The tutor could not report its status.', model: null };
+      }
+      const off = !s.available && b instanceof UnavailableBackend && !fake;
+      return { ...s, backend: off ? 'none' : b.id };
+    },
+  };
+}
