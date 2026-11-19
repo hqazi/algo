@@ -22,6 +22,11 @@ export interface SettingsHandlerDeps {
   defaultModel: string;
   practice: Practice;
   data: DataService;
+  /**
+   * Why a Rust/Go runtime cannot be chosen now (`null`: it can). Only a
+   * running runtime is selectable (SPEC §6.5, T18).
+   */
+  runtimeRefusal?: (runtime: 'local' | 'podman' | 'docker') => Promise<string | null>;
 }
 
 async function refusing<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -85,8 +90,13 @@ export function registerSettingsHandlers(router: IpcRouter, deps: SettingsHandle
   );
 
   router.handle('settings:get', () => view());
-  router.handle('settings:set', (patch) =>
-    refusing(() => {
+  router.handle('settings:set', async (patch) => {
+    const runtime = patch.execution?.runtime;
+    if (runtime && runtime !== settings.get().execution.runtime && deps.runtimeRefusal) {
+      const why = await deps.runtimeRefusal(runtime);
+      if (why) throw new IpcRefusal('runtime_not_running', `Cannot use ${runtime}: ${why}.`);
+    }
+    return refusing(() => {
       const tutor = patch.tutor;
       // An empty model means "the default".
       const fixed =
@@ -95,8 +105,8 @@ export function registerSettingsHandlers(router: IpcRouter, deps: SettingsHandle
           : patch;
       settings.update(fixed);
       return view();
-    }),
-  );
+    });
+  });
 
   router.handle('secrets:status', () => secrets.status());
   router.handle('secrets:set-key', ({ key }) => refusing(() => secrets.setApiKey(key)));

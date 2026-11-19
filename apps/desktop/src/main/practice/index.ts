@@ -5,7 +5,8 @@
 import { join } from 'node:path';
 import { isoNow, type Executor, type ExecutorId } from '@algorithm-tutor/core';
 import { ExecHost, type ExecHostOptions } from '../exec/host-window';
-import { ContainerExecutor, runnerImage } from '../exec/container';
+import { CodeExecution } from '../exec/code-execution';
+import { ContainerExecutor, runnerImage, type ContainerExecutorOptions } from '../exec/container';
 import { LocalExecutor } from '../exec/local';
 import { PyodideExecutor } from '../exec/pyodide-executor';
 import type { AppStorage } from '../storage';
@@ -23,6 +24,8 @@ export interface AppPractice {
   host: ExecHost;
   /** The executors by id; model-written code asks for `pyodide` only (T12, SPEC §6.3). */
   executors: (id: ExecutorId) => Executor | null;
+  /** Settings → Code execution (T18): detection, pull, Test sandbox, fallback notice. */
+  codeExecution: CodeExecution;
   dispose(): void;
 }
 
@@ -48,28 +51,44 @@ export async function openPractice(
   const pyodide: Executor = new PyodideExecutor(host);
   // Rust and Go with the user's own toolchains (T16), or in a container
   // runtime when Settings chooses one (T17), falling back to local if it stops.
+  const runners = join(opts.content, 'runners');
   const local = new LocalExecutor({
     buildDir: join(app.paths.cache, 'build'),
-    runnersDir: join(opts.content, 'runners'),
+    runnersDir: runners,
+  });
+  const base = (runtime: 'podman' | 'docker'): ContainerExecutorOptions => ({
+    runtime,
+    image: runnerImage(opts.appVersion ?? '0.0.0'),
+    jobsDir: join(app.paths.cache, 'container-jobs'),
+    runnersDir: runners,
   });
   const containers = new Map<'podman' | 'docker', ContainerExecutor>();
-  const container = (): ContainerExecutor | null => {
-    const runtime = app.settings.get().execution.runtime;
-    if (runtime === 'local') return null;
+  const containerFor = (runtime: 'podman' | 'docker'): ContainerExecutor => {
     let c = containers.get(runtime);
     if (!c) {
       c = new ContainerExecutor({
-        runtime,
-        image: runnerImage(opts.appVersion ?? '0.0.0'),
-        jobsDir: join(app.paths.cache, 'container-jobs'),
-        runnersDir: join(opts.content, 'runners'),
+        ...base(runtime),
         fallback: local,
-        onNotice: (message) => console.warn(`code execution: ${message}`),
+        onNotice: (message) => {
+          console.warn(`code execution: ${message}`);
+          codeExecution.notice(message);
+        },
       });
       containers.set(runtime, c);
     }
     return c;
   };
+  const container = (): ContainerExecutor | null => {
+    const runtime = app.settings.get().execution.runtime;
+    return runtime === 'local' ? null : containerFor(runtime);
+  };
+  const codeExecution = new CodeExecution({
+    local,
+    container: containerFor,
+    // Test sandbox has no fallback: it must run in the container or fail.
+    sandbox: (runtime) => new ContainerExecutor(base(runtime)),
+    selected: () => app.settings.get().execution.runtime,
+  });
   const compiled = (): Executor => container() ?? local;
   const practice = new Practice({
     storage: app.storage,
@@ -93,6 +112,7 @@ export async function openPractice(
     host,
     executors: (id) =>
       id === 'pyodide' ? pyodide : id === 'local' ? local : id === 'container' ? container() : null,
+    codeExecution,
     dispose: () => host.dispose(),
   };
 }

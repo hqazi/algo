@@ -6,15 +6,15 @@
  */
 import { APP_NAME } from '@algorithm-tutor/core';
 import { useEffect, useState } from 'react';
-import type { ExecStatusView, ProfileUpdate, SettingsPatchView } from '../../../shared/settings';
+import type { ProfileUpdate, SettingsPatchView } from '../../../shared/settings';
 import { ProfileForm } from '../components/ProfileForm';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
+import { ExecutionSection } from './SettingsCodeExecution';
 import { DataSection } from './SettingsData';
 import { TutorSection } from './SettingsTutor';
 import { UpdatesSection } from './SettingsUpdates';
 
-const TIME_SCALES = [0.5, 1, 1.5, 2, 3, 5, 10];
 const THEMES = [
   { id: 'system', label: 'Follow the system' },
   { id: 'light', label: 'Light' },
@@ -37,62 +37,6 @@ const LICENCES: { name: string; licence: string; note?: string }[] = [
   { name: 'DOMPurify', licence: 'MPL-2.0 or Apache-2.0' },
   { name: 'zod, fflate', licence: 'MIT' },
 ];
-
-function ExecutionSection() {
-  const app = useApp();
-  const [status, setStatus] = useState<ExecStatusView | null>(null);
-  const [failed, setFailed] = useState<string | null>(null);
-  useEffect(() => {
-    void invoke('exec:status').then(setStatus, (e: unknown) => setFailed(errorText(e)));
-  }, []);
-  const s = app.settings?.settings.execution;
-  if (!s) return null;
-  const scales = TIME_SCALES.includes(s.timeScale)
-    ? TIME_SCALES
-    : [...TIME_SCALES, s.timeScale].sort((a, b) => a - b);
-  const py = status?.python;
-  const versions = py ? Object.entries(py.versions) : [];
-  return (
-    <section className="card" aria-labelledby="settings-exec">
-      <h2 id="settings-exec">Code execution</h2>
-      <dl className="kv" data-testid="exec-status">
-        <dt>Python</dt>
-        <dd>
-          {failed
-            ? `Unknown (${failed})`
-            : !py
-              ? 'Checking… (the first check starts Python, which takes a few seconds)'
-              : py.available
-                ? `Ready · Pyodide${versions.length ? ` (${versions.map(([k, v]) => `${k} ${v}`).join(', ')})` : ''}`
-                : `Not available: ${py.reason ?? 'unknown reason'}`}
-        </dd>
-        <dt>Rust, Go</dt>
-        <dd className="muted">Arrive in a later version.</dd>
-      </dl>
-      <p className="muted small">
-        Your code and the tutor’s run inside the app with Pyodide, which has no access to your files
-        or the network.
-      </p>
-      <label className="field">
-        Time limits
-        <select
-          aria-label="Time limit multiplier"
-          value={String(s.timeScale)}
-          onChange={(e) =>
-            void app.updateSettings({ execution: { timeScale: Number(e.target.value) } })
-          }
-        >
-          {scales.map((x) => (
-            <option key={x} value={String(x)}>
-              {x === 1 ? '×1 (normal)' : `×${x}`}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="muted small">Raise this on a slow computer if correct solutions time out.</p>
-    </section>
-  );
-}
 
 /** Keyed by the saved size, so a change from elsewhere resets the field. */
 function FontSize({ saved, onSave }: { saved: number; onSave: (n: number) => void }) {

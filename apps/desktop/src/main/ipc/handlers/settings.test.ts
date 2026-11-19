@@ -111,6 +111,7 @@ beforeEach(async () => {
     anthropic,
     defaultModel: DEFAULT_MODEL,
     practice,
+    runtimeRefusal: (r) => Promise.resolve(r === 'podman' ? 'podman was not found' : null),
     data: new DataService({ paths: app.paths, storage: app.storage, appVersion: '0.1.0', now, ui }),
   });
   replies.length = 0;
@@ -191,6 +192,19 @@ describe('settings apply at once', () => {
         keymap: 'default',
       },
     );
+  });
+
+  it('chooses only a running container runtime (T18)', async () => {
+    await expect(call('settings:set', { execution: { runtime: 'podman' } })).rejects.toMatchObject({
+      code: 'refused',
+      reason: 'runtime_not_running',
+      message: 'Cannot use podman: podman was not found.',
+    });
+    expect(app.settings.get().execution.runtime).toBe('local');
+    await call('settings:set', { execution: { runtime: 'docker' } });
+    expect(app.settings.get().execution.runtime).toBe('docker');
+    await call('settings:set', { execution: { runtime: 'local' } });
+    expect(app.settings.get().execution.runtime).toBe('local');
   });
 });
 

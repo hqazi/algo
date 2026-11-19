@@ -97,6 +97,57 @@ export const execStatus = z.strictObject({
   }),
 });
 
+// ---- Code execution (T18, SPEC §6.5): runtimes, toolchains, image, Test sandbox
+
+const containerRuntime = z.enum(['podman', 'docker']);
+
+export const runtimesRequest = z.strictObject({
+  /** Also forget the cached toolchain detection (the Recheck button). */
+  recheck: z.boolean(),
+});
+
+export const runtimesView = z.strictObject({
+  selected: z.enum(EXECUTION_RUNTIMES),
+  toolchains: z.array(
+    z.strictObject({
+      language: z.enum(['rust', 'go']),
+      tool: z.enum(['cargo', 'go']),
+      found: z.boolean(),
+      version: z.string().nullable(),
+      path: z.string().nullable(),
+      reason: z.string().nullable(),
+    }),
+  ),
+  runtimes: z.array(
+    z.strictObject({
+      runtime: containerRuntime,
+      state: z.enum(['not-found', 'installed-not-running', 'running']),
+      version: z.string().nullable(),
+      path: z.string().nullable(),
+      endpoint: z.string().nullable(),
+      reason: z.string().nullable(),
+      start_hint: z.string().nullable(),
+      image: z.strictObject({ name: z.string(), present: z.boolean().nullable() }),
+    }),
+  ),
+  notice: z.string().nullable(),
+});
+
+export const runtimeRequest = z.strictObject({ runtime: containerRuntime });
+export const pullEvent = z.strictObject({
+  line: z.string(),
+  layers: z.strictObject({ done: z.int(), total: z.int() }).nullable(),
+});
+export const pullResult = z.strictObject({ ok: z.boolean(), message: z.string() });
+export const sandboxResult = z.strictObject({
+  ok: z.boolean(),
+  checks: z.array(
+    z.strictObject({ language: z.enum(['rust', 'go']), ok: z.boolean(), message: z.string() }),
+  ),
+});
+/** README sections the How to install → links open (fixed URLs; the renderer names a topic). */
+export const installHelpRequest = z.strictObject({ topic: z.enum(['container', 'toolchains']) });
+
 export const profileUpdate = z.strictObject({
   goal: z.enum(['general', 'interview']),
   interview_date: z
@@ -131,3 +182,5 @@ export type KeyStatusView = z.output<typeof keyStatus>;
 export type TestResultView = z.output<typeof testResult>;
 export type ExecStatusView = z.output<typeof execStatus>;
 export type ProfileUpdate = z.input<typeof profileUpdate>;
+export type RuntimesView = z.output<typeof runtimesView>;
+export type SandboxResultView = z.output<typeof sandboxResult>;

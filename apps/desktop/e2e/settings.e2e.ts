@@ -173,6 +173,59 @@ try {
   await page.getByRole('spinbutton', { name: 'Editor font size' }).fill('18');
   await page.getByRole('combobox', { name: 'Editor keys' }).selectOption('vim');
 
+  // ---- Code execution (T18): real detection; whatever is found here, only
+  // running runtimes are selectable, a missing one links to the README.
+  await app.evaluate(({ shell }) => {
+    const g = globalThis as unknown as { opened: string[] };
+    g.opened = [];
+    shell.openExternal = (url: string) => {
+      g.opened.push(url);
+      return Promise.resolve();
+    };
+  });
+  const rustGo = page.getByTestId('rust-go');
+  await rustGo.getByRole('radio', { name: /Local toolchains/ }).waitFor();
+  for (const runtime of ['podman', 'docker']) {
+    const row = page.getByTestId(`runtime-${runtime}`);
+    const state = (await page.getByTestId(`runtime-state-${runtime}`).textContent()) ?? '';
+    const running = state.startsWith('(Running');
+    const radio = row.getByRole('radio');
+    check(
+      `${runtime}: shown with its state, selectable only when running`,
+      /^\((Running|Installed, not running|Not found)/.test(state) &&
+        (await radio.isDisabled()) === !running,
+      state,
+    );
+    if (state === '(Not found)') {
+      await row.getByRole('button', { name: 'How to install →' }).click();
+      const opened = await app.evaluate(
+        () => (globalThis as unknown as { opened: string[] }).opened,
+      );
+      check(
+        `${runtime}: How to install opens the README section`,
+        opened.at(-1) === 'https://github.com/hqazi/algorithm-tutor#optional-a-container-sandbox',
+        opened,
+      );
+    }
+    if (running) {
+      await radio.check();
+      await page.waitForTimeout(500);
+      check(`${runtime}: choosing a running runtime saves it`, await radio.isChecked());
+      check(
+        `${runtime}: pull and test sandbox are offered`,
+        (await row.getByRole('button', { name: /^(Pull|Update) image/ }).count()) === 1 &&
+          (await row.getByRole('button', { name: /^Test sandbox/ }).count()) === 1,
+      );
+      await rustGo.getByRole('radio', { name: /Local toolchains/ }).check();
+    }
+  }
+  await page.getByRole('button', { name: 'Recheck runtimes' }).click();
+  await page.getByRole('button', { name: 'Recheck runtimes' }).waitFor();
+  check(
+    'Recheck detects again and local stays chosen',
+    await rustGo.getByRole('radio', { name: /Local toolchains/ }).isChecked(),
+  );
+
   // ---- a solve to round-trip
   await page.getByRole('button', { name: 'Next problem' }).first().click();
   await page.locator('.statement-title').waitFor();

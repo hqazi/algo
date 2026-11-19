@@ -18,6 +18,7 @@ import { EXEC_SCHEME_PRIVILEGES } from './exec/host-window';
 import { registerHandlers } from './ipc/handlers';
 import { DataService, type DataUi } from './data';
 import { registerPracticeHandlers } from './ipc/handlers/practice';
+import { registerCodeExecutionHandlers } from './ipc/handlers/code-execution';
 import { followTheme, registerSettingsHandlers } from './ipc/handlers/settings';
 import { registerTutorHandlers } from './ipc/handlers/tutor';
 import { registerIntakeHandlers } from './ipc/handlers/intake';
@@ -192,6 +193,7 @@ export async function startPractice(
     anthropic: tutor.anthropic,
     defaultModel: DEFAULT_MODEL,
     practice: practice.practice,
+    runtimeRefusal: (runtime) => practice.codeExecution.refusal(runtime),
     data: new DataService({
       paths: storage.paths,
       storage: storage.storage,
@@ -199,6 +201,13 @@ export async function startPractice(
       now: isoNow,
       ui: dataUi,
     }),
+  });
+  registerCodeExecutionHandlers(router, {
+    codeExecution: practice.codeExecution,
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+      return true;
+    },
   });
   // Updates (T13): only installed builds have an updater.
   const updates = await openUpdater({

@@ -30,6 +30,9 @@ export const INVOKE_CHANNELS = [
   'secrets:clear-key',
   'tutor:test',
   'exec:status',
+  'exec:runtimes',
+  'exec:test',
+  'exec:install-help',
   'data:info',
   'data:open-folder',
   'data:export',
@@ -58,6 +61,7 @@ export const STREAM_CHANNELS = [
   'chat:send',
   'intake:events',
   'updates:watch',
+  'exec:pull',
 ] as const;
 
 /** Internal Electron channels used to carry streams. */

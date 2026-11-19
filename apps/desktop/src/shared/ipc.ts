@@ -106,6 +106,15 @@ export const invokeChannels = {
   'tutor:test': { request: z.undefined(), response: S.testResult },
   /** The Python executor (Pyodide) and its versions. */
   'exec:status': { request: z.undefined(), response: S.execStatus },
+  /** Rust/Go: local toolchains, Podman and Docker as detected now, the runner image (T18). */
+  'exec:runtimes': { request: S.runtimesRequest, response: S.runtimesView },
+  /** Test sandbox: hello world in Rust and Go inside the runtime's container. */
+  'exec:test': { request: S.runtimeRequest, response: S.sandboxResult },
+  /** Opens the README section on installing a runtime or the toolchains. */
+  'exec:install-help': {
+    request: S.installHelpRequest,
+    response: z.strictObject({ opened: z.boolean() }),
+  },
   'data:info': { request: z.undefined(), response: S.dataInfo },
   'data:open-folder': { request: z.undefined(), response: z.strictObject({ opened: z.boolean() }) },
   /** Asks where to save, then writes the export zip; `path: null` if cancelled. */
@@ -199,6 +208,8 @@ export const streamChannels = {
     event: U.updateState,
     result: z.strictObject({ closed: z.literal(true) }),
   },
+  /** Pull / Update the runner image in a runtime (T18): its output lines, then the outcome. */
+  'exec:pull': { request: S.runtimeRequest, event: S.pullEvent, result: S.pullResult },
 } as const;
 
 export type InvokeChannel = keyof typeof invokeChannels;
