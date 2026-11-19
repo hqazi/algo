@@ -3,7 +3,7 @@
  * workspace, the Pyodide executor behind the execution host, and `Practice`.
  */
 import { join } from 'node:path';
-import { isoNow, type Executor } from '@algorithm-tutor/core';
+import { isoNow, type Executor, type ExecutorId } from '@algorithm-tutor/core';
 import { ExecHost, type ExecHostOptions } from '../exec/host-window';
 import { PyodideExecutor } from '../exec/pyodide-executor';
 import type { AppStorage } from '../storage';
@@ -19,6 +19,8 @@ export interface AppPractice {
   practice: Practice;
   catalog: FileCatalog;
   host: ExecHost;
+  /** The executors by id (Pyodide only in v1); model-written code asks for `pyodide` only (T12). */
+  executors: (id: ExecutorId) => Executor | null;
   dispose(): void;
 }
 
@@ -50,5 +52,11 @@ export async function openPractice(
     timeScale: () => app.settings.get().execution.timeScale,
     now: isoNow,
   });
-  return { practice, catalog, host, dispose: () => host.dispose() };
+  return {
+    practice,
+    catalog,
+    host,
+    executors: (id) => (id === 'pyodide' ? pyodide : null),
+    dispose: () => host.dispose(),
+  };
 }

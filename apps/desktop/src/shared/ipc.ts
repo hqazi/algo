@@ -20,6 +20,7 @@ import { INVOKE_CHANNELS, STREAM_CHANNELS } from './channels';
 import * as P from './practice';
 import * as S from './settings';
 import * as T from './tutor';
+import * as I from './intake';
 
 export {
   INVOKE_CHANNELS,
@@ -118,6 +119,22 @@ export const invokeChannels = {
   'explanations:page': { request: T.pageRequest, response: T.pageResponse },
   /** The learner opened an explanation: an open attempt counts as explained. */
   'explanations:viewed': { request: P.slugRequest, response: T.viewedResponse },
+
+  // ---- new problems (T12): intake jobs and open sets
+  /**
+   * Start writing a new problem (generate, paste or import). Refused:
+   * `invalid`, `busy` (one job at a time), `unavailable` (no tutor),
+   * `unknown_set`, `unknown_entry`.
+   */
+  'intake:start': { request: I.intakeRequest, response: I.startResponse },
+  /** The job still running, if any (the dialog reattaches to it). */
+  'intake:current': { request: z.undefined(), response: I.currentResponse },
+  /** Stop a running job; it ends with `cancelled`. */
+  'intake:cancel': { request: I.jobRequest, response: I.cancelResponse },
+  /** The open problem sets that can be imported (no network). */
+  'open-sets:list': { request: z.undefined(), response: I.openSetsResponse },
+  /** A set's entries (no network), each with the slug it was imported as, if any. */
+  'open-sets:entries': { request: I.entriesRequest, response: I.entriesResponse },
 } as const;
 
 export const streamChannels = {
@@ -149,6 +166,12 @@ export const streamChannels = {
    * turn. Refused before it starts: `busy`, `unavailable`, `empty`…
    */
   'chat:send': { request: T.sendRequest, event: T.chatEvent, result: T.sendResult },
+  /**
+   * A job's progress, replayed from its first event, until it ends; the
+   * result is how it ended. Cancel stops following, not the job (that is
+   * `intake:cancel`). Refused: `not_found`.
+   */
+  'intake:events': { request: I.jobRequest, event: I.intakeEvent, result: I.intakeOutcome },
 } as const;
 
 export type InvokeChannel = keyof typeof invokeChannels;

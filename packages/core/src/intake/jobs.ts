@@ -176,7 +176,7 @@ const clip = (s: unknown, n: number): string => String(s ?? '').slice(0, n);
 /**
  * What the UI may see of a failed `create_problem`: the error, spec problems,
  * and per failing test only id, category and status (plus the error type,
- * and the message when `withMessages`).
+ * and, when `withMessages`, the message of a visible test).
  */
 export function publicFailure(
   output: ToolOutput | null | undefined,
@@ -196,7 +196,9 @@ export function publicFailure(
       if (typeof r.category === 'string') item.category = r.category;
       if (typeof r.status === 'string') item.status = r.status;
       if (typeof r.error_type === 'string') item.error_type = clip(r.error_type, 80);
-      if (withMessages && typeof r.message === 'string') item.message = clip(r.message, 200);
+      // A message can quote a test's input: only visible tests' messages are shown.
+      if (withMessages && r.visibility === 'visible' && typeof r.message === 'string')
+        item.message = clip(r.message, 200);
       items.push(item);
     }
     out.failures = items;

@@ -20,6 +20,8 @@ import { DataService, type DataUi } from './data';
 import { registerPracticeHandlers } from './ipc/handlers/practice';
 import { followTheme, registerSettingsHandlers } from './ipc/handlers/settings';
 import { registerTutorHandlers } from './ipc/handlers/tutor';
+import { registerIntakeHandlers } from './ipc/handlers/intake';
+import { chatCreateProblem, openIntake, openSets, problemFactory, type AppIntake } from './intake';
 import { IpcRouter } from './ipc/router';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import { SecretStore } from './secrets';
@@ -132,7 +134,7 @@ export async function startPractice(
   ui: UiOptions,
   mainDir: string,
   dataUi: DataUi = electronDataUi(),
-): Promise<AppPractice & { tutor: AppTutor; secrets: SecretStore }> {
+): Promise<AppPractice & { tutor: AppTutor; secrets: SecretStore; intake: AppIntake }> {
   const content = contentDir(app.isPackaged, process.resourcesPath, mainDir);
   const practice = await openPractice(storage, {
     content,
@@ -145,7 +147,15 @@ export async function startPractice(
   followTheme(storage.settings, nativeTheme);
   registerPracticeHandlers(router, { practice: practice.practice });
   const secrets = await SecretStore.open(storage.paths.secrets, electronCrypto, process.env);
+  // New problems (T12): the self-check runs in Pyodide only.
+  const create = problemFactory({
+    catalog: practice.catalog,
+    dataDir: storage.paths.root,
+    executors: practice.executors,
+    now: isoNow,
+  });
   const tutor = await openTutor({
+    createProblem: chatCreateProblem(create),
     practice: practice.practice,
     settings: () => storage.settings.get(),
     apiKey: () => secrets.apiKey(),
@@ -157,6 +167,21 @@ export async function startPractice(
     now: isoNow,
   });
   registerTutorHandlers(router, { tutor, practice: practice.practice });
+  const { sets } = await openSets({
+    contentDir: content,
+    cacheDir: storage.paths.cache,
+    topics: new Set(practice.catalog.topics().map((t) => t.id)),
+  });
+  const intake = openIntake({
+    catalog: practice.catalog,
+    create,
+    sets,
+    backend: () => tutor.backend(),
+    tools: tutor.tools,
+    guides: tutor.references,
+    guard: practice.practice.guard,
+  });
+  registerIntakeHandlers(router, { intake });
   registerSettingsHandlers(router, {
     settings: storage.settings,
     secrets,
@@ -175,6 +200,7 @@ export async function startPractice(
     ...practice,
     tutor,
     secrets,
+    intake,
     dispose: () => {
       void tutor.close();
       practice.dispose();

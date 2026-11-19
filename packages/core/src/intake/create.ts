@@ -283,6 +283,7 @@ function failure(test: SpecTest, r: TestResult, expected?: unknown): Record<stri
   const status = r.status === 'pass' || r.status === 'fail' ? 'wrong_answer' : r.status;
   const item: Record<string, unknown> = {
     id: test.id,
+    visibility: test.visibility,
     category: test.category ?? '',
     status,
     input: clip(test.input),

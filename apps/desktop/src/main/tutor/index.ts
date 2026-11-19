@@ -72,6 +72,8 @@ export interface TutorDeps {
   env?: Record<string, string | undefined>;
   now: () => string;
   log?: (message: string, error?: unknown) => void;
+  /** T12: validate, self-check and save a problem; without it `create_problem` is not offered. */
+  createProblem?: TutorToolContext['createProblem'];
 }
 
 export interface AppTutor {
@@ -79,6 +81,8 @@ export interface AppTutor {
   tools: ToolRegistry<TutorToolContext>;
   explanations: ExplanationStore;
   systemPrompt: string;
+  /** `content/references/*.md` by name. */
+  references: Record<string, string>;
   /** The Anthropic backend, also when another is chosen (Settings' connection test). */
   anthropic: AnthropicBackend;
   claudeCode: ClaudeCodeBackend;
@@ -143,11 +147,10 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
   };
 
   const ctx: TutorToolContext = { ...practice.toolContext, renderExplanation };
+  if (deps.createProblem) ctx.createProblem = deps.createProblem;
   const tools = buildTutorRegistry(ctx, (m, e) => log(m, e));
-  const systemPrompt = buildSystemPrompt(
-    tools.anthropicTools(),
-    await readReferences(deps.contentDir),
-  );
+  const references = await readReferences(deps.contentDir);
+  const systemPrompt = buildSystemPrompt(tools.anthropicTools(), references);
 
   const anthropic = new AnthropicBackend({
     apiKey: deps.apiKey,
@@ -245,6 +248,7 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     tools,
     explanations,
     systemPrompt,
+    references,
     anthropic,
     claudeCode,
     claudeCodeInfo,

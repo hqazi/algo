@@ -40,8 +40,18 @@ export const INVOKE_CHANNELS = [
   'explanations:list',
   'explanations:page',
   'explanations:viewed',
+  'intake:start',
+  'intake:current',
+  'intake:cancel',
+  'open-sets:list',
+  'open-sets:entries',
 ] as const;
-export const STREAM_CHANNELS = ['example:count', 'workspace:watch', 'chat:send'] as const;
+export const STREAM_CHANNELS = [
+  'example:count',
+  'workspace:watch',
+  'chat:send',
+  'intake:events',
+] as const;
 
 /** Internal Electron channels used to carry streams. */
 export const STREAM_START = 'ipc:stream:start';

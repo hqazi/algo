@@ -7,3 +7,4 @@ package-lock.json
 *.md
 # Test data: kept compact, one line per file, as dsa-tutor wrote it.
 content/problems/**/tests.json
+content/open-sets/*/index.json
