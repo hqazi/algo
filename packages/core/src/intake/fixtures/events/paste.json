@@ -1,0 +1,24 @@
+[
+  {
+    "type": "progress",
+    "stage": "started",
+    "message": "Asking the tutor to convert the pasted problem"
+  },
+  {
+    "type": "progress",
+    "stage": "writing",
+    "message": "The tutor is writing the problem"
+  },
+  {
+    "type": "progress",
+    "stage": "checking",
+    "message": "Running the self-check",
+    "attempt": 1,
+    "max_attempts": 4
+  },
+  {
+    "type": "done",
+    "slug": "count-even-readings",
+    "title": "Even Readings"
+  }
+]

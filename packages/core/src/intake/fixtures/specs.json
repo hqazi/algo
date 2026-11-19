@@ -1,0 +1,75 @@
+{
+  "good": {
+    "slug": "count-even-readings",
+    "title": "Even Readings",
+    "topic": "arrays-strings",
+    "difficulty": "easy",
+    "statement": "A sensor logs whole-number readings. Return how many of them are even.",
+    "constraints": ["0 <= len(readings) <= 10^4"],
+    "signature": {
+      "function": "count_even",
+      "params": [{ "name": "readings", "type": "list<int>" }],
+      "returns": "int"
+    },
+    "compare": { "mode": "exact" },
+    "expected_complexity": { "time": "O(n)", "space": "O(1)" },
+    "tests": [
+      { "visibility": "visible", "input": { "readings": [1, 2, 3, 4] } },
+      { "visibility": "visible", "input": { "readings": [7] } },
+      { "visibility": "hidden", "category": "empty input", "input": { "readings": [] } },
+      {
+        "visibility": "hidden",
+        "category": "negative numbers",
+        "input": { "readings": [-2, -3, -4, 0] }
+      },
+      {
+        "visibility": "hidden",
+        "category": "all even",
+        "input": { "readings": [24680, 13579, 86420] }
+      }
+    ],
+    "reference_solution": "def count_even(readings):\n    return sum(1 for r in readings if r % 2 == 0)\n",
+    "brute_force": "def count_even(readings):\n    n = 0\n    for r in readings:\n        if r % 2 == 0:\n            n += 1\n    return n\n"
+  },
+  "bad_reference": "def count_even(readings):\n    return len(readings)\n",
+  "hidden_needles": ["24680", "13579", "86420"],
+  "import": {
+    "slug": "shelf-search",
+    "title": "Shelf Search",
+    "topic": "binary-search",
+    "difficulty": "easy",
+    "statement": "Given a sorted list of numbers and a value, return the index of the value, or -1 if it is not there.",
+    "signature": {
+      "function": "find",
+      "params": [
+        { "name": "array", "type": "list<int>" },
+        { "name": "value", "type": "int" }
+      ],
+      "returns": "int"
+    },
+    "expected_complexity": { "time": "O(log n)", "space": "O(1)" },
+    "tests": [
+      { "visibility": "visible", "input": { "array": [6], "value": 6 }, "expected": 0 },
+      {
+        "visibility": "visible",
+        "input": { "array": [1, 3, 4, 6, 8, 9, 11], "value": 6 },
+        "expected": 3
+      },
+      {
+        "visibility": "hidden",
+        "category": "first value",
+        "input": { "array": [1, 3, 4, 6, 8, 9, 11], "value": 1 },
+        "expected": 0
+      },
+      {
+        "visibility": "hidden",
+        "category": "missing value",
+        "input": { "array": [1, 3, 4, 6, 8, 9, 11], "value": 7 },
+        "expected": -1
+      },
+      { "visibility": "hidden", "category": "empty list", "input": { "array": [], "value": 1 } }
+    ],
+    "reference_solution": "def find(array, value):\n    lo, hi = 0, len(array) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if array[mid] == value:\n            return mid\n        if array[mid] < value:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n",
+    "brute_force": "def find(array, value):\n    for i, x in enumerate(array):\n        if x == value:\n            return i\n    return -1\n"
+  }
+}

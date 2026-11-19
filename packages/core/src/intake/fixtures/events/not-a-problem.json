@@ -1,0 +1,17 @@
+[
+  {
+    "type": "progress",
+    "stage": "started",
+    "message": "Asking the tutor to convert the pasted problem"
+  },
+  {
+    "type": "progress",
+    "stage": "writing",
+    "message": "The tutor is writing the problem"
+  },
+  {
+    "type": "error",
+    "code": "not_a_problem",
+    "message": "The pasted text could not be turned into a problem: it describes no inputs or outputs."
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "type": "progress",
+    "stage": "started",
+    "message": "Importing the problem from the open set"
+  },
+  {
+    "type": "progress",
+    "stage": "fetching",
+    "message": "Fetching the problem from Exercism problem-specifications"
+  },
+  {
+    "type": "error",
+    "code": "fetch",
+    "message": "Could not fetch the exercise from Exercism problem-specifications: refused a redirect from \"raw.githubusercontent.com\" to \"evil.example\": only the same host is followed."
+  }
+]

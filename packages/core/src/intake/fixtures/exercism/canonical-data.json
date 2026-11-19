@@ -1,0 +1,53 @@
+{
+  "exercise": "binary-search",
+  "cases": [
+    {
+      "uuid": "a1",
+      "description": "finds a value in a list with one element",
+      "property": "find",
+      "input": { "array": [6], "value": 6 },
+      "expected": 0
+    },
+    {
+      "uuid": "a2",
+      "description": "finds a value in the middle of a list",
+      "property": "find",
+      "input": { "array": [1, 3, 4, 6, 8, 9, 11], "value": 6 },
+      "expected": 3
+    },
+    {
+      "uuid": "a3",
+      "description": "old version of a case",
+      "property": "find",
+      "input": { "array": [1], "value": 2 },
+      "expected": 0
+    },
+    {
+      "uuid": "a4",
+      "reimplements": "a3",
+      "description": "identifies that a value is not included",
+      "property": "find",
+      "input": { "array": [1], "value": 2 },
+      "expected": { "error": "value not in array" }
+    },
+    {
+      "description": "edge cases",
+      "cases": [
+        {
+          "uuid": "a5",
+          "description": "nothing is found in an empty list",
+          "property": "find",
+          "input": { "array": [], "value": 1 },
+          "expected": { "error": "value not in array" }
+        },
+        {
+          "uuid": "a6",
+          "description": "another property",
+          "property": "other",
+          "input": { "array": [], "value": 1 },
+          "expected": 0
+        }
+      ]
+    }
+  ]
+}

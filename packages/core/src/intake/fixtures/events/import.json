@@ -1,0 +1,29 @@
+[
+  {
+    "type": "progress",
+    "stage": "started",
+    "message": "Importing the problem from the open set"
+  },
+  {
+    "type": "progress",
+    "stage": "fetching",
+    "message": "Fetching the problem from Exercism problem-specifications"
+  },
+  {
+    "type": "progress",
+    "stage": "writing",
+    "message": "The tutor is writing the problem"
+  },
+  {
+    "type": "progress",
+    "stage": "checking",
+    "message": "Running the self-check",
+    "attempt": 1,
+    "max_attempts": 4
+  },
+  {
+    "type": "done",
+    "slug": "shelf-search",
+    "title": "Shelf Search"
+  }
+]

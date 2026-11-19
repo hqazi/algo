@@ -1,0 +1,198 @@
+[
+  {
+    "type": "progress",
+    "stage": "started",
+    "message": "Asking the tutor to write the problem"
+  },
+  {
+    "type": "progress",
+    "stage": "writing",
+    "message": "The tutor is writing the problem"
+  },
+  {
+    "type": "progress",
+    "stage": "checking",
+    "message": "Running the self-check",
+    "attempt": 1,
+    "max_attempts": 4
+  },
+  {
+    "type": "progress",
+    "stage": "repair",
+    "attempt": 1,
+    "max_attempts": 4,
+    "message": "The self-check failed; the tutor is fixing it",
+    "detail": {
+      "error": "self-check failed: the reference solution does not pass every test; fix the reference or the expected values and call create_problem again",
+      "failures": [
+        {
+          "id": "example-1",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "example-2",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-2",
+          "category": "negative numbers",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-3",
+          "category": "all even",
+          "status": "wrong_answer"
+        }
+      ]
+    }
+  },
+  {
+    "type": "progress",
+    "stage": "checking",
+    "message": "Running the self-check",
+    "attempt": 2,
+    "max_attempts": 4
+  },
+  {
+    "type": "progress",
+    "stage": "repair",
+    "attempt": 2,
+    "max_attempts": 4,
+    "message": "The self-check failed; the tutor is fixing it",
+    "detail": {
+      "error": "self-check failed: the reference solution does not pass every test; fix the reference or the expected values and call create_problem again",
+      "failures": [
+        {
+          "id": "example-1",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "example-2",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-2",
+          "category": "negative numbers",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-3",
+          "category": "all even",
+          "status": "wrong_answer"
+        }
+      ]
+    }
+  },
+  {
+    "type": "progress",
+    "stage": "checking",
+    "message": "Running the self-check",
+    "attempt": 3,
+    "max_attempts": 4
+  },
+  {
+    "type": "progress",
+    "stage": "repair",
+    "attempt": 3,
+    "max_attempts": 4,
+    "message": "The self-check failed; the tutor is fixing it",
+    "detail": {
+      "error": "self-check failed: the reference solution does not pass every test; fix the reference or the expected values and call create_problem again",
+      "failures": [
+        {
+          "id": "example-1",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "example-2",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-2",
+          "category": "negative numbers",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-3",
+          "category": "all even",
+          "status": "wrong_answer"
+        }
+      ]
+    }
+  },
+  {
+    "type": "progress",
+    "stage": "checking",
+    "message": "Running the self-check",
+    "attempt": 4,
+    "max_attempts": 4
+  },
+  {
+    "type": "progress",
+    "stage": "repair",
+    "attempt": 4,
+    "max_attempts": 4,
+    "message": "The self-check failed; no repairs left",
+    "detail": {
+      "error": "self-check failed: the reference solution does not pass every test; fix the reference or the expected values and call create_problem again",
+      "failures": [
+        {
+          "id": "example-1",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "example-2",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-2",
+          "category": "negative numbers",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-3",
+          "category": "all even",
+          "status": "wrong_answer"
+        }
+      ]
+    }
+  },
+  {
+    "type": "error",
+    "code": "self_check",
+    "message": "The problem did not pass the self-check after 3 repairs.",
+    "detail": {
+      "error": "self-check failed: the reference solution does not pass every test; fix the reference or the expected values and call create_problem again",
+      "failures": [
+        {
+          "id": "example-1",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "example-2",
+          "category": "",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-2",
+          "category": "negative numbers",
+          "status": "wrong_answer"
+        },
+        {
+          "id": "hidden-3",
+          "category": "all even",
+          "status": "wrong_answer"
+        }
+      ]
+    }
+  }
+]
