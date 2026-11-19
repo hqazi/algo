@@ -120,8 +120,8 @@ function start(
   const origSend = p.event.sender.send;
   p.event.sender.send = (channel: string, ...args: unknown[]) => {
     origSend(channel, ...args);
-    const msg = args[0] as { id: string; event: { type: string } };
-    if (msg?.id === id) {
+    const msg = args[0] as { id: string; event?: { type: string } };
+    if (msg?.id === id && msg.event) {
       seen.push(msg.event);
       onEvent?.(msg.event, cancel);
     }

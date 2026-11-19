@@ -156,8 +156,8 @@ describe('turns', () => {
       {
         match: 'next hint',
         steps: [
-          { tool: 'read_solution', input: { slug: SLUG } },
-          { tool: 'take_hint', input: { slug: SLUG } },
+          { tool: 'read_solution', input: { slug: '$context.slug' } },
+          { tool: 'take_hint', input: { slug: '$context.slug' } },
           { text: 'Think about runs.' },
         ],
       },

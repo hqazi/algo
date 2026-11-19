@@ -241,12 +241,17 @@ export class IpcRouter {
         return fail('internal', e instanceof Error ? e.message : String(e));
       }
     })();
+    let result: IpcResult<unknown> = fail('internal', 'the stream ended unexpectedly');
     try {
       // A cancel answers at once, even if the handler ignores its signal.
-      return await Promise.race([run, cancelled]);
+      result = await Promise.race([run, cancelled]);
+      return result;
     } finally {
       this.running.delete(key);
       controller.abort(); // stops a handler that finished by error or by result
+      // The result again, in order after the events (see `StreamEventMessage`).
+      if (!sender.isDestroyed())
+        sender.send(STREAM_EVENT, { id, result } satisfies StreamEventMessage);
     }
   }
 

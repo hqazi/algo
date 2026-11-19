@@ -19,7 +19,9 @@
  *
  * A string input value `"$<tool>.<field>"` is replaced with that field of
  * the output of the most recent call to that tool in the same turn, e.g.
- * `{ "tool": "start_problem", "input": { "slug": "$next_problem.slug" } }`.
+ * `{ "tool": "start_problem", "input": { "slug": "$next_problem.slug" } }`;
+ * `"$context.<field>"` is that field of the turn's context (e.g. the open
+ * problem's `slug`).
  * `turns` keeps every `Turn` received, for assertions.
  */
 import type { JsonValue } from '../types/json';
@@ -142,7 +144,9 @@ export class FakeBackend implements TutorBackend {
       else if ('tool' in step) {
         const id = `fake_t${++this.tools}`;
         yield toolStart(id, step.tool, turn.tools.startSummary(step.tool));
-        const result = await turn.tools.call(step.tool, resolve(step.input, outputs));
+        const known = new Map(outputs);
+        known.set('context', { ...turn.context });
+        const result = await turn.tools.call(step.tool, resolve(step.input, known));
         outputs.set(step.tool, result.output);
         yield* resultEvents(id, result);
       } else if ('error' in step) {

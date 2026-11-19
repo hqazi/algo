@@ -40,9 +40,12 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+let chat: ChatStore;
+
 async function open(): Promise<void> {
+  chat = new ChatStore();
   render(
-    <ChatStoreContext.Provider value={new ChatStore()}>
+    <ChatStoreContext.Provider value={chat}>
       <AppProvider>
         <PracticePage slug={SLUG} />
         <Toasts />
@@ -142,6 +145,18 @@ describe('PracticePage', () => {
     expect((await screen.findByTestId('summary')).textContent).toBe('0/1 passed');
     expect(screen.getByTestId('problem-status').textContent).toBe('In progress');
     expect(screen.getByRole('button', { name: 'Give up' })).toBeTruthy();
+  });
+
+  it("shows the tutor's test run in the results panel", async () => {
+    await open();
+    act(() => {
+      (chat as unknown as { emitUi(e: unknown, t: string): void }).emitUi(
+        { type: 'ui', action: 'show_results', slug: SLUG, report: REPORT },
+        SLUG,
+      );
+    });
+    expect((await screen.findByTestId('summary')).textContent).toBe('1/1 passed');
+    expect(screen.getByText(/Run by the tutor/)).toBeTruthy();
   });
 
   it('says so when the problem is busy', async () => {

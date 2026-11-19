@@ -151,7 +151,14 @@ export const streamStart = z.strictObject({
   request: z.unknown(),
 });
 export type StreamStart = z.infer<typeof streamStart>;
-export type StreamEventMessage = { id: string; event: unknown };
+/**
+ * What main sends on `STREAM_EVENT`: one message per event, then one with the
+ * result. The result travels in order with the events because the invoke
+ * reply to `STREAM_START` (a different pipe) can overtake them; the preload
+ * resolves a stream from this message, so no event is lost.
+ */
+export type StreamEventMessage =
+  { id: string; event: unknown } | { id: string; result: IpcResult<unknown> };
 
 export type IpcErrorCode =
   | 'invalid_request' // the payload failed its schema

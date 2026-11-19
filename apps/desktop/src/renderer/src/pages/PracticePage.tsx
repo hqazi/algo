@@ -35,7 +35,7 @@ export function PracticePage({ slug }: { slug: string }) {
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [report, setReport] = useState<ReportView | null>(null);
-  const [reportKind, setReportKind] = useState<Busy>(null);
+  const [reportKind, setReportKind] = useState<Busy | 'tutor'>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [giveUpOpen, setGiveUpOpen] = useState(false);
@@ -154,7 +154,7 @@ export function PracticePage({ slug }: { slug: string }) {
       chat.onUi((ev) => {
         if (ev.action === 'show_results' && ev.slug === slug) {
           setReport(ev.report);
-          setReportKind('run');
+          setReportKind('tutor');
         } else if (ev.action === 'refresh_state') {
           invoke('problems:get', { slug }).then(
             (d) =>

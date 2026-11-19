@@ -283,15 +283,9 @@ export class ChatStore {
     });
     this.streams.set(thread, s);
     try {
-      await s.result;
-      if (!ended)
-        setReply(
-          applyEvent(reply, {
-            type: 'error',
-            kind: 'other',
-            message: 'The reply ended before it finished.',
-          }),
-        );
+      const { message } = await s.result;
+      // Main stores every reply; if an event went missing, show what it stored.
+      if (!ended) setReply({ ...fromTranscript(message), id: reply.id, pending: false });
     } catch (err) {
       if (err instanceof IpcError && err.code === 'cancelled') {
         if (!ended)

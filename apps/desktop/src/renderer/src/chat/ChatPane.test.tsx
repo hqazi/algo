@@ -203,11 +203,12 @@ describe('ChatPane with recorded turns', () => {
     expect(screen.queryByTestId('msg-error')).toBeNull();
   });
 
-  it('a stream that ends without done is shown as an error', async () => {
+  it('a stream that ends without its last events shows the stored reply', async () => {
     setup();
     await type('go');
     await play('cancelled');
-    expect((await screen.findByTestId('msg-error')).getAttribute('data-kind')).toBe('other');
+    expect(await log().findByText('x')).toBeTruthy();
+    expect(screen.queryByText('Thinking about')).toBeNull();
   });
 });
 

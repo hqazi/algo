@@ -8,7 +8,8 @@ import { args, STATUS_LABEL, titleCase, withExamples } from '../lib/format';
 
 export interface ResultsProps {
   report: ReportView | null;
-  kind: 'run' | 'submit' | 'give_up' | null;
+  /** What produced the report; `tutor`: the tutor's `run_tests`. */
+  kind: 'run' | 'submit' | 'give_up' | 'tutor' | null;
   examples?: ExampleView[];
   busy?: 'run' | 'submit' | 'give_up' | null;
   error?: string | null;
@@ -101,6 +102,7 @@ const KIND_TEXT = {
   run: 'Run (visible tests)',
   submit: 'Submit (all tests)',
   give_up: 'Final run',
+  tutor: 'Run by the tutor',
 };
 
 export function ResultsPanel({ report, kind, examples = [], busy, error }: ResultsProps) {

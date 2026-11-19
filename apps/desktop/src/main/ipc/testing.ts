@@ -49,7 +49,15 @@ export function page(url = APP_URL, parent: unknown = null) {
   return {
     event,
     sent,
-    events: () => sent.filter((s) => s.channel === STREAM_EVENT).map((s) => s.args[0]),
+    events: () =>
+      sent
+        .filter((s) => s.channel === STREAM_EVENT && !('result' in (s.args[0] as object)))
+        .map((s) => s.args[0]),
+    /** The result messages sent in order after a stream's events. */
+    results: () =>
+      sent
+        .filter((s) => s.channel === STREAM_EVENT && 'result' in (s.args[0] as object))
+        .map((s) => s.args[0]),
     destroy: () => {
       destroyed = true;
       onDestroyed?.();

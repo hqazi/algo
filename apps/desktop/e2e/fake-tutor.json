@@ -1,0 +1,53 @@
+[
+  {
+    "match": "practise next",
+    "steps": [
+      { "tool": "get_status" },
+      { "tool": "next_problem", "input": {} },
+      { "tool": "start_problem", "input": { "slug": "$next_problem.slug" } },
+      { "text": "Here is your next problem. Read it, then try a first version." }
+    ]
+  },
+  {
+    "match": "next hint",
+    "steps": [
+      { "tool": "read_solution", "input": { "slug": "$context.slug" } },
+      { "tool": "take_hint", "input": { "slug": "$context.slug" } },
+      { "text": "Think about what you have **already seen**." }
+    ]
+  },
+  {
+    "match": "review my current solution",
+    "steps": [
+      { "tool": "run_tests", "input": { "slug": "$context.slug" } },
+      { "text": "Verdict: not yet. Look at the failing cases in the results panel." }
+    ]
+  },
+  {
+    "match": "explain this problem",
+    "steps": [
+      {
+        "tool": "render_explanation",
+        "input": {
+          "content": {
+            "slug": "$context.slug",
+            "plain_words": "Find the answer in **one pass**.",
+            "intuition": "Remember what you have seen.",
+            "brute_force": { "idea": "Try every pair.", "time": "O(n^2)", "space": "O(1)" },
+            "optimal": { "idea": "Use a hash map.", "time": "O(n)", "space": "O(n)" },
+            "trace": "1. Start.\n2. Finish.",
+            "complexity": { "time": "O(n)", "space": "O(n)", "why": "Each item once." },
+            "solution": "def solve(xs):\n    # one pass\n    return xs\n",
+            "pitfalls": ["Empty input."]
+          }
+        }
+      },
+      { "text": "The explanation is open." }
+    ]
+  },
+  {
+    "match": "take your time",
+    "steps": [{ "text": "Thinking" }, { "sleep": 30000 }, { "text": "never shown" }]
+  },
+  [{ "text": "This is the fake tutor. It has no script for this message." }]
+]

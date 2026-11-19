@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { STREAM_CANCEL, STREAM_START, type IpcResult } from '../../shared/ipc';
+import { STREAM_CANCEL, STREAM_EVENT, STREAM_START, type IpcResult } from '../../shared/ipc';
 import { registerHandlers } from './handlers';
 import { IpcRouter } from './router';
 import { APP_URL, FakeIpcMain, page } from './testing';
@@ -93,6 +93,12 @@ describe('stream channels', () => {
       { id: 's1', event: { n: 2 } },
       { id: 's1', event: { n: 3 } },
     ]);
+    // The result also follows the events on the event channel, in order:
+    // the invoke reply can overtake them in Electron.
+    expect(p.sent.filter((m) => m.channel === STREAM_EVENT).at(-1)!.args[0]).toEqual({
+      id: 's1',
+      result: { ok: true, value: { counted: 3 } },
+    });
     expect(router.activeStreams).toBe(0);
   });
 
@@ -113,6 +119,9 @@ describe('stream channels', () => {
     expect(count).toBeLessThan(1000);
     await tick(30);
     expect(p.events().length).toBe(count);
+    expect(p.results()).toEqual([
+      { id: 's2', result: { ok: false, error: { code: 'cancelled', message: 'cancelled' } } },
+    ]);
     expect(router.activeStreams).toBe(0);
   });
 

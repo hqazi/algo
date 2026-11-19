@@ -57,10 +57,7 @@ try {
   await page.locator('.statement-title').waitFor();
   const slug = new URL(page.url()).hash.replace('#/p/', '');
   check('next problem opens the practice view', /^[a-z0-9-]+$/.test(slug), slug);
-  check(
-    'tutor pane says not configured',
-    await page.getByText('Tutor not configured.').isVisible(),
-  );
+  check('tutor pane says not set up', await page.getByTestId('ai-unavailable').isVisible());
 
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   const summary = page.getByTestId('summary');

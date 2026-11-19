@@ -15,9 +15,17 @@ import {
 import type { IpcResult, StreamEventMessage, StreamStart, TutorBridge } from '../shared/ipc';
 
 const listeners = new Map<string, (event: unknown) => void>();
+/** Resolvers for running streams' results, which arrive after their events. */
+const enders = new Map<string, (result: IpcResult<never>) => void>();
+/** Replies main gives before a stream starts: no result message follows them. */
+const EARLY = new Set(['forbidden', 'invalid_request', 'unknown_channel']);
 
 ipcRenderer.on(STREAM_EVENT, (_e: IpcRendererEvent, message: StreamEventMessage) => {
-  listeners.get(message.id)?.(message.event);
+  if ('result' in message) {
+    listeners.delete(message.id);
+    enders.get(message.id)?.(message.result as IpcResult<never>);
+    enders.delete(message.id);
+  } else listeners.get(message.id)?.(message.event);
 });
 
 const unknownChannel = (channel: unknown): IpcResult<never> => ({
@@ -38,8 +46,19 @@ const bridge: TutorBridge = {
     const id = crypto.randomUUID();
     listeners.set(id, onEvent as (event: unknown) => void);
     const start: StreamStart = { id, channel, request };
-    const result = (ipcRenderer.invoke(STREAM_START, start) as Promise<IpcResult<never>>).finally(
-      () => listeners.delete(id),
+    const ended = new Promise<IpcResult<never>>((resolve) => enders.set(id, resolve));
+    const result = (ipcRenderer.invoke(STREAM_START, start) as Promise<IpcResult<never>>).then(
+      (reply) => {
+        if (reply.ok || !EARLY.has(reply.error.code)) return ended;
+        listeners.delete(id);
+        enders.delete(id);
+        return reply;
+      },
+      (err: unknown) => {
+        listeners.delete(id);
+        enders.delete(id);
+        throw err;
+      },
     );
     return {
       result,
