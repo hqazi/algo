@@ -3,7 +3,8 @@
  * optional "Connect the tutor" step, then home. Ported from
  * `dsa-tutor/web/src/pages/OnboardingPage.tsx`. The tutor step is skipped
  * when a tutor is already available (e.g. a key in the environment).
- * Claude Code joins the tutor step in T11.
+ * Claude Code needs the same API key (DECISIONS D-25), so the step is the key
+ * form either way.
  */
 import { useState } from 'react';
 import type { ProfileUpdate } from '../../../shared/settings';

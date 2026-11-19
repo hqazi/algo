@@ -13,7 +13,7 @@ describe('parseSettings', () => {
     expect(parseSettings(undefined)).toEqual({ settings: DEFAULT_SETTINGS, issues: [] });
     expect(parseSettings({})).toEqual({ settings: DEFAULT_SETTINGS, issues: [] });
     expect(DEFAULT_SETTINGS).toEqual({
-      tutor: { backend: 'auto', model: null, effort: 'medium' },
+      tutor: { backend: 'auto', model: null, effort: 'medium', claudeCodePath: null },
       execution: { runtime: 'local', timeScale: 1 },
       editor: { fontSize: 14, keymap: 'default' },
       ui: { theme: 'system' },
@@ -28,7 +28,12 @@ describe('parseSettings', () => {
       execution: { timeScale: 2.5 },
     });
     expect(issues).toEqual([]);
-    expect(settings.tutor).toEqual({ backend: 'anthropic', model: 'some-model', effort: 'medium' });
+    expect(settings.tutor).toEqual({
+      backend: 'anthropic',
+      model: 'some-model',
+      effort: 'medium',
+      claudeCodePath: null,
+    });
     expect(settings.ui.theme).toBe('dark');
     expect(settings.execution).toEqual({ runtime: 'local', timeScale: 2.5 });
     expect(settings.editor).toEqual(DEFAULT_SETTINGS.editor);

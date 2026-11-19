@@ -25,6 +25,7 @@ const groups = {
     backend: z.enum(TUTOR_BACKENDS),
     model: z.string().max(200).nullable(),
     effort: z.enum(TUTOR_EFFORTS),
+    claudeCodePath: z.string().max(1000).nullable(),
   },
   execution: {
     runtime: z.enum(EXECUTION_RUNTIMES),

@@ -25,6 +25,8 @@ const FIELDS = {
     /** `null`: the backend's default model (chosen in T10). */
     model: z.string().trim().min(1).nullable(),
     effort: z.enum(TUTOR_EFFORTS),
+    /** The Claude Code executable (absolute); `null`: look on `PATH` (T11). */
+    claudeCodePath: z.string().trim().min(1).nullable(),
   },
   execution: {
     runtime: z.enum(EXECUTION_RUNTIMES),
@@ -50,7 +52,7 @@ export type Settings = {
 export type SettingsPatch = { [G in keyof Settings]?: Partial<Settings[G]> };
 
 export const DEFAULT_SETTINGS: Settings = {
-  tutor: { backend: 'auto', model: null, effort: 'medium' },
+  tutor: { backend: 'auto', model: null, effort: 'medium', claudeCodePath: null },
   execution: { runtime: 'local', timeScale: 1.0 },
   editor: { fontSize: 14, keymap: 'default' },
   ui: { theme: 'system' },

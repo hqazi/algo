@@ -49,6 +49,8 @@ try {
     apiKey: () => key,
     contentDir: CONTENT,
     explanationsDir: join(dataDir, 'explanations'),
+    agentHome: join(dataDir, 'agent-home'),
+    appVersion: '0.0.0',
     env: {},
     now: isoNow,
   });

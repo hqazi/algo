@@ -31,7 +31,14 @@ import { Practice } from '../practice/service';
 import { openDatabase } from '../storage/database';
 import { SqliteStorage } from '../storage/sqlite-storage';
 import { ExplanationStore, KEEP } from './explanations';
-import { DEFAULT_MODEL, FAKE_TUTOR_ENV, openTutor, type AppTutor } from '.';
+import {
+  CLAUDE_CODE_MIN_VERSION,
+  DEFAULT_MODEL,
+  FAKE_TUTOR_ENV,
+  openTutor,
+  type AppTutor,
+  type ClaudeCodeInfo,
+} from '.';
 
 const CONTENT = fileURLToPath(new URL('../../../../../content/', import.meta.url));
 const SLUG = 'compress-runs';
@@ -47,6 +54,8 @@ let ipc: FakeIpcMain;
 let settings: Settings;
 let apiKey: string | null;
 let streamId = 0;
+let ccInfo: ClaudeCodeInfo;
+let detections: (string | null)[];
 
 async function make(script: FakeScript | null): Promise<void> {
   const env: Record<string, string> = {};
@@ -61,6 +70,12 @@ async function make(script: FakeScript | null): Promise<void> {
     apiKey: () => apiKey,
     contentDir: CONTENT,
     explanationsDir: join(dataDir, 'explanations'),
+    agentHome: join(dataDir, 'agent-home'),
+    appVersion: '0.0.0',
+    detectClaudeCode: (configured) => {
+      detections.push(configured);
+      return Promise.resolve(ccInfo);
+    },
     env,
     now,
     log: () => {},
@@ -90,6 +105,14 @@ beforeEach(async () => {
   await practice.teaching.profileDefaults();
   settings = structuredClone(DEFAULT_SETTINGS);
   apiKey = null;
+  detections = [];
+  ccInfo = {
+    found: false,
+    path: null,
+    version: null,
+    usable: false,
+    reason: 'Claude Code was not found.',
+  };
 });
 
 afterEach(async () => {
@@ -167,8 +190,41 @@ describe('status and backend choice', () => {
     expect(await value('tutor:status')).toMatchObject({ model: 'claude-sonnet-5-5' });
     settings.tutor.backend = 'none';
     expect(await value('tutor:status')).toMatchObject({ backend: 'none', available: false });
+  });
+
+  it('claude-code: the installed CLI, with the app’s key; detection is cached', async () => {
+    await make(null);
     settings.tutor.backend = 'claude-code';
-    expect(await value('tutor:status')).toMatchObject({ backend: 'none', available: false });
+    apiKey = 'sk-ant-test';
+    expect(await value('tutor:status')).toEqual({
+      backend: 'claude-code',
+      available: false,
+      reason: 'Claude Code was not found.',
+      model: 'claude-opus-5-5',
+    });
+    ccInfo = { found: true, path: '/bin/claude', version: '2.1.400', usable: true, reason: null };
+    // Cached until a recheck.
+    expect(await value('tutor:status')).toMatchObject({ available: false });
+    expect(await value('tutor:claude-code', { recheck: true })).toEqual({
+      ...ccInfo,
+      min_version: CLAUDE_CODE_MIN_VERSION,
+    });
+    expect(await value('tutor:status')).toMatchObject({
+      backend: 'claude-code',
+      available: true,
+    });
+    apiKey = null;
+    expect(await value('tutor:status')).toMatchObject({
+      available: false,
+      reason: expect.stringMatching(/API key/) as string,
+    });
+    // A new configured path is detected again.
+    const before = detections.length;
+    settings.tutor.claudeCodePath = '/opt/claude';
+    await value('tutor:claude-code', { recheck: false });
+    expect(detections.slice(before)).toEqual(['/opt/claude']);
+    await value('tutor:claude-code', { recheck: false });
+    expect(detections.length).toBe(before + 1);
   });
 
   it('the fake backend from the environment replaces the choice; a bad script says why', async () => {
@@ -182,6 +238,8 @@ describe('status and backend choice', () => {
       apiKey: () => null,
       contentDir: CONTENT,
       explanationsDir: join(dataDir, 'explanations'),
+      agentHome: join(dataDir, 'agent-home'),
+      appVersion: '0.0.0',
       env: { [FAKE_TUTOR_ENV]: file },
       now,
     });

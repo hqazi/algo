@@ -48,7 +48,7 @@ export const EXPORT_DIRS = [
 /** What an import replaces: the exported items plus the database's side files. */
 const IMPORT_REPLACES = [...EXPORT_FILES, 'tutor.db-wal', 'tutor.db-shm', ...EXPORT_DIRS];
 /** What "reset everything" removes besides that: the key, caches, old copies. */
-const RESET_ALSO = ['secrets.bin', 'cache', 'settings.json.invalid'];
+const RESET_ALSO = ['secrets.bin', 'cache', 'agent-home', 'settings.json.invalid'];
 
 export const LIMITS = {
   entries: 20_000,

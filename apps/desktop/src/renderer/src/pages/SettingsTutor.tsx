@@ -1,11 +1,13 @@
 /**
  * Settings → Tutor (SPEC §8): backend, API key (entered here, stored by main
  * in the OS keychain, shown back only as "…abcd"), test connection, model,
- * effort, and the tutor's status. `KeyForm` is also onboarding's "Connect
- * the tutor" step.
+ * effort, the tutor's status, and Claude Code (found where, which version,
+ * a path to use instead; T11). `KeyForm` is also onboarding's "Connect the
+ * tutor" step.
  */
 import { useEffect, useState, type FormEvent } from 'react';
 import type { KeyStatusView, TestResultView } from '../../../shared/settings';
+import type { ClaudeCodeInfoView } from '../../../shared/tutor';
 import { useChatStore, useTutorStatus } from '../chat/store';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
@@ -14,7 +16,7 @@ import { keyText, useKeyStatus } from './SettingsShared';
 const BACKENDS = [
   { id: 'auto', label: 'Automatic (Anthropic API when a key is set)' },
   { id: 'anthropic', label: 'Anthropic API' },
-  { id: 'claude-code', label: 'Claude Code (not available yet)' },
+  { id: 'claude-code', label: 'Claude Code (with your API key)' },
   { id: 'none', label: 'Off' },
 ] as const;
 const EFFORTS = ['low', 'medium', 'high'] as const;
@@ -169,6 +171,101 @@ export function KeyForm({ status, onStatus, onConnected }: KeyFormProps) {
   );
 }
 
+function claudeCodeText(info: ClaudeCodeInfoView): string {
+  if (info.usable) return `Found: ${info.path ?? ''} (version ${info.version ?? '?'})`;
+  return info.reason ?? 'Not available.';
+}
+
+/**
+ * Claude Code: where it was found, its version, and a path to use instead.
+ * The app runs it in bare mode with the API key above, never with the
+ * Claude account it may be signed in to (DECISIONS D-25).
+ */
+export function ClaudeCodePanel({
+  saved,
+  onSave,
+}: {
+  saved: string | null;
+  onSave: (path: string | null) => Promise<void>;
+}) {
+  const { notify } = useApp();
+  const chat = useChatStore();
+  const [info, setInfo] = useState<ClaudeCodeInfoView | null>(null);
+  const [path, setPath] = useState(saved ?? '');
+  const [busy, setBusy] = useState(false);
+
+  // Keyed by the saved path, so a saved change mounts a new panel and looks again.
+  useEffect(() => {
+    let live = true;
+    void invoke('tutor:claude-code', { recheck: false }).then(
+      (i) => {
+        if (!live) return;
+        setInfo(i);
+        void chat.refreshStatus();
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [chat]);
+
+  async function recheck(): Promise<void> {
+    setBusy(true);
+    try {
+      setInfo(await invoke('tutor:claude-code', { recheck: true }));
+      void chat.refreshStatus();
+    } catch (err) {
+      notify(errorText(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="claude-code" data-testid="claude-code">
+      <p data-testid="claude-code-status">
+        <strong>Claude Code:</strong>{' '}
+        {info ? (
+          <span className={info.usable ? '' : 'error-text'}>{claudeCodeText(info)}</span>
+        ) : (
+          'Checking…'
+        )}
+      </p>
+      <form
+        className="inline-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSave(path.trim() || null);
+        }}
+      >
+        <label className="field">
+          Claude Code path
+          <input
+            aria-label="Claude Code path"
+            spellCheck={false}
+            value={path}
+            placeholder="Default: claude on your PATH"
+            onChange={(e) => setPath(e.target.value)}
+          />
+        </label>
+        <button type="submit" disabled={(saved ?? '') === path.trim()}>
+          Save path
+        </button>
+        <button type="button" onClick={() => void recheck()} disabled={busy}>
+          Recheck
+        </button>
+      </form>
+      <p className="muted small">
+        The tutor runs your installed Claude Code (version {info?.min_version ?? '…'} or later) with
+        only the tutor’s tools: no files, shell or web. It uses the API key above, not the Claude
+        account Claude Code may be signed in to: Anthropic’s terms do not let other apps use a
+        Claude subscription.
+      </p>
+    </div>
+  );
+}
+
 /** Keyed by the saved model, so a saved change resets the field. */
 function ModelForm({
   saved,
@@ -257,6 +354,13 @@ export function TutorSection() {
         </select>
       </label>
       <KeyForm status={keyStatus} onStatus={setKeyStatus} />
+      {t.backend === 'claude-code' && (
+        <ClaudeCodePanel
+          key={`claude-code:${t.claudeCodePath ?? ''}`}
+          saved={t.claudeCodePath}
+          onSave={(claudeCodePath) => change({ tutor: { claudeCodePath } })}
+        />
+      )}
       <ModelForm
         key={t.model ?? ''}
         saved={t.model}

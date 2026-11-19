@@ -77,6 +77,8 @@ beforeEach(async () => {
     apiKey: () => secrets.apiKey(),
     contentDir: CONTENT,
     explanationsDir: app.paths.explanations,
+    agentHome: app.paths.agentHome,
+    appVersion: '0.0.0',
     env: {},
     now,
     log,
@@ -144,6 +146,7 @@ describe('settings apply at once', () => {
       backend: 'auto',
       model: 'claude-sonnet-5-5',
       effort: 'high',
+      claudeCodePath: null,
     });
     const p = tutor.anthropic.requestParams(turn(), []);
     expect(p.model).toBe('claude-sonnet-5-5');

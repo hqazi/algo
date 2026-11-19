@@ -32,6 +32,17 @@ export const tutorStatus = z.strictObject({
   model: z.string().nullable(),
 });
 
+/** Where Claude Code is and whether the tutor can use it (T11); never a secret. */
+export const claudeCodeInfo = z.strictObject({
+  found: z.boolean(),
+  path: z.string().nullable(),
+  version: z.string().nullable(),
+  usable: z.boolean(),
+  reason: z.string().nullable(),
+  min_version: z.string(),
+});
+export const claudeCodeRequest = z.strictObject({ recheck: z.boolean() });
+
 export const toolChip = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -127,6 +138,7 @@ export const viewedResponse = z.strictObject({
 });
 
 export type TutorStatusView = z.output<typeof tutorStatus>;
+export type ClaudeCodeInfoView = z.output<typeof claudeCodeInfo>;
 export type ChatMessageView = z.output<typeof chatMessage>;
 export type ChatEventView = z.output<typeof chatEvent>;
 export type UiEventView = z.output<typeof uiEvent>;

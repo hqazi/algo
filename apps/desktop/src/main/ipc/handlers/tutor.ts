@@ -17,7 +17,7 @@ import {
 } from '@algorithm-tutor/core';
 import type { ChatEventView, ChatMessageView, UiEventView } from '../../../shared/tutor';
 import { reportView, type Practice } from '../../practice/service';
-import type { AppTutor } from '../../tutor';
+import { CLAUDE_CODE_MIN_VERSION, type AppTutor } from '../../tutor';
 import { IpcRefusal, type IpcRouter } from '../router';
 
 export interface TutorHandlerDeps {
@@ -85,6 +85,10 @@ export function registerTutorHandlers(router: IpcRouter, deps: TutorHandlerDeps)
   const languageFor = (slug: string) => practice.teaching.languageFor(slug);
 
   router.handle('tutor:status', () => tutor.status());
+  router.handle('tutor:claude-code', async ({ recheck }) => ({
+    ...(await tutor.claudeCodeInfo(recheck)),
+    min_version: CLAUDE_CODE_MIN_VERSION,
+  }));
 
   router.handle('chat:thread', ({ thread }) =>
     refusing(() => ({

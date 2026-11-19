@@ -5,7 +5,9 @@
  * `content/references/`, the per-turn context, and the explanation pages.
  *
  * Backend choice (`tutor.backend`): `auto` is Anthropic when a key is set,
- * else none (Claude Code joins `auto` in T11); `none` turns the tutor off.
+ * else none; `claude-code` is the user's installed Claude Code, run with the
+ * same key through a loopback relay (T11, DECISIONS D-25), so `auto` never
+ * needs it; `none` turns the tutor off.
  * `ALGOTUTOR_FAKE_TUTOR=<script.json>` (development and tests only, SPEC §12)
  * replaces all of it with the scripted fake backend.
  *
@@ -14,6 +16,7 @@
  * this process.
  */
 import { readdir, readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
@@ -34,12 +37,18 @@ import {
   type TutorBackend,
   type TutorToolContext,
 } from '@algorithm-tutor/core';
+import { McpGateway } from '../mcp/gateway';
+import { McpServer } from '../mcp/server';
 import type { Practice } from '../practice/service';
 import { AnthropicBackend } from './anthropic/backend';
+import { ApiProxy } from './claude-code/api-proxy';
+import { ClaudeCodeBackend } from './claude-code/backend';
+import { detectClaudeCode, type ClaudeCodeInfo } from './claude-code/detect';
 import { ExplanationStore } from './explanations';
 
 export { AnthropicBackend, DEFAULT_MODEL } from './anthropic/backend';
 export { ExplanationStore } from './explanations';
+export { MIN_VERSION as CLAUDE_CODE_MIN_VERSION, type ClaudeCodeInfo } from './claude-code/detect';
 
 export const FAKE_TUTOR_ENV = 'ALGOTUTOR_FAKE_TUTOR';
 
@@ -55,6 +64,11 @@ export interface TutorDeps {
   apiKey: () => string | null;
   contentDir: string;
   explanationsDir: string;
+  /** Claude Code's home while it runs as the tutor (`<data>/agent-home`). */
+  agentHome: string;
+  appVersion: string;
+  /** Tests: replaces Claude Code detection. */
+  detectClaudeCode?: (configured: string | null) => Promise<ClaudeCodeInfo>;
   env?: Record<string, string | undefined>;
   now: () => string;
   log?: (message: string, error?: unknown) => void;
@@ -67,8 +81,13 @@ export interface AppTutor {
   systemPrompt: string;
   /** The Anthropic backend, also when another is chosen (Settings' connection test). */
   anthropic: AnthropicBackend;
+  claudeCode: ClaudeCodeBackend;
+  /** Where Claude Code is and whether it can be used (cached; `recheck` looks again). */
+  claudeCodeInfo(recheck?: boolean): Promise<ClaudeCodeInfo>;
   backend(): TutorBackend;
   status(): Promise<TutorStatus>;
+  /** Stops the MCP server and the relay (at quit). */
+  close(): Promise<void>;
 }
 
 const sleep: Sleep = async (ms, signal) => {
@@ -136,6 +155,48 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     effort: () => deps.settings().tutor.effort,
     log: (m) => console.warn(m),
   });
+  // Claude Code (T11): detection is cached (status is read before every
+  // turn); a new configured path or a recheck looks again.
+  const env = deps.env ?? process.env;
+  let detected: { configured: string | null; info: Promise<ClaudeCodeInfo> } | null = null;
+  const claudeCodeInfo = (recheck = false): Promise<ClaudeCodeInfo> => {
+    const configured = deps.settings().tutor.claudeCodePath;
+    if (recheck || !detected || detected.configured !== configured) {
+      const info = deps.detectClaudeCode
+        ? deps.detectClaudeCode(configured)
+        : detectClaudeCode({ configured, env, home: homedir() });
+      detected = { configured, info };
+    }
+    return detected.info;
+  };
+  const gateway = new McpGateway();
+  const mcp = new McpServer({ gateway, version: deps.appVersion, log: (m) => log(m) });
+  const relay = new ApiProxy({
+    apiKey: deps.apiKey,
+    upstream: () => env.ANTHROPIC_BASE_URL?.trim() || 'https://api.anthropic.com',
+    log: (m) => log(m),
+  });
+  let servers: Promise<void> | null = null;
+  const claudeCode = new ClaudeCodeBackend({
+    info: () => claudeCodeInfo(),
+    gateway,
+    relay,
+    ready: () =>
+      (servers ??= Promise.all([mcp.start(), relay.start()]).then(
+        () => undefined,
+        (e: unknown) => {
+          servers = null;
+          throw e;
+        },
+      )),
+    apiKey: deps.apiKey,
+    model: () => deps.settings().tutor.model,
+    effort: () => deps.settings().tutor.effort,
+    home: deps.agentHome,
+    env,
+    log: (m) => log(m),
+  });
+
   const fakePath = deps.env?.[FAKE_TUTOR_ENV]?.trim();
   const fake = fakePath ? await fakeFromEnv(fakePath) : null;
 
@@ -144,11 +205,7 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     const choice = deps.settings().tutor.backend;
     if (choice === 'none')
       return new UnavailableBackend('anthropic', 'The tutor is turned off in Settings.');
-    if (choice === 'claude-code')
-      return new UnavailableBackend(
-        'claude-code',
-        'Claude Code is not supported in this version yet.',
-      );
+    if (choice === 'claude-code') return claudeCode;
     if (choice === 'auto' && !deps.apiKey())
       return new UnavailableBackend(
         'anthropic',
@@ -189,7 +246,12 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     explanations,
     systemPrompt,
     anthropic,
+    claudeCode,
+    claudeCodeInfo,
     backend,
+    async close() {
+      await Promise.all([mcp.stop(), relay.stop()]);
+    },
     async status() {
       const b = backend();
       let s: BackendStatus;

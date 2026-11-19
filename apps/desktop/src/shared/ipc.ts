@@ -106,6 +106,8 @@ export const invokeChannels = {
   // ---- tutor (T10): status, chat threads, explanation pages
   /** Which backend is in use and whether it can run. */
   'tutor:status': { request: z.undefined(), response: T.tutorStatus },
+  /** Claude Code's path, version and whether it can be used; `recheck` looks again (T11). */
+  'tutor:claude-code': { request: T.claudeCodeRequest, response: T.claudeCodeInfo },
   /** A thread's current transcript. */
   'chat:thread': { request: T.threadRequest, response: T.threadResponse },
   /** Archive the thread ("Reset chat"). Refused (`busy`) while a reply streams. */

@@ -34,6 +34,7 @@ export const INVOKE_CHANNELS = [
   'data:import',
   'data:reset',
   'tutor:status',
+  'tutor:claude-code',
   'chat:thread',
   'chat:reset',
   'explanations:list',

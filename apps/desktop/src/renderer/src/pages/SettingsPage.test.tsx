@@ -139,7 +139,7 @@ describe('SettingsPage', () => {
     const bridge = bridgeWith().on('tutor:status', () => TUTOR_ON);
     bridge.on('settings:get', () => ({
       settings: {
-        tutor: { backend: 'auto', model: null, effort: 'medium' },
+        tutor: { backend: 'auto', model: null, effort: 'medium', claudeCodePath: null },
         execution: { runtime: 'local', timeScale: 1 },
         editor: { fontSize: 14, keymap: 'default' },
         ui: { theme: 'system' },
@@ -154,6 +154,56 @@ describe('SettingsPage', () => {
       expect(screen.getByTestId('tutor-status-line').textContent).toContain('claude-opus-5-5'),
     );
     expect((await screen.findByTestId('exec-status')).textContent).toContain('pyodide 314.0.7');
+  });
+
+  it('Claude Code: status, a path to use instead, and recheck', async () => {
+    let info = {
+      found: false,
+      path: null as string | null,
+      version: null as string | null,
+      usable: false,
+      reason: 'Claude Code was not found.' as string | null,
+      min_version: '2.1.328',
+    };
+    const bridge = bridgeWith().on('tutor:claude-code', () => info);
+    renderPage(bridge);
+    expect(await screen.findByLabelText('Tutor backend')).toBeTruthy();
+    expect(screen.queryByTestId('claude-code')).toBeNull();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Tutor backend' }), {
+      target: { value: 'claude-code' },
+    });
+    expect((await screen.findByTestId('claude-code-status')).textContent).toContain(
+      'Claude Code was not found.',
+    );
+    expect(screen.getByTestId('claude-code').textContent).toContain('2.1.328 or later');
+    expect(screen.getByTestId('claude-code').textContent).toMatch(/not the\s+Claude account/);
+
+    info = {
+      ...info,
+      found: true,
+      path: '/opt/claude',
+      version: '2.1.400',
+      usable: true,
+      reason: null,
+    };
+    fireEvent.change(screen.getByLabelText('Claude Code path'), {
+      target: { value: ' /opt/claude ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save path' }));
+    await waitFor(() =>
+      expect(setCalls(bridge).at(-1)).toEqual({ tutor: { claudeCodePath: '/opt/claude' } }),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('claude-code-status').textContent).toBe(
+        'Claude Code: Found: /opt/claude (version 2.1.400)',
+      ),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Recheck' }));
+    await waitFor(() =>
+      expect(
+        bridge.calls.filter((c) => c.channel === 'tutor:claude-code').map((c) => c.request),
+      ).toContainEqual({ recheck: true }),
+    );
   });
 
   it('reset progress goes to main and reports the backup', async () => {

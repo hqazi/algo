@@ -151,6 +151,8 @@ export async function startPractice(
     apiKey: () => secrets.apiKey(),
     contentDir: content,
     explanationsDir: storage.paths.explanations,
+    agentHome: storage.paths.agentHome,
+    appVersion: app.getVersion(),
     env: process.env,
     now: isoNow,
   });
@@ -169,5 +171,13 @@ export async function startPractice(
       ui: dataUi,
     }),
   });
-  return { ...practice, tutor, secrets };
+  return {
+    ...practice,
+    tutor,
+    secrets,
+    dispose: () => {
+      void tutor.close();
+      practice.dispose();
+    },
+  };
 }

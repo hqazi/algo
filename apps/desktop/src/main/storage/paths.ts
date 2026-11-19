@@ -30,6 +30,8 @@ export function dataPaths(dataDir: string) {
     importedProblems: join(dataDir, 'problems', 'imported'),
     explanations: join(dataDir, 'explanations'),
     cache: join(dataDir, 'cache'),
+    /** Claude Code's home while it runs as the tutor (its sessions; T11). Never exported. */
+    agentHome: join(dataDir, 'agent-home'),
     logs: join(dataDir, 'logs'),
     /** Automatic exports made before import and reset (SPEC §4.5). */
     backups: join(dataDir, 'backups'),
