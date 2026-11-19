@@ -992,3 +992,61 @@ GitHub drafts, unsigned until secrets exist** (2026-11-19, T13)
 |---|---|---|
 | electron-builder | 26.18.1 | Desktop dev dependency; also downloads Electron, appimagetool and fpm at package time. |
 | electron-updater | 6.8.11 | Bundled into the main process. The update check (D-27) ran with this version; 6.8.12 is newer and untried. |
+
+**D-29 Rust and Go harnesses: `i64`, no crates, a nonce-marked stdout
+protocol** (2026-11-19, T15; resolves the Rust `int` DECISION)
+
+- **Rust `int` is `i64`** (the default): the format promises the 64-bit range
+  (D-11), so `i32` would reject or wrap valid tests. Go `int` is 64-bit on
+  every platform the app ships for.
+- **Type mapping** (SPEC §5.2, now final). Rust: `i64`, `f64`, `bool`,
+  `String`, `char`, `Vec<T>`, `(A, B)`, `HashMap<String|i64, T>`,
+  `Option<T>`, `Option<Rc<RefCell<TreeNode>>>`, `Option<Box<ListNode>>`, owned
+  arguments (the LeetCode shapes). Go: `int`, `float64`, `bool`, `string`,
+  `rune`, `[]T`, a struct per tuple type (`Tuple`, or `Tuple1`, `Tuple2`… when
+  a signature has several; fields `V0`, `V1`…), `map[string|int]T`, `*T`,
+  `*TreeNode`, `*ListNode`. A returned Go nil slice is `[]`; an empty tree or
+  list is `[]`, as in Python.
+- **Node types are concrete** (`val: i64`, `Val int`, or the element type of
+  the signature's trees/lists). So Rust and Go need every `tree` in a
+  signature to share one element type, and every `linked_list` too
+  (`compiledHarnessLimit`); all 50 curated problems qualify and now list
+  `["python", "rust", "go"]`.
+- **Names.** Rust keeps snake_case; keywords become raw identifiers
+  (`r#type`), and `self`/`super`/`crate` get a trailing `_`. Go uses
+  lowerCamelCase (`level_lists` → `levelLists`); keywords, predeclared names
+  (`len`, `string`, …) and `main`/`init` get a trailing `_`. Harness
+  identifiers in Go start with `harness`.
+- **No `serde_json`** (the ticket suggested it, vendored or cached). The
+  Rust runtime has a ~280-line JSON reader/writer (`content/runners/rust/json.rs`)
+  and the project has no dependencies, so `cargo build --offline` works with
+  no registry cache: in `--network none` containers (§6.5), on offline
+  machines, and with nothing for T19 to pre-fetch. Integers parse to `i64`
+  exactly; `\u` escapes and surrogate pairs are handled; covered by the
+  round-trip check. Go uses `encoding/json` with `UseNumber`. Rejected:
+  vendoring serde/serde_json (a lot of third-party source in the repo for
+  two functions), relying on a cached registry (first build needs network).
+- **Protocol** (`langs/common.ts`): stdin is a `{"nonce": …}` header line
+  then one input object per test; the harness reads all of stdin before any
+  solution code runs. After each test it writes `\x1e<nonce> {record}\n` to
+  stdout; text printed between records is that test's stdout, so solutions
+  can print freely and cannot forge a record without the nonce. Records:
+  `ok` (`actual` as a JSON value, `time_ms` around the call only), `error`
+  (`panic` with the line in `solution.rs`/`.go` when found, or `output`),
+  `fatal` (bad input: the run fails as a harness error).
+  `parseHarnessStream` maps a missing record to `timeout` (the executor
+  killed it) or `crash` (process died: stack overflow, `process::exit`,
+  a panic in a goroutine), and skips the rest.
+- **Build settings.** Rust: release profile with `overflow-checks = true`
+  (overflow panics instead of wrapping silently) and line tables (panic
+  lines); the solution runs on a 512 MB-stack thread for deep recursion
+  (overflow still aborts: reported as a crash). Go: `go 1.22` in `go.mod`
+  (range-over-int works; an older Go may try to download a toolchain, so
+  T16 should run with `GOTOOLCHAIN=local`).
+- **Offered vs. supported.** `languageSupports` (content validation) knows
+  Rust and Go now; `languagesWithHarness()` (what profiles, tutor tools and
+  new problems may use) stays `["python"]` until an executor runs them
+  (T16/T17), and `teaching.start` refuses languages not offered.
+- **Checked with** cargo 1.97.0 and go 1.24.7 on Linux (`npm run
+  check:harnesses`, CI job `harnesses`). Not checked: macOS and Windows,
+  older toolchains.

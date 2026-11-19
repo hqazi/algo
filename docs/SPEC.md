@@ -280,16 +280,17 @@ Compare modes are unchanged: `exact`, `unordered`, `unordered_deep`, `float`
 | `string` | string | `str` | `String` | `string` |
 | `char` | 1-char string | `str` | `char` | `rune` |
 | `list<T>` | array | `list[T]` | `Vec<T>` | `[]T` |
-| `tuple<A,B,…>` | array of fixed length | `tuple[A, B]` | `(A, B)` | struct per harness |
-| `map<string,T>` / `map<int,T>` | object (int keys as strings) | `dict` | `HashMap` | `map` |
-| `optional<T>` | value or `null` | `T \| None` | `Option<T>` | pointer or `ok` pair |
+| `tuple<A,B,…>` | array of fixed length | `tuple[A, B]` | `(A, B)` | struct per harness (`Tuple`, fields `V0`, `V1`, …) |
+| `map<string,T>` / `map<int,T>` | object (int keys as strings) | `dict` | `HashMap<String, T>` / `HashMap<i64, T>` | `map[string]T` / `map[int]T` |
+| `optional<T>` | value or `null` | `T \| None` | `Option<T>` | `*T` |
 | `tree<T>` | level-order array with `null` gaps | `TreeNode \| None` | `Option<Rc<RefCell<TreeNode>>>` | `*TreeNode` |
 | `linked_list<T>` | array | `ListNode \| None` | `Option<Box<ListNode>>` | `*ListNode` |
 
 Graphs are expressed with existing types (`list<list<int>>` adjacency lists or
-edge lists, `list<string>` grids). The Rust and Go columns are indicative; T15
-finalises them. **DECISION**: whether `int` is `i64` or `i32` in Rust (default
-`i64`).
+edge lists, `list<string>` grids). The Rust and Go columns are final (T15,
+D-29); Rust `int` is `i64`. Rust and Go have one node type per harness, so
+they run a signature only if all its trees share one element type, and all
+its linked lists too.
 
 Rules (enforced by the parser, D-12): `tuple` has two or more items; `tree`
 and `linked_list` hold a scalar (`int`, `float`, `bool`, `string`, `char`);
@@ -417,6 +418,12 @@ in the local toolchain or a container, in every version.
   signature, writes: the stub the user sees, a `main` that reads tests from
   stdin as JSON, converts with the type adapters, calls the function, and
   writes one JSON result line per test.
+- Protocol (D-29): stdin is a `{"nonce"}` header line then one input object
+  per test; after each test the harness writes `\x1e<nonce> {record}` on
+  stdout, and what the solution printed in between is that test's stdout.
+  The project has no third-party dependencies (Rust parses JSON itself), so
+  it builds offline. Core's `parseHarnessStream` turns stdout into the same
+  `HarnessOutput` the Python harness produces.
 - **Local executor:** uses `cargo` / `go` on `PATH`. One cached project per
   problem under `cache/build/<lang>/<slug>/` so reruns compile incrementally.
   Process per run, killed (with its process group) on timeout. No sandbox: the
@@ -623,7 +630,7 @@ needs.
 |---|---|---|
 | ~~**DECISION** default tutor model~~ | 4.3, T10 | Resolved: `claude-opus-5-5` (D-23) |
 | ~~**DECISION** Pyodide time limits~~ | 6.2, T07 | Resolved: default kept, measured (D-15) |
-| **DECISION** Rust `int` width | 5.2, T15 | `i64` |
+| ~~**DECISION** Rust `int` width~~ | 5.2, T15 | Resolved: `i64` (D-29) |
 | ~~**DECISION** code signing~~ | 11, T13 | Resolved: unsigned until secrets exist; the workflow signs when they do (D-27) |
 | ~~**VERIFY** Electron `safeStorage` API and Linux fallback~~ | 4.4, T09 | Resolved: async API, `basic_text` warning (D-24) |
 | ~~**VERIFY** Anthropic API behaviour notes~~ | 7.3, T10 | Resolved: checked against current docs and SDK 1.5.0 (D-23) |

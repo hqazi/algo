@@ -65,7 +65,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | done |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | done |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
-| T15 | Rust and Go harness generators | v2 | 5d | T04 | in-progress |
+| T15 | Rust and Go harness generators | v2 | 5d | T04 | done |
 | T16 | Local toolchain executor | v2 | 2d | T15 | todo |
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | todo |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | todo |
@@ -1183,10 +1183,17 @@ and Go.
 - Mark which problems each language supports (all types supported → add to `languages`).
 
 **Acceptance.**
-- [ ] Golden-file tests for stubs and harnesses across all neutral types.
-- [ ] A hand-written Rust and Go solution for 5 problems (one per tricky type: tree, linked list, map, tuple, float) passes when compiled locally (CI job with toolchains).
+- [x] Golden-file tests for stubs and harnesses across all neutral types.
+- [x] A hand-written Rust and Go solution for 5 problems (one per tricky type: tree, linked list, map, tuple, float) passes when compiled locally (CI job with toolchains).
 
 **Notes.**
+
+- Built: `packages/core/src/langs/` — `rust/` and `go/` generators (`rustStub`/`goStub`, `rustProject`/`goProject` returning the generated files, the runtime files to copy from `content/runners/<lang>/`, the solution path, build and run commands) and `common.ts` (protocol: `encodeHarnessInput`, `newNonce`, `parseHarnessStream` → `HarnessOutput`, `compiledHarnessLimit`). Fixed runtimes: `content/runners/rust/{harness,json}.rs` (no crates), `content/runners/go/harness.go`. Decisions in D-29 (Rust `int` = `i64`, type mapping, names, no `serde_json`, protocol, build settings); SPEC §5.2 table finalised and §6.4 protocol added; §14 item resolved.
+- Tests: `langs/langs.test.ts` — golden files for 7 signatures covering every neutral type, nested and with keyword names (`langs/golden/<lang>/<case>/`, `vitest -u` to regenerate), names, support rule, protocol parsing (stdout split, forged records ignored, timeout, crash, fatal), grading through `gradeRun`, fixtures validate.
+- `npm run check:harnesses` (`scripts/check-harnesses.ts`; CI job `harnesses`, Linux): hand-written Rust and Go solutions in `content/runners/<lang>/check/` for `mirror-tree` (tree), `reverse-chain` (linked list) and three fixture problems in `langs/fixtures/` (`group-lengths` map, `best-team` tuple/char/optional, `basket-average` float + map inputs) pass every test; the stub panics with a line, a wrong answer fails, an index error reports its line, runaway recursion is a crash, an endless loop times out, printed text reaches stdout; 18 types round-trip through `echo`; all 14 golden projects compile. Ran here with cargo 1.97.0 and go 1.24.7: all passed (~30 s).
+- Content: all 50 curated problems now list `["python", "rust", "go"]` (every signature qualifies). `validate:content` passes.
+- Wiring outside Owns: `problems/validate.ts` (per-language support with reasons; `languagesWithHarness()` stays `["python"]` until an executor runs Rust/Go), `teaching/teaching.ts` (`start` refuses languages the app cannot run), `teaching/workspace.ts` (`starterCode` uses the Rust/Go stubs), `tools/tutor-tools.ts` (`get_problem` lists only runnable languages), `problems/loader.test.ts` (unsupported-language case now uses mixed tree types), `core/src/index.ts` export, `package.json` script, `.github/workflows/ci.yml` job, SPEC/DECISIONS, T19 scope line.
+- Not done / not tested: no executor runs Rust or Go in the app yet (T16/T17); the language picker is T16. Not tested on macOS or Windows (the check script runs `harness` without `.exe`; T16 handles Windows names) or with toolchains older than the ones above; the CI job uses the runner image's preinstalled `cargo`/`go` (not pinned) and has not run yet. No Rust/Go reference solutions exist for the 50 curated problems, so listing them means "the harness supports the types", not "checked in Rust/Go". Memory limits are not enforced by the harness.
 
 ### T16 — Local toolchain executor
 
@@ -1261,7 +1268,7 @@ and Go.
 and Go, multi-arch, published on release tags.
 
 **Scope.**
-- Minimal image, non-root user, toolchains pinned, `serde_json` pre-fetched for offline builds.
+- Minimal image, non-root user, toolchains pinned. (No `serde_json` to pre-fetch: the harnesses have no dependencies, D-29.)
 - Published with the app release; version tied to the app.
 
 **Acceptance.**
