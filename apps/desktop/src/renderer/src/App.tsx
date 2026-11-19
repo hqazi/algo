@@ -1,11 +1,9 @@
 /**
  * The app shell (ported from `dsa-tutor/web/src/App.tsx`): top bar, routes,
- * toasts, and the chat's app-wide effects (T10). New problem (T12) and
- * Settings (T09) come later.
+ * toasts, and the chat's app-wide effects (T10). New problem arrives in T12.
  */
 import { APP_NAME } from '@algorithm-tutor/core';
 import { useCallback, useEffect, useState } from 'react';
-import type { Theme } from '../../shared/practice';
 import { ChatEffects } from './chat/ChatEffects';
 import { useChatStore, useTutorStatus } from './chat/store';
 import { Link } from './components/Link';
@@ -18,7 +16,8 @@ import { HomePage } from './pages/HomePage';
 import { PracticePage } from './pages/PracticePage';
 import { ProblemsPage } from './pages/ProblemsPage';
 import { ProgressPage } from './pages/ProgressPage';
-import { WelcomePage } from './pages/WelcomePage';
+import { OnboardingPage } from './pages/OnboardingPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 function NavLink({
   to,
@@ -37,12 +36,6 @@ function NavLink({
     </Link>
   );
 }
-
-const THEMES: { id: Theme; label: string }[] = [
-  { id: 'system', label: 'System theme' },
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
-];
 
 export function Shell() {
   const app = useApp();
@@ -109,7 +102,7 @@ export function Shell() {
         page = <HomePage onNext={() => void next()} nextBusy={nextBusy} />;
         break;
       case 'welcome':
-        page = <WelcomePage />;
+        page = <OnboardingPage />;
         break;
       case 'problems':
         page = <ProblemsPage />;
@@ -119,6 +112,9 @@ export function Shell() {
         break;
       case 'progress':
         page = <ProgressPage />;
+        break;
+      case 'settings':
+        page = <SettingsPage />;
         break;
       default:
         page = (
@@ -153,19 +149,11 @@ export function Shell() {
           <NavLink to="/progress" route={route} name="progress">
             Progress
           </NavLink>
+          <NavLink to="/settings" route={route} name="settings">
+            Settings
+          </NavLink>
         </nav>
-        <select
-          className="theme-select"
-          aria-label="Theme"
-          value={app.theme}
-          onChange={(e) => void app.setTheme(e.target.value as Theme)}
-        >
-          {THEMES.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+        <span className="spacer" />
         {tutor &&
           (tutor.available ? (
             <span className="ai-on small" title={tutor.model ? `Model: ${tutor.model}` : undefined}>

@@ -679,9 +679,6 @@ textarea {
 }
 
 /* ---------------------------------------------------------------- added in T08 */
-.theme-select {
-  margin-left: auto;
-}
 .notice {
   font-size: 0.82rem;
   padding: 0.3rem 0.6rem;
@@ -693,4 +690,37 @@ textarea {
   font-family: var(--mono);
   font-size: 0.8rem;
   overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- added in T09 */
+.warning {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.7rem;
+}
+.pass-text {
+  color: var(--pass);
+}
+.inline-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+.inline-form .field {
+  flex: 1 1 16rem;
+  margin: 0;
+}
+button.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.settings-page .card h3 {
+  font-size: 0.95rem;
+  margin: 1rem 0 0.4rem;
+}
+.settings-page .card > .field {
+  max-width: 24rem;
 }

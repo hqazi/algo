@@ -5,7 +5,8 @@
  * React state. Such replacements do not call `onChange`.
  *
  * The one-dark theme follows `prefers-color-scheme`, which the main process
- * sets from the theme setting.
+ * sets from the theme setting. Font size and keymap (default, Vim, Emacs)
+ * come from the editor settings and change without a reload (T09).
  */
 import { useEffect, useRef } from 'react';
 import { basicSetup } from 'codemirror';
@@ -15,6 +16,11 @@ import { indentWithTab } from '@codemirror/commands';
 import { indentUnit } from '@codemirror/language';
 import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { emacs } from '@replit/codemirror-emacs';
+import { vim } from '@replit/codemirror-vim';
+import type { Extension } from '@codemirror/state';
+
+export type EditorKeymap = 'default' | 'vim' | 'emacs';
 
 export interface EditorProps {
   value: string;
@@ -24,6 +30,18 @@ export interface EditorProps {
   onSubmit?: () => void;
   readOnly?: boolean;
   label?: string;
+  fontSize?: number | undefined;
+  keymap?: EditorKeymap | undefined;
+}
+
+function keymapExtension(k: EditorKeymap | undefined): Extension {
+  if (k === 'vim') return vim();
+  if (k === 'emacs') return emacs();
+  return [];
+}
+
+function fontExtension(px: number | undefined): Extension {
+  return EditorView.theme({ '&': { fontSize: `${px ?? 14}px` } });
 }
 
 const DARK = '(prefers-color-scheme: dark)';
@@ -38,6 +56,8 @@ export function Editor(props: EditorProps) {
   const handlers = useRef(props);
   const theme = useRef(new Compartment());
   const ro = useRef(new Compartment());
+  const keys = useRef(new Compartment());
+  const font = useRef(new Compartment());
   const external = useRef(false);
 
   useEffect(() => {
@@ -46,7 +66,7 @@ export function Editor(props: EditorProps) {
 
   useEffect(() => {
     if (!host.current) return;
-    const keys = Prec.highest(
+    const runKeys = Prec.highest(
       keymap.of([
         {
           key: 'Mod-Enter',
@@ -68,8 +88,11 @@ export function Editor(props: EditorProps) {
     const state = EditorState.create({
       doc: initial.value,
       extensions: [
-        keys,
+        // Vim and Emacs bindings must come before the default keymaps.
+        keys.current.of(keymapExtension(initial.keymap)),
+        runKeys,
         basicSetup,
+        font.current.of(fontExtension(initial.fontSize)),
         keymap.of([indentWithTab]),
         indentUnit.of('    '),
         python(),
@@ -94,7 +117,7 @@ export function Editor(props: EditorProps) {
     };
   }, []);
 
-  const { value, docKey, readOnly } = props;
+  const { value, docKey, readOnly, fontSize, keymap: keymapSetting } = props;
   useEffect(() => {
     const v = view.current;
     if (!v) return;
@@ -121,5 +144,13 @@ export function Editor(props: EditorProps) {
     });
   }, [readOnly]);
 
-  return <div className="editor" ref={host} />;
+  useEffect(() => {
+    view.current?.dispatch({ effects: keys.current.reconfigure(keymapExtension(keymapSetting)) });
+  }, [keymapSetting]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: font.current.reconfigure(fontExtension(fontSize)) });
+  }, [fontSize]);
+
+  return <div className="editor" ref={host} data-keymap={keymapSetting ?? 'default'} />;
 }

@@ -18,6 +18,7 @@
 import { z } from 'zod';
 import { INVOKE_CHANNELS, STREAM_CHANNELS } from './channels';
 import * as P from './practice';
+import * as S from './settings';
 import * as T from './tutor';
 
 export {
@@ -77,8 +78,30 @@ export const invokeChannels = {
     request: P.attemptsRequest,
     response: z.strictObject({ attempts: z.array(P.attemptView) }),
   },
-  'settings:theme': { request: z.undefined(), response: P.themeView },
-  'settings:set-theme': { request: P.themeView, response: P.themeView },
+
+  // ---- settings and onboarding (T09)
+  /** Save the questionnaire's answers (onboarding and Settings → Profile). */
+  'profile:set': { request: S.profileUpdate, response: P.profileResponse },
+  'settings:get': { request: z.undefined(), response: S.settingsResponse },
+  /** Apply a change at once (no restart). Refused (`invalid`) if any value is invalid. */
+  'settings:set': { request: S.settingsPatch, response: S.settingsResponse },
+  /** Where the API key comes from and its last four characters; never the key. */
+  'secrets:status': { request: z.undefined(), response: S.keyStatus },
+  /** Store the API key in the OS keychain. Refused: `invalid_key`, `unavailable`. */
+  'secrets:set-key': { request: S.setKeyRequest, response: S.keyStatus },
+  'secrets:clear-key': { request: z.undefined(), response: S.keyStatus },
+  /** One small API call with the key in use (no tokens spent): is the key and model good? */
+  'tutor:test': { request: z.undefined(), response: S.testResult },
+  /** The Python executor (Pyodide) and its versions. */
+  'exec:status': { request: z.undefined(), response: S.execStatus },
+  'data:info': { request: z.undefined(), response: S.dataInfo },
+  'data:open-folder': { request: z.undefined(), response: z.strictObject({ opened: z.boolean() }) },
+  /** Asks where to save, then writes the export zip; `path: null` if cancelled. */
+  'data:export': { request: z.undefined(), response: S.exportResponse },
+  /** Asks for a zip, validates it, exports the current data to backups, restarts to apply. */
+  'data:import': { request: z.undefined(), response: S.importResponse },
+  /** Confirms, exports to backups, then resets (everything: on restart). */
+  'data:reset': { request: S.resetRequest, response: S.resetResponse },
 
   // ---- tutor (T10): status, chat threads, explanation pages
   /** Which backend is in use and whether it can run. */

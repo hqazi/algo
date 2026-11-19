@@ -7,13 +7,11 @@
  * `locked`, `no_solution`…); anything else is an internal error.
  */
 import { TutorError, type ProfileView } from '@algorithm-tutor/core';
-import type { Theme } from '../../../shared/practice';
 import { PracticeRefusal, type Practice } from '../../practice/service';
 import { IpcRefusal, type IpcRouter } from '../router';
 
 export interface PracticeHandlerDeps {
   practice: Practice;
-  theme: { get(): Theme; set(theme: Theme): Theme };
 }
 
 /** Run `fn`, turning expected failures into refusals. */
@@ -101,7 +99,4 @@ export function registerPracticeHandlers(router: IpcRouter, deps: PracticeHandle
   router.handle('attempts:list', (req) =>
     refusing(() => ({ attempts: practice.attempts({ slug: req.slug, last: req.last }) })),
   );
-
-  router.handle('settings:theme', () => ({ theme: deps.theme.get() }));
-  router.handle('settings:set-theme', ({ theme }) => ({ theme: deps.theme.set(theme) }));
 }

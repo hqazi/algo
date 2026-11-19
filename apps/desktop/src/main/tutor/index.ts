@@ -9,8 +9,9 @@
  * `ALGOTUTOR_FAKE_TUTOR=<script.json>` (development and tests only, SPEC §12)
  * replaces all of it with the scripted fake backend.
  *
- * The API key comes from `apiKey()` (the environment's `ANTHROPIC_API_KEY`
- * here; T09 adds the keychain). It stays in this process.
+ * The API key comes from `apiKey()`: the environment's `ANTHROPIC_API_KEY`,
+ * else the one stored in the keychain (`main/secrets/`, T09). It stays in
+ * this process.
  */
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -64,6 +65,8 @@ export interface AppTutor {
   tools: ToolRegistry<TutorToolContext>;
   explanations: ExplanationStore;
   systemPrompt: string;
+  /** The Anthropic backend, also when another is chosen (Settings' connection test). */
+  anthropic: AnthropicBackend;
   backend(): TutorBackend;
   status(): Promise<TutorStatus>;
 }
@@ -149,7 +152,7 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     if (choice === 'auto' && !deps.apiKey())
       return new UnavailableBackend(
         'anthropic',
-        'No tutor is set up. Add an Anthropic API key to use the tutor.',
+        'No tutor is set up. Add an Anthropic API key in Settings to use the tutor.',
         anthropic.model(),
       );
     return anthropic;
@@ -185,6 +188,7 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     tools,
     explanations,
     systemPrompt,
+    anthropic,
     backend,
     async status() {
       const b = backend();

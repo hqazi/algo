@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/** The shell: first run goes to Welcome, Next problem opens a problem, the theme setting. */
+/** The shell: first run goes to Welcome, Next problem opens a problem, Settings changes the theme. */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { App } from './App';
@@ -10,7 +10,7 @@ beforeEach(() => window.history.replaceState(null, '', '/index.html'));
 afterEach(cleanup);
 
 describe('App', () => {
-  it('sends a first run to Welcome, and "use defaults" to Home', async () => {
+  it('sends a first run to Welcome; "use defaults", then "skip" the tutor, lands on Home', async () => {
     let onboarded = false;
     const bridge = baseHandlers(new FakeBridge(), { onboarded: false, profile: null });
     bridge
@@ -24,6 +24,8 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome' })).toBeTruthy();
     expect(window.location.hash).toBe('#/welcome');
     fireEvent.click(screen.getByRole('button', { name: 'Use defaults and start' }));
+    expect(await screen.findByRole('heading', { name: 'Connect the tutor' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
     expect(await screen.findByRole('heading', { name: 'Practice' })).toBeTruthy();
     expect(window.location.hash).toBe('#/');
   });
@@ -60,15 +62,19 @@ describe('App', () => {
     expect(screen.getByText('Starting with hash maps.')).toBeTruthy();
   });
 
-  it('changes the theme through the main process', async () => {
-    const bridge = baseHandlers(new FakeBridge());
+  it('changes the theme in Settings through the main process', async () => {
+    const bridge = baseHandlers(new FakeBridge())
+      .on('exec:status', () => ({ python: { available: true, reason: null, versions: {} } }))
+      .on('data:info', () => ({ dir: '/data', backups: '/data/backups' }))
+      .on('app:version', () => ({ app: '0.0.0', electron: '45', chrome: '1', node: '24' }));
     installBridge(bridge);
     render(<App />);
+    fireEvent.click(await screen.findByRole('link', { name: 'Settings' }));
     const select = await screen.findByRole('combobox', { name: 'Theme' });
     fireEvent.change(select, { target: { value: 'dark' } });
     await waitFor(() => expect((select as HTMLSelectElement).value).toBe('dark'));
-    expect(bridge.calls.find((c) => c.channel === 'settings:set-theme')?.request).toEqual({
-      theme: 'dark',
+    expect(bridge.calls.find((c) => c.channel === 'settings:set')?.request).toEqual({
+      ui: { theme: 'dark' },
     });
   });
 });

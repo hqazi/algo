@@ -3,16 +3,29 @@
  * (`security-check.ts`), so the check runs exactly what ships.
  */
 import { join } from 'node:path';
-import { app, ipcMain, nativeTheme, protocol, session } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  nativeTheme,
+  protocol,
+  session,
+  shell,
+} from 'electron';
 import { isoNow } from '@algorithm-tutor/core';
 import { EXEC_SCHEME_PRIVILEGES } from './exec/host-window';
 import { registerHandlers } from './ipc/handlers';
+import { DataService, type DataUi } from './data';
 import { registerPracticeHandlers } from './ipc/handlers/practice';
+import { followTheme, registerSettingsHandlers } from './ipc/handlers/settings';
 import { registerTutorHandlers } from './ipc/handlers/tutor';
 import { IpcRouter } from './ipc/router';
 import { contentDir, openPractice, type AppPractice } from './practice';
+import { SecretStore } from './secrets';
+import { electronCrypto } from './secrets/electron-crypto';
 import type { AppStorage } from './storage';
-import { openTutor, type AppTutor } from './tutor';
+import { DEFAULT_MODEL, openTutor, type AppTutor } from './tutor';
 import {
   APP_SCHEME_PRIVILEGES,
   guardAllWebContents,
@@ -56,18 +69,70 @@ export function afterReady(ui: UiOptions): IpcRouter {
   return router;
 }
 
+/** File choosers, confirmations and restart for the Data section, as Electron dialogs. */
+export function electronDataUi(): DataUi {
+  const parent = (): BrowserWindow | undefined =>
+    BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  const withParent = <T>(fn: (w: BrowserWindow | undefined) => Promise<T>): Promise<T> =>
+    fn(parent());
+  return {
+    chooseExportPath: (defaultName) =>
+      withParent(async (w) => {
+        const opts = {
+          title: 'Export data',
+          defaultPath: join(app.getPath('documents'), defaultName),
+          filters: [{ name: 'Zip', extensions: ['zip'] }],
+        };
+        const r = w ? await dialog.showSaveDialog(w, opts) : await dialog.showSaveDialog(opts);
+        return r.canceled || !r.filePath ? null : r.filePath;
+      }),
+    chooseImportFile: () =>
+      withParent(async (w) => {
+        const opts = {
+          title: 'Import data',
+          properties: ['openFile' as const],
+          filters: [{ name: 'Zip', extensions: ['zip'] }],
+        };
+        const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
+        return r.canceled ? null : (r.filePaths[0] ?? null);
+      }),
+    confirm: ({ message, detail, ok }) =>
+      withParent(async (w) => {
+        const opts = {
+          type: 'warning' as const,
+          message,
+          detail,
+          buttons: ['Cancel', ok],
+          defaultId: 0,
+          cancelId: 0,
+        };
+        const r = w ? await dialog.showMessageBox(w, opts) : await dialog.showMessageBox(opts);
+        return r.response === 1;
+      }),
+    openFolder: async (path) => (await shell.openPath(path)) === '',
+    restart: () => {
+      // After the IPC reply has gone out.
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 300);
+    },
+  };
+}
+
 /**
  * After `app.whenReady()` and storage: load the problems, start the executor
- * behind the execution host, and register the practice channels (T08) and
- * the tutor's (T10). The theme setting drives `prefers-color-scheme` in
- * every window.
+ * behind the execution host, open the keychain, and register the practice
+ * channels (T08), the tutor's (T10) and Settings' (T09). Settings apply at
+ * once; the theme setting drives `prefers-color-scheme` in every window.
  */
 export async function startPractice(
   router: IpcRouter,
   storage: AppStorage,
   ui: UiOptions,
   mainDir: string,
-): Promise<AppPractice & { tutor: AppTutor }> {
+  dataUi: DataUi = electronDataUi(),
+): Promise<AppPractice & { tutor: AppTutor; secrets: SecretStore }> {
   const content = contentDir(app.isPackaged, process.resourcesPath, mainDir);
   const practice = await openPractice(storage, {
     content,
@@ -77,28 +142,32 @@ export async function startPractice(
       devServerUrl: ui.devServerUrl,
     },
   });
-  nativeTheme.themeSource = storage.settings.get().ui.theme;
-  registerPracticeHandlers(router, {
-    practice: practice.practice,
-    theme: {
-      get: () => storage.settings.get().ui.theme,
-      set: (theme) => {
-        const next = storage.settings.update({ ui: { theme } }).ui.theme;
-        nativeTheme.themeSource = next;
-        return next;
-      },
-    },
-  });
+  followTheme(storage.settings, nativeTheme);
+  registerPracticeHandlers(router, { practice: practice.practice });
+  const secrets = await SecretStore.open(storage.paths.secrets, electronCrypto, process.env);
   const tutor = await openTutor({
     practice: practice.practice,
     settings: () => storage.settings.get(),
-    // T09 adds the key stored in the keychain; until then, the environment's.
-    apiKey: () => process.env['ANTHROPIC_API_KEY']?.trim() || null,
+    apiKey: () => secrets.apiKey(),
     contentDir: content,
     explanationsDir: storage.paths.explanations,
     env: process.env,
     now: isoNow,
   });
   registerTutorHandlers(router, { tutor, practice: practice.practice });
-  return { ...practice, tutor };
+  registerSettingsHandlers(router, {
+    settings: storage.settings,
+    secrets,
+    anthropic: tutor.anthropic,
+    defaultModel: DEFAULT_MODEL,
+    practice: practice.practice,
+    data: new DataService({
+      paths: storage.paths,
+      storage: storage.storage,
+      appVersion: app.getVersion(),
+      now: isoNow,
+      ui: dataUi,
+    }),
+  });
+  return { ...practice, tutor, secrets };
 }

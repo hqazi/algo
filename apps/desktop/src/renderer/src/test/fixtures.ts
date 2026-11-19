@@ -1,4 +1,5 @@
 /** Shared replies for UI tests. */
+import { DEFAULT_SETTINGS } from '@algorithm-tutor/core';
 import type {
   ProblemDetail,
   ProfileResponse,
@@ -6,6 +7,7 @@ import type {
   TopicView,
   WorkspaceResponse,
 } from '../../../shared/practice';
+import type { KeyStatusView, SettingsResponse } from '../../../shared/settings';
 import type { TutorStatusView } from '../../../shared/tutor';
 import type { FakeBridge } from './fake-bridge';
 
@@ -90,7 +92,7 @@ export const REPORT: ReportView = {
 export const TUTOR_OFF: TutorStatusView = {
   backend: 'none',
   available: false,
-  reason: 'No tutor is set up. Add an Anthropic API key to use the tutor.',
+  reason: 'No tutor is set up. Add an Anthropic API key in Settings to use the tutor.',
   model: 'claude-opus-5-5',
 };
 export const TUTOR_ON: TutorStatusView = {
@@ -100,13 +102,37 @@ export const TUTOR_ON: TutorStatusView = {
   model: 'claude-opus-5-5',
 };
 
-/** The app-wide channels every page needs. */
+export const KEY_NONE: KeyStatusView = {
+  source: 'none',
+  hint: null,
+  stored: false,
+  storage: { available: true, backend: null, weak: false },
+  problem: null,
+};
+
+export function settingsFixture(): SettingsResponse {
+  return {
+    settings: structuredClone(DEFAULT_SETTINGS),
+    issues: [],
+    default_model: 'claude-opus-5-5',
+  };
+}
+
+/** The app-wide channels every page needs. `settings:set` merges into a fresh copy of the defaults. */
 export function baseHandlers(bridge: FakeBridge, profile: ProfileResponse = PROFILE): FakeBridge {
+  let settings = settingsFixture();
   return bridge
     .on('profile:get', () => profile)
     .on('catalog:topics', () => ({ topics: TOPICS }))
-    .on('settings:theme', () => ({ theme: 'system' }))
-    .on('settings:set-theme', ({ theme }) => ({ theme }))
+    .on('settings:get', () => settings)
+    .on('settings:set', (patch) => {
+      const next = structuredClone(settings.settings) as Record<string, Record<string, unknown>>;
+      for (const [g, values] of Object.entries(patch))
+        next[g] = { ...next[g], ...(values as Record<string, unknown>) };
+      settings = { ...settings, settings: next as SettingsResponse['settings'] };
+      return settings;
+    })
+    .on('secrets:status', () => KEY_NONE)
     .on('tutor:status', () => TUTOR_OFF)
     .on('chat:thread', ({ thread }) => ({ thread, running: false, messages: [] }))
     .on('explanations:list', ({ slug }) => ({ slug, versions: [] }))

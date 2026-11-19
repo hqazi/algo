@@ -172,6 +172,12 @@ export interface StorageWriter extends StorageReader {
   archiveThread(id: string, archivedId: string, archivedAt: string): void;
 
   addTestRun(run: Omit<TestRunRecord, 'id'>): TestRunRecord;
+
+  /**
+   * "Reset progress" (SPEC §4.5): deletes every attempt with its hints and
+   * test runs, and every topic level. The profile, problems and chats stay.
+   */
+  resetProgress(): void;
 }
 
 export interface Storage {

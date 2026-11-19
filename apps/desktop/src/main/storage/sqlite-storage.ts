@@ -154,6 +154,17 @@ export class SqliteStorage implements Storage {
     );
   }
 
+  /**
+   * A consistent copy of the database at `path` (`VACUUM INTO`, which works
+   * in WAL mode), taken in turn with the queued writes. `path` must not exist.
+   */
+  snapshot(path: string): Promise<void> {
+    this.checkReentry('snapshot');
+    return this.enqueue(() => {
+      this.db.prepare('VACUUM INTO ?').run(path);
+    });
+  }
+
   /** Waits for queued tasks, then closes the database. */
   async close(): Promise<void> {
     if (this.closed) return;
@@ -422,6 +433,11 @@ export class SqliteStorage implements Storage {
         );
         this.run('UPDATE messages SET thread_id = ? WHERE thread_id = ?', [archivedId, id]);
         this.run('DELETE FROM threads WHERE id = ?', [id]);
+      },
+      resetProgress: () => {
+        // Hints and test runs cascade from their attempt.
+        this.run('DELETE FROM attempts');
+        this.run('DELETE FROM topic_progress');
       },
       addTestRun: (t) => {
         const { lastInsertRowid } = this.run(

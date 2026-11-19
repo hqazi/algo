@@ -243,6 +243,12 @@ export class MemoryStorage implements Storage {
         s().threads.set(archivedId, { ...t, id: archivedId, archivedAt });
         for (const m of s().messages) if (m.threadId === id) m.threadId = archivedId;
       },
+      resetProgress: () => {
+        s().attempts = [];
+        s().hints = [];
+        s().testRuns = [];
+        s().topics.clear();
+      },
       addTestRun: (r) => {
         if (!attempt(r.attemptId)) throw new Error(`no attempt with id ${r.attemptId}`);
         const rec = { ...copy(r), id: s().nextRunId++ };

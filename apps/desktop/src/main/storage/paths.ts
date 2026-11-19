@@ -23,12 +23,18 @@ export function dataPaths(dataDir: string) {
     root: dataDir,
     db: join(dataDir, 'tutor.db'),
     settings: join(dataDir, 'settings.json'),
+    /** The encrypted API key (SPEC §4.4); never exported. */
+    secrets: join(dataDir, 'secrets.bin'),
     workspace: join(dataDir, 'workspace'),
     generatedProblems: join(dataDir, 'problems', 'generated'),
     importedProblems: join(dataDir, 'problems', 'imported'),
     explanations: join(dataDir, 'explanations'),
     cache: join(dataDir, 'cache'),
     logs: join(dataDir, 'logs'),
+    /** Automatic exports made before import and reset (SPEC §4.5). */
+    backups: join(dataDir, 'backups'),
+    /** An import or reset waiting for the next start (applied before storage opens). */
+    pending: join(dataDir, 'pending'),
   };
 }
 

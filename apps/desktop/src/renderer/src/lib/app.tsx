@@ -1,10 +1,11 @@
 /**
  * App-wide state (ported from `dsa-tutor/web/src/lib/app.tsx`): profile,
- * topics with levels, theme, plus a toast notifier. Talks to the main
+ * topics with levels, settings (T09), plus a toast notifier. Talks to the main
  * process only through `ipc.ts`.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { ProfileResponse, Theme, TopicView } from '../../../shared/practice';
+import type { ProfileResponse, TopicView } from '../../../shared/practice';
+import type { SettingsPatchView, SettingsResponse } from '../../../shared/settings';
 import { invoke } from '../ipc';
 import { AppContext, errorText, type AppValue, type Toast } from './app-context';
 
@@ -13,7 +14,7 @@ let toastId = 0;
 export function AppProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [topics, setTopics] = useState<TopicView[]>([]);
-  const [theme, setThemeState] = useState<Theme>('system');
+  const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [version, setVersion] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -30,11 +31,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(
     () =>
-      Promise.all([invoke('profile:get'), invoke('catalog:topics'), invoke('settings:theme')]).then(
-        ([p, t, th]) => {
+      Promise.all([invoke('profile:get'), invoke('catalog:topics'), invoke('settings:get')]).then(
+        ([p, t, st]) => {
           setProfile(p);
           setTopics(t.topics);
-          setThemeState(th.theme);
+          setSettings(st);
           setLoadError(null);
           setVersion((v) => v + 1);
         },
@@ -43,12 +44,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const setTheme = useCallback(
-    async (next: Theme) => {
+  const updateSettings = useCallback(
+    async (patch: SettingsPatchView) => {
       try {
-        setThemeState((await invoke('settings:set-theme', { theme: next })).theme);
+        setSettings(await invoke('settings:set', patch));
+        return true;
       } catch (err) {
         notify(errorText(err), 'error');
+        return false;
       }
     },
     [notify],
@@ -64,11 +67,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const value: AppValue = {
     profile,
     topics,
-    theme,
+    settings,
     version,
     loadError,
     refresh,
-    setTheme,
+    updateSettings,
     notify,
     toasts,
     dismiss,

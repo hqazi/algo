@@ -25,7 +25,7 @@ type SaveState = 'saved' | 'unsaved' | 'saving' | 'error';
 export const AUTOSAVE_MS = 700;
 
 export function PracticePage({ slug }: { slug: string }) {
-  const { notify, refresh, topicName } = useApp();
+  const { notify, refresh, topicName, settings } = useApp();
   const [detail, setDetail] = useState<ProblemDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [initialCode, setInitialCode] = useState('');
@@ -463,6 +463,8 @@ export function PracticePage({ slug }: { slug: string }) {
           onChange={onChange}
           onRun={() => void execute('run')}
           onSubmit={() => void execute('submit')}
+          fontSize={settings?.settings.editor.fontSize}
+          keymap={settings?.settings.editor.keymap}
         />
       </div>
       <ResultsPanel

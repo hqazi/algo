@@ -1,9 +1,10 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog } from 'electron';
 import { APP_NAME } from '@algorithm-tutor/core';
+import { applyPending } from './data';
 import type { AppPractice } from './practice';
 import { afterReady, beforeReady, startPractice } from './setup';
-import { openAppStorage, resolveDataDir, type AppStorage } from './storage';
+import { dataPaths, openAppStorage, resolveDataDir, type AppStorage } from './storage';
 import { createMainWindow, type UiOptions } from './window';
 
 const ui: UiOptions = {
@@ -19,9 +20,21 @@ beforeReady();
 function openStorage(): AppStorage | null {
   const dataDir = resolveDataDir({ userData: app.getPath('userData'), env: process.env });
   try {
+    // A staged import or "reset everything" (SPEC §4.5), before anything is opened.
+    const applied = applyPending(dataPaths(dataDir));
+    if (applied) console.warn(`data: applied a staged ${applied.op} from ${applied.at}`);
+  } catch (e) {
+    dialog.showErrorBox(
+      `${APP_NAME} could not finish importing or resetting`,
+      `${e instanceof Error ? e.message : String(e)}\n\nData folder: ${dataDir}\n` +
+        'The data from before is in the backups folder there.',
+    );
+    return null;
+  }
+  try {
     const opened = openAppStorage(dataDir);
     for (const issue of opened.settings.issues) {
-      // Shown in Settings once it exists (T09).
+      // Also shown in Settings.
       console.warn(`settings.json: ${issue.key || '(file)'}: ${issue.message}`);
     }
     return opened;

@@ -12,6 +12,7 @@ export type Route =
   | { name: 'problems' }
   | { name: 'problem'; slug: string }
   | { name: 'progress' }
+  | { name: 'settings' }
   | { name: 'not_found'; path: string };
 
 const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)';
@@ -22,6 +23,7 @@ export function parse(path: string): Route {
   if (p === '/welcome') return { name: 'welcome' };
   if (p === '/problems') return { name: 'problems' };
   if (p === '/progress') return { name: 'progress' };
+  if (p === '/settings') return { name: 'settings' };
   const m = new RegExp(`^/p/${SLUG}$`).exec(p);
   if (m) return { name: 'problem', slug: m[1]! };
   return { name: 'not_found', path: p };

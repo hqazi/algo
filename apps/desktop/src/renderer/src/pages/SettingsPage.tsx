@@ -1,0 +1,303 @@
+/**
+ * Settings (SPEC §8): Tutor, Code execution, Appearance and editor, Profile,
+ * Data, Updates, About. Every change is sent to main at once and applies
+ * without a restart. Problems found in `settings.json` at start-up are shown
+ * at the top.
+ */
+import { APP_NAME } from '@algorithm-tutor/core';
+import { useEffect, useState } from 'react';
+import type { ExecStatusView, ProfileUpdate, SettingsPatchView } from '../../../shared/settings';
+import { ProfileForm } from '../components/ProfileForm';
+import { invoke } from '../ipc';
+import { errorText, useApp } from '../lib/app-context';
+import { DataSection } from './SettingsData';
+import { TutorSection } from './SettingsTutor';
+
+const TIME_SCALES = [0.5, 1, 1.5, 2, 3, 5, 10];
+const THEMES = [
+  { id: 'system', label: 'Follow the system' },
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+] as const;
+const KEYMAPS = [
+  { id: 'default', label: 'Standard' },
+  { id: 'vim', label: 'Vim' },
+  { id: 'emacs', label: 'Emacs' },
+] as const;
+
+const LICENCES: { name: string; licence: string; note?: string }[] = [
+  { name: APP_NAME, licence: 'Apache-2.0' },
+  { name: 'Pyodide (Python in the app)', licence: 'MPL-2.0', note: 'with CPython (PSF licence)' },
+  { name: 'Electron and Chromium', licence: 'MIT', note: 'Chromium: BSD-style and others' },
+  { name: 'React', licence: 'MIT' },
+  { name: 'CodeMirror, @replit/codemirror-vim, @replit/codemirror-emacs', licence: 'MIT' },
+  { name: 'Anthropic TypeScript SDK', licence: 'Apache-2.0' },
+  { name: 'marked', licence: 'MIT' },
+  { name: 'DOMPurify', licence: 'MPL-2.0 or Apache-2.0' },
+  { name: 'zod, fflate', licence: 'MIT' },
+];
+
+function ExecutionSection() {
+  const app = useApp();
+  const [status, setStatus] = useState<ExecStatusView | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  useEffect(() => {
+    void invoke('exec:status').then(setStatus, (e: unknown) => setFailed(errorText(e)));
+  }, []);
+  const s = app.settings?.settings.execution;
+  if (!s) return null;
+  const scales = TIME_SCALES.includes(s.timeScale)
+    ? TIME_SCALES
+    : [...TIME_SCALES, s.timeScale].sort((a, b) => a - b);
+  const py = status?.python;
+  const versions = py ? Object.entries(py.versions) : [];
+  return (
+    <section className="card" aria-labelledby="settings-exec">
+      <h2 id="settings-exec">Code execution</h2>
+      <dl className="kv" data-testid="exec-status">
+        <dt>Python</dt>
+        <dd>
+          {failed
+            ? `Unknown (${failed})`
+            : !py
+              ? 'Checking… (the first check starts Python, which takes a few seconds)'
+              : py.available
+                ? `Ready · Pyodide${versions.length ? ` (${versions.map(([k, v]) => `${k} ${v}`).join(', ')})` : ''}`
+                : `Not available: ${py.reason ?? 'unknown reason'}`}
+        </dd>
+        <dt>Rust, Go</dt>
+        <dd className="muted">Arrive in a later version.</dd>
+      </dl>
+      <p className="muted small">
+        Your code and the tutor’s run inside the app with Pyodide, which has no access to your files
+        or the network.
+      </p>
+      <label className="field">
+        Time limits
+        <select
+          aria-label="Time limit multiplier"
+          value={String(s.timeScale)}
+          onChange={(e) =>
+            void app.updateSettings({ execution: { timeScale: Number(e.target.value) } })
+          }
+        >
+          {scales.map((x) => (
+            <option key={x} value={String(x)}>
+              {x === 1 ? '×1 (normal)' : `×${x}`}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted small">Raise this on a slow computer if correct solutions time out.</p>
+    </section>
+  );
+}
+
+/** Keyed by the saved size, so a change from elsewhere resets the field. */
+function FontSize({ saved, onSave }: { saved: number; onSave: (n: number) => void }) {
+  const [font, setFont] = useState(String(saved));
+  return (
+    <label className="field">
+      Editor font size
+      <input
+        aria-label="Editor font size"
+        type="number"
+        min={8}
+        max={40}
+        value={font}
+        onChange={(e) => {
+          setFont(e.target.value);
+          const n = Number(e.target.value);
+          if (Number.isInteger(n) && n >= 8 && n <= 40 && n !== saved) onSave(n);
+        }}
+      />
+    </label>
+  );
+}
+
+function AppearanceSection() {
+  const app = useApp();
+  const s = app.settings?.settings;
+  if (!s) return null;
+  const set = (patch: SettingsPatchView) => void app.updateSettings(patch);
+  return (
+    <section className="card" aria-labelledby="settings-look">
+      <h2 id="settings-look">Appearance and editor</h2>
+      <label className="field">
+        Theme
+        <select
+          aria-label="Theme"
+          value={s.ui.theme}
+          onChange={(e) => set({ ui: { theme: e.target.value as typeof s.ui.theme } })}
+        >
+          {THEMES.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <FontSize
+        key={s.editor.fontSize}
+        saved={s.editor.fontSize}
+        onSave={(n) => set({ editor: { fontSize: n } })}
+      />
+      <label className="field">
+        Editor keys
+        <select
+          aria-label="Editor keys"
+          value={s.editor.keymap}
+          onChange={(e) => set({ editor: { keymap: e.target.value as typeof s.editor.keymap } })}
+        >
+          {KEYMAPS.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </section>
+  );
+}
+
+function ProfileSection() {
+  const app = useApp();
+  const [busy, setBusy] = useState(false);
+  const profile = app.profile?.profile ?? null;
+
+  async function save(u: ProfileUpdate): Promise<void> {
+    setBusy(true);
+    try {
+      await invoke('profile:set', u);
+      await app.refresh();
+      app.notify('Profile saved.', 'success');
+    } catch (err) {
+      app.notify(errorText(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card" aria-labelledby="settings-profile">
+      <h2 id="settings-profile">Profile</h2>
+      {profile ? (
+        <ProfileForm
+          key={profile.updated_at}
+          initial={profile}
+          topics={app.topics}
+          submitLabel="Save profile"
+          busy={busy}
+          onSubmit={(u) => void save(u)}
+        />
+      ) : (
+        <p className="muted">Not onboarded yet.</p>
+      )}
+    </section>
+  );
+}
+
+function UpdatesSection({ version }: { version: string | null }) {
+  const app = useApp();
+  const s = app.settings?.settings.updates;
+  if (!s) return null;
+  return (
+    <section className="card" aria-labelledby="settings-updates">
+      <h2 id="settings-updates">Updates</h2>
+      <dl className="kv">
+        <dt>Version</dt>
+        <dd>{version ?? '…'}</dd>
+      </dl>
+      <label className="field">
+        Channel
+        <select
+          aria-label="Update channel"
+          value={s.channel}
+          onChange={(e) =>
+            void app.updateSettings({ updates: { channel: e.target.value as typeof s.channel } })
+          }
+        >
+          <option value="stable">Stable</option>
+          <option value="beta">Beta (pre-releases)</option>
+        </select>
+      </label>
+      <label className="radio">
+        <input
+          type="checkbox"
+          checked={s.auto}
+          onChange={(e) => void app.updateSettings({ updates: { auto: e.target.checked } })}
+        />{' '}
+        Download updates in the background and install them when the app quits
+      </label>
+      <p className="muted small">Checking for updates is not set up in this build yet.</p>
+    </section>
+  );
+}
+
+function AboutSection({
+  versions,
+}: {
+  versions: { app: string; electron: string; chrome: string; node: string } | null;
+}) {
+  return (
+    <section className="card" aria-labelledby="settings-about">
+      <h2 id="settings-about">About</h2>
+      {versions && (
+        <p className="small">
+          {APP_NAME} {versions.app} · Electron {versions.electron} · Chromium {versions.chrome} ·
+          Node {versions.node}
+        </p>
+      )}
+      <h3>Licences</h3>
+      <ul className="list small" data-testid="licences">
+        {LICENCES.map((l) => (
+          <li key={l.name}>
+            {l.name}: {l.licence}
+            {l.note ? <span className="muted"> ({l.note})</span> : null}
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">
+        Imported problem sets show their own licence with each problem (none imported yet).
+      </p>
+    </section>
+  );
+}
+
+export function SettingsPage() {
+  const app = useApp();
+  const [versions, setVersions] = useState<{
+    app: string;
+    electron: string;
+    chrome: string;
+    node: string;
+  } | null>(null);
+  useEffect(() => {
+    void invoke('app:version').then(setVersions, () => undefined);
+  }, []);
+  const issues = app.settings?.issues ?? [];
+  return (
+    <main className="page narrow-page settings-page">
+      <h1>Settings</h1>
+      {issues.length > 0 && (
+        <div className="card warning" role="alert" data-testid="settings-issues">
+          <p>Some values in settings.json were not valid and use their defaults:</p>
+          <ul className="small">
+            {issues.map((i) => (
+              <li key={`${i.key}:${i.message}`}>
+                <code>{i.key || 'settings.json'}</code>: {i.message}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <TutorSection />
+      <ExecutionSection />
+      <AppearanceSection />
+      <ProfileSection />
+      <DataSection />
+      <UpdatesSection version={versions?.app ?? null} />
+      <AboutSection versions={versions} />
+    </main>
+  );
+}

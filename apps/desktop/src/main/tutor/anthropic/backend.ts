@@ -101,6 +101,18 @@ export interface AnthropicOptions {
   maxTokens?: number;
   /** Warnings without secrets or message text. */
   log?: (message: string) => void;
+  /**
+   * Checks a key and model with one request that spends no tokens
+   * (`GET /v1/models/{model}`); defaults to the SDK's. Tests pass a fake.
+   */
+  probe?: (apiKey: string, model: string, signal?: AbortSignal) => Promise<void>;
+}
+
+export interface ConnectionTest {
+  ok: boolean;
+  kind: string | null;
+  message: string;
+  model: string;
 }
 
 export class AnthropicBackend implements TutorBackend {
@@ -118,6 +130,37 @@ export class AnthropicBackend implements TutorBackend {
     if (!this.opts.apiKey())
       return Promise.resolve({ available: false, reason: 'No Anthropic API key is set.', model });
     return Promise.resolve({ available: true, reason: null, model });
+  }
+
+  /** Settings' "Test connection": is the key accepted, and does the model exist? */
+  async testConnection(signal?: AbortSignal): Promise<ConnectionTest> {
+    const model = this.model();
+    const key = this.opts.apiKey();
+    if (!key) return { ok: false, kind: 'no_key', message: 'No Anthropic API key is set.', model };
+    const probe =
+      this.opts.probe ??
+      (async (apiKey: string, id: string, s?: AbortSignal) => {
+        await new Anthropic({ apiKey, maxRetries: 1, timeout: 20_000 }).models.retrieve(
+          id,
+          {},
+          s ? { signal: s } : {},
+        );
+      });
+    try {
+      await probe(key, model, signal);
+      return { ok: true, kind: null, message: `Connected. The tutor will use ${model}.`, model };
+    } catch (e) {
+      if (e instanceof Anthropic.NotFoundError)
+        return {
+          ok: false,
+          kind: 'model',
+          message: `The key works, but the model "${model}" was not found. Check the model in Settings.`,
+          model,
+        };
+      const ev = this.errorEvent(e, signal ?? new AbortController().signal);
+      const message = ev.type === 'error' ? ev.message : 'The connection test failed.';
+      return { ok: false, kind: ev.type === 'error' ? ev.kind : 'other', message, model };
+    }
   }
 
   private client(key: string): MessagesClient {
