@@ -58,7 +58,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | done |
 | T06 | Port the core teaching logic | v1 | 3d | T05 | done |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
-| T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | in-progress |
+| T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | done |
 | T09 | Onboarding and Settings | v1 | 2d | T08 | todo |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | todo |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | todo |
@@ -641,11 +641,51 @@ Not done / not tested:
 - Chat pane present but showing "Tutor not configured" (filled by T10).
 
 **Acceptance.**
-- [ ] Manual and e2e smoke: next problem → edit → run shows visible results → submit records the attempt → progress updates.
-- [ ] Editing the solution file in another editor updates the open editor.
-- [ ] Ported UI tests pass (Vitest + Testing Library).
+- [x] Manual and e2e smoke: next problem → edit → run shows visible results → submit records the attempt → progress updates. (`npm run e2e` in the built app, passing; its screenshots checked by eye in light and dark. No hands-on session by a person.)
+- [x] Editing the solution file in another editor updates the open editor. (`npm run e2e`; `FileWorkspace` and `PracticePage` tests.)
+- [x] Ported UI tests pass (Vitest + Testing Library). (`ResultsPanel`, Markdown; plus new page tests.)
 
 **Notes.**
+
+Done 2026-11-19. Decisions in D-22.
+
+Built:
+- Main: `src/main/practice/` (`FileCatalog`, `FileWorkspace`, `Practice`,
+  `openPractice`), `src/main/ipc/handlers/practice.ts` (problems, profile
+  defaults, status, workspace get/save/watch, run, submit, give up,
+  reference, attempts, theme). `handlers.ts` moved to `handlers/index.ts`.
+- Renderer: shell with hash routes, Home, Problems, Practice (Panes,
+  CodeMirror Editor, ResultsPanel, Markdown), Progress, a Welcome page with
+  "use defaults" only, a "Tutor not configured" pane, toasts, theme picker.
+  Run Ctrl/Cmd+Enter, Submit Ctrl/Cmd+Shift+Enter. Ported from
+  `dsa-tutor/web/src`; the HTTP client is replaced by `window.tutor`.
+- Tests: `practice.test.ts` (real content, SQLite, Pyodide on Node threads,
+  temp-dir workspace and watch), ported `ResultsPanel` and Markdown tests,
+  `PracticePage` and `App` tests on a fake bridge that parses replies with
+  the real contract, router test. `npm run e2e` (Playwright for Electron).
+
+Wiring outside **Owns**: `shared/ipc.ts`, `shared/channels.ts`,
+`shared/practice.ts` (new channels; error code `refused`);
+`main/ipc/router.ts` (`IpcRefusal`); `main/setup.ts` (`startPractice`),
+`main/index.ts`; `main/security-check.ts` (now wires practice in a temp data
+folder and waits for the Welcome page instead of the old version text);
+`apps/desktop/e2e/`, `tsconfig.node.json`, the `e2e` scripts, CI (e2e on
+Linux); dependencies in D-22.
+
+Not done or not tested:
+- Onboarding questions and Settings are T09: first run offers only the
+  defaults; the theme picker sits in the top bar. The tutor pane is a
+  placeholder (T10); New problem and generating when a topic runs out are
+  T12 (Next problem says so in a toast). Explanations page not ported (T10).
+- The e2e runs on Linux only (CI and here). macOS and Windows run the unit
+  tests, including the `fs.watch` test, but not the app end to end.
+- Links in problem statements are blocked by D-17's navigation guard, not
+  opened in the system browser.
+- The editor font size and keymap settings are not applied yet (T09).
+- A save pending when the window closes is sent but not awaited
+  (`beforeunload` must not block in Electron); up to 700 ms of typing can be
+  lost if the app quits at once.
+- The renderer bundle is about 1.9 MB; not looked into.
 
 ### T09 — Onboarding and Settings
 

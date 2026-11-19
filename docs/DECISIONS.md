@@ -535,3 +535,61 @@ ported tool tests.
   unknown prerequisites are errors) and is now also what the content scripts
   use.
 
+
+**D-22 Practice UI over IPC: shapes, refusals, files, routes, theme**
+(2026-11-19, T08)
+
+- **One practice service for buttons and tools.** `main/practice/service.ts`
+  (`Practice`) does Run, Submit, Give up and the reference over core's
+  `Teaching`, `runProblemTests` and `runView`, with the same `SlugGuard` the
+  tutor's tools get from `practice.toolContext` (T10 builds its registry from
+  it), so a button and a chat tool never run one problem at once. Submit runs
+  every test inside `storage.serial` and records only when all pass (as
+  `dsa-tutor`'s `/submit`); otherwise the attempt stays open and the run is
+  stored on it. Saving while the problem's tests run is refused (`busy`), as
+  in `dsa-tutor`.
+- **IPC shapes** (`shared/practice.ts`) keep `dsa-tutor`'s snake_case names
+  so the ported UI keeps its fields. Test values cross as JSON text from
+  core's `stringifyJson` (exact 64-bit integers, D-11), never as live values.
+  Hidden cases have their own strict schema (`id`, `visibility`, `category`,
+  `status`, `time_ms`); since the router parses every reply, a hidden input
+  cannot reach the renderer even if a handler forgot `redactReport`.
+- **Refusals.** The IPC envelope (D-17) gains code `refused` with a
+  `reason` (`busy`, `locked`, `no_solution`, `not_onboarded`, `no_problem`,
+  `runtime_missing`…): handlers throw `IpcRefusal`; core's `TutorError`
+  maps to it with its `code`. Refusals are not logged as errors.
+- **Problems on disk.** `FileCatalog` loads and validates `content/problems/`
+  (curated only) and `<data>/problems/{generated,imported}/` (never curated)
+  at start-up; an invalid problem is left out and logged, not half-loaded.
+  It upserts the `problems` index (never deletes, so history keeps its
+  topic). `content/` is the repository's in development and
+  `<resources>/content` when packaged (T13 must ship it there).
+- **Solution files.** `FileWorkspace` writes atomically (temp + rename) and
+  caps a solution at 200 000 bytes. "Edited in another editor" is
+  `fs.watch` on the problem's folder (the file is replaced on every atomic
+  save), debounced 120 ms, reported only when the content differs from what
+  the app last wrote or read, over the `workspace:watch` stream. The open
+  editor takes the new text unless it has unsaved edits; then it keeps them
+  and offers "Load the file's version".
+- **Routes in the hash** (`#/p/<slug>`): the app protocol serves files, with
+  no fallback to `index.html`, so `dsa-tutor`'s history routes would break on
+  reload. In-page navigation does not fire `will-navigate`, so D-17's
+  navigation block is unchanged.
+- **Theme.** `ui.theme` sets `nativeTheme.themeSource` at start and on change,
+  so `prefers-color-scheme` follows the setting in every window and the
+  ported CSS and CodeMirror theme switch need no theme code of their own. The
+  picker is in the top bar until Settings exists (T09).
+- **End to end.** `npm run e2e` drives the built app with Playwright for
+  Electron (`playwright-core`; no browser download) in a temp data folder.
+  Playwright emulates a light colour scheme unless launched with
+  `colorScheme: null`.
+- **Versions pinned:**
+
+  | Package | Version | Note |
+  |---|---|---|
+  | codemirror | 6.0.2 | With @codemirror/state 6.7.6, view 6.43.15, commands 6.11.1, language 6.13.1, lang-python 6.2.1, theme-one-dark 6.1.3 (as `dsa-tutor`). |
+  | marked | 18.1.3 | 18.2.x was under two weeks old. |
+  | dompurify | 3.4.17 | 3.4.18 was under two weeks old. |
+  | @testing-library/react / dom | 16.3.3 / 10.4.2 | Dev. |
+  | jsdom | 30.1.3 | Dev; 31.0 was under two weeks old. UI tests opt in per file (`@vitest-environment jsdom`). |
+  | playwright-core | 1.64.1 | Dev; `npm run e2e`. |
