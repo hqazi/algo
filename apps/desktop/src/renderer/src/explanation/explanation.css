@@ -1,0 +1,58 @@
+/* Explanation panel and list (SPEC §8), ported from dsa-tutor. Uses the theme variables from styles.css. */
+.explanation-modal {
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+}
+.explanation-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.explanation-head h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.explanation-head .spacer {
+  flex: 1;
+}
+.explanation-frame {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-top: 0.75rem;
+  background: #fff;
+}
+.explanation-list {
+  margin-top: 1.25rem;
+}
+.explanation-list h2 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+.explanation-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+  text-align: left;
+}
+@media (prefers-color-scheme: dark) {
+  .explanation-frame {
+    background: #15171a;
+  }
+}

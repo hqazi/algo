@@ -1,10 +1,13 @@
 /**
  * The app shell (ported from `dsa-tutor/web/src/App.tsx`): top bar, routes,
- * toasts. New problem (T12), Settings (T09) and the tutor (T10) come later.
+ * toasts, and the chat's app-wide effects (T10). New problem (T12) and
+ * Settings (T09) come later.
  */
 import { APP_NAME } from '@algorithm-tutor/core';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { Theme } from '../../shared/practice';
+import { ChatEffects } from './chat/ChatEffects';
+import { useChatStore, useTutorStatus } from './chat/store';
 import { Link } from './components/Link';
 import { Toasts } from './components/Toasts';
 import { invoke, isRefusal } from './ipc';
@@ -46,6 +49,17 @@ export function Shell() {
   const route = useRoute();
   const [nextBusy, setNextBusy] = useState(false);
   const onboarded = app.profile?.onboarded;
+  const chat = useChatStore();
+  const tutor = useTutorStatus(chat);
+  const { refresh } = app;
+  const onRefresh = useCallback(
+    () => Promise.all([refresh(), chat.refreshStatus()]).then(() => undefined),
+    [refresh, chat],
+  );
+
+  useEffect(() => {
+    void chat.refreshStatus();
+  }, [chat]);
 
   useEffect(() => {
     if (onboarded === false && route.name !== 'welcome') navigate('/welcome', true);
@@ -152,11 +166,19 @@ export function Shell() {
             </option>
           ))}
         </select>
-        <span className="ai-off small" title="The tutor is set up in Settings (coming soon).">
-          Tutor off
-        </span>
+        {tutor &&
+          (tutor.available ? (
+            <span className="ai-on small" title={tutor.model ? `Model: ${tutor.model}` : undefined}>
+              Tutor on
+            </span>
+          ) : (
+            <span className="ai-off small" title={tutor.reason ?? undefined}>
+              Tutor off
+            </span>
+          ))}
       </header>
       {page}
+      <ChatEffects onRefresh={onRefresh} />
       <Toasts />
     </div>
   );

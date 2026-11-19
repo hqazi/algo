@@ -5,6 +5,8 @@
  */
 import {
   invokeChannels,
+  streamChannels,
+  type IpcErrorCode,
   type InvokeChannel,
   type InvokeRequest,
   type InvokeResponse,
@@ -31,6 +33,10 @@ interface OpenStream {
   channel: StreamChannel;
   request: unknown;
   emit(event: unknown): void;
+  /** End the stream with a result (parsed with the contract's result schema). */
+  finish(value: unknown): void;
+  /** End the stream with an error envelope. */
+  fail(error: { code: IpcErrorCode; message: string; reason?: string }): void;
   cancelled: boolean;
 }
 
@@ -73,8 +79,11 @@ export class FakeBridge implements TutorBridge {
       channel,
       request,
       emit: (e) => {
-        if (!s.cancelled) onEvent(e as StreamEvent<C>);
+        if (!s.cancelled) onEvent(streamChannels[channel].event.parse(e) as StreamEvent<C>);
       },
+      finish: (value) =>
+        resolve({ ok: true, value: streamChannels[channel].result.parse(value) as never }),
+      fail: (error) => resolve({ ok: false, error }),
       cancelled: false,
     };
     this.streams.push(s);

@@ -6,6 +6,7 @@ import type {
   TopicView,
   WorkspaceResponse,
 } from '../../../shared/practice';
+import type { TutorStatusView } from '../../../shared/tutor';
 import type { FakeBridge } from './fake-bridge';
 
 export const TOPICS: TopicView[] = [
@@ -86,6 +87,19 @@ export const REPORT: ReportView = {
   ],
 };
 
+export const TUTOR_OFF: TutorStatusView = {
+  backend: 'none',
+  available: false,
+  reason: 'No tutor is set up. Add an Anthropic API key to use the tutor.',
+  model: 'claude-opus-5-5',
+};
+export const TUTOR_ON: TutorStatusView = {
+  backend: 'anthropic',
+  available: true,
+  reason: null,
+  model: 'claude-opus-5-5',
+};
+
 /** The app-wide channels every page needs. */
 export function baseHandlers(bridge: FakeBridge, profile: ProfileResponse = PROFILE): FakeBridge {
   return bridge
@@ -93,6 +107,9 @@ export function baseHandlers(bridge: FakeBridge, profile: ProfileResponse = PROF
     .on('catalog:topics', () => ({ topics: TOPICS }))
     .on('settings:theme', () => ({ theme: 'system' }))
     .on('settings:set-theme', ({ theme }) => ({ theme }))
+    .on('tutor:status', () => TUTOR_OFF)
+    .on('chat:thread', ({ thread }) => ({ thread, running: false, messages: [] }))
+    .on('explanations:list', ({ slug }) => ({ slug, versions: [] }))
     .on('status:get', () => ({
       onboarded: profile.onboarded,
       topics: [],

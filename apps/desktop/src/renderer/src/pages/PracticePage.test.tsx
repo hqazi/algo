@@ -6,6 +6,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { EditorView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { ChatStore, ChatStoreContext } from '../chat/store';
 import { Toasts } from '../components/Toasts';
 import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
@@ -41,10 +42,12 @@ afterEach(cleanup);
 
 async function open(): Promise<void> {
   render(
-    <AppProvider>
-      <PracticePage slug={SLUG} />
-      <Toasts />
-    </AppProvider>,
+    <ChatStoreContext.Provider value={new ChatStore()}>
+      <AppProvider>
+        <PracticePage slug={SLUG} />
+        <Toasts />
+      </AppProvider>
+    </ChatStoreContext.Provider>,
   );
   await screen.findByText('Two Receipts');
 }
@@ -63,10 +66,10 @@ const type = (text: string): void => {
 };
 
 describe('PracticePage', () => {
-  it('shows the statement, the starter code and the tutor placeholder', async () => {
+  it('shows the statement, the starter code and the tutor (not set up)', async () => {
     await open();
     expect(screen.getByText('Find two receipts.')).toBeTruthy();
-    expect(screen.getByText('Tutor not configured.')).toBeTruthy();
+    expect(await screen.findByTestId('ai-unavailable')).toBeTruthy();
     expect(editorText()).toBe(WORKSPACE.code);
     expect(screen.getByTestId('save-state').textContent).toBe('Saved');
   });
@@ -147,7 +150,7 @@ describe('PracticePage', () => {
     });
     await open();
     fireEvent.click(screen.getByRole('button', { name: 'Run' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('already running');
+    expect((await screen.findByText(/already running/)).textContent).toContain('already running');
   });
 
   it('loads edits made to the file in another editor', async () => {

@@ -187,12 +187,17 @@ textarea {
   background: var(--surface-2);
   border-color: var(--border);
 }
-.ai-off {
+.ai-off,
+.ai-on {
   margin-left: auto;
   color: var(--muted);
   border: 1px dashed var(--border);
   border-radius: 99px;
   padding: 0.1rem 0.6rem;
+}
+.ai-on {
+  color: var(--pass);
+  border-style: solid;
 }
 
 .page {
@@ -676,12 +681,6 @@ textarea {
 /* ---------------------------------------------------------------- added in T08 */
 .theme-select {
   margin-left: auto;
-}
-.tutor-off {
-  padding: 1rem;
-}
-.tutor-off h2 {
-  margin-top: 0;
 }
 .notice {
   font-size: 0.82rem;

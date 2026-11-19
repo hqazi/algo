@@ -2,15 +2,18 @@
  * The practice view: statement | editor + results | tutor (ported from
  * `dsa-tutor/web/src/pages/PracticePage.tsx`). Saves as you type, picks up
  * edits made to the solution file in another editor, and runs and submits
- * through the main process. The tutor pane is a placeholder until T10.
+ * through the main process. The tutor pane is the problem's chat (T10); its
+ * `show_results` events show in the results panel.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ProblemDetail, RecordView, ReportView } from '../../../shared/practice';
+import { ChatPane } from '../chat/ChatPane';
+import { useChatStore, useTutorStatus } from '../chat/store';
 import { Editor } from '../components/Editor';
+import { ExplanationList } from '../explanation/ExplanationList';
 import { Markdown } from '../components/Markdown';
 import { Panes } from '../components/Panes';
 import { ResultsPanel } from '../components/ResultsPanel';
-import { TutorPane } from '../components/TutorPane';
 import { invoke, isRefusal, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { args, PROBLEM_STATUS_LABEL, titleCase } from '../lib/format';
@@ -40,6 +43,8 @@ export function PracticePage({ slug }: { slug: string }) {
   const [reference, setReference] = useState<string | null>(null);
   const [onDisk, setOnDisk] = useState<string | null>(null);
   const [tab, setTab] = useState('code');
+  const chat = useChatStore();
+  const tutor = useTutorStatus(chat);
 
   // Mutable working state the async helpers share.
   const code = useRef('');
@@ -137,6 +142,31 @@ export function PracticePage({ slug }: { slug: string }) {
     chain.current = next.catch(() => undefined);
     return next;
   }, [slug]);
+
+  /** The editor's code for the tutor, saved first so its tools see the same. */
+  const codeForTutor = useCallback(async (): Promise<string | undefined> => {
+    await flush().catch(() => undefined);
+    return code.current;
+  }, [flush]);
+
+  useEffect(
+    () =>
+      chat.onUi((ev) => {
+        if (ev.action === 'show_results' && ev.slug === slug) {
+          setReport(ev.report);
+          setReportKind('run');
+        } else if (ev.action === 'refresh_state') {
+          invoke('problems:get', { slug }).then(
+            (d) =>
+              setDetail((cur) =>
+                cur ? { ...cur, status: d.status, attempt_recorded: d.attempt_recorded } : cur,
+              ),
+            () => undefined,
+          );
+        }
+      }),
+    [chat, slug],
+  );
 
   useEffect(
     () => () => {
@@ -354,6 +384,7 @@ export function PracticePage({ slug }: { slug: string }) {
       <p className="small muted">
         Target: time {meta.expected_complexity.time}, space {meta.expected_complexity.space}
       </p>
+      <ExplanationList slug={slug} active={detail.status === 'active'} />
     </div>
   );
 
@@ -452,7 +483,11 @@ export function PracticePage({ slug }: { slug: string }) {
         panes={[
           { id: 'problem', title: 'Problem', content: problemPane },
           { id: 'code', title: 'Code', content: codePane },
-          { id: 'tutor', title: 'Tutor', content: <TutorPane /> },
+          {
+            id: 'tutor',
+            title: 'Tutor',
+            content: <ChatPane slug={slug} getCode={codeForTutor} />,
+          },
         ]}
       />
 
@@ -467,8 +502,10 @@ export function PracticePage({ slug }: { slug: string }) {
           >
             <h2 id="gu-title">Give up on this one?</h2>
             <p>
-              Before you do: a hint or the full explanation from the tutor often unblocks it. The
-              tutor is not configured, so that is not available right now.
+              Before you do: a hint or the full explanation from the tutor often unblocks it.
+              {tutor?.available
+                ? ' Ask for one in the Tutor pane.'
+                : ' The tutor is not set up, so that is not available right now.'}
             </p>
             <p className="muted small">
               Giving up runs the tests one last time, records the attempt, and opens the reference

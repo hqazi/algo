@@ -1,8 +1,8 @@
-/** Home (ported from `dsa-tutor/web`): next problem, unfinished and recent attempts. */
+/** Home (ported from `dsa-tutor/web`): next problem, the general chat, unfinished and recent attempts. */
 import { useEffect, useState } from 'react';
 import type { StatusResponse } from '../../../shared/practice';
 import { Link } from '../components/Link';
-import { TutorPane } from '../components/TutorPane';
+import { ChatPane } from '../chat/ChatPane';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { OUTCOME_LABEL } from '../lib/format';
@@ -30,7 +30,7 @@ export function HomePage({ onNext, nextBusy }: { onNext: () => void; nextBusy: b
         </span>
       </p>
       <section className="home-chat card">
-        <TutorPane />
+        <ChatPane slug={null} />
       </section>
       {status && status.active.length > 0 && (
         <section>
