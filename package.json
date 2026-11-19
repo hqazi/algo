@@ -27,6 +27,7 @@
     "schema:export": "tsx scripts/export-schemas.ts",
     "validate:content": "tsx scripts/validate-content.ts",
     "e2e": "npm run e2e --workspace apps/desktop --",
+    "e2e:claude-code": "npm run e2e:claude-code --workspace apps/desktop --",
     "smoke:ai": "tsx apps/desktop/scripts/smoke-ai.ts"
   },
   "devDependencies": {

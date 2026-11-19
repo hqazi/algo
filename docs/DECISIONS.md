@@ -761,3 +761,95 @@ reset, export layout** (2026-11-19, T09; resolves the §14 safeStorage VERIFY)
   | fflate | 0.8.3 | Zip for export / import; pure JS, no dependencies. |
   | @replit/codemirror-vim | 6.3.0 | 6.4.0 pulls a new `-vim-core` package; 6.3.0 has none. |
   | @replit/codemirror-emacs | 6.1.0 | |
+
+**D-25 Claude Code backend: API key only, bare mode, key through a loopback
+relay, own MCP server** (2026-11-19, T11; resolves the §14 Claude Code VERIFY)
+
+- **Terms: a Claude subscription login is not used.** Checked against the
+  current Claude Code docs (`code.claude.com/docs/en/legal-and-compliance`,
+  `…/agent-sdk/overview`, `…/authentication`). They say: "Anthropic does not
+  permit third-party developers to offer Claude.ai login into their own
+  applications, or to route requests through Free, Pro, Max, or Ultra plan
+  credentials on behalf of their users"; developers "may not collect, store,
+  or intermediate Claude.ai credentials or session tokens"; products built
+  on Claude's capabilities "should use API key authentication"; and the
+  Agent SDK page: "Unless previously approved, Anthropic does not allow third
+  party developers to offer claude.ai login or rate limits for their
+  products". The carve-out ("an end user signing in to the unmodified Claude
+  Code binary with their own Claude subscription") covers people using Claude
+  Code themselves, not an app that drives it for its own feature. At best
+  this is unclear, so the SPEC default applies: **Claude Code with an API key
+  only**. Asking Anthropic (the docs point to sales) could reopen it.
+- **Bare mode enforces it.** `claude --bare` "never reads OAuth credentials
+  or the system keychain"; Anthropic auth is `ANTHROPIC_API_KEY` only. It also
+  skips hooks, plugins, CLAUDE.md, auto memory, skills and subagents, and
+  connects only the MCP servers given on the command line; the docs call it
+  "the recommended mode for scripted and SDK calls". The init line of every
+  recorded run says `apiKeySource: "ANTHROPIC_API_KEY"`.
+- **The key stays in the main process** (SPEC §4.4) through a relay
+  (`tutor/claude-code/api-proxy.ts`): the CLI gets `ANTHROPIC_BASE_URL` =
+  `http://127.0.0.1:<port>` and a random per-turn token as its
+  `ANTHROPIC_API_KEY`; the relay accepts only loopback `POST /v1/messages` and
+  `/v1/messages/count_tokens` with a live token, swaps in the real key and
+  streams the answer back. Tokens die with the turn. Upstream is the main
+  process's `ANTHROPIC_BASE_URL` or the real API (as for the SDK).
+- **So Claude Code needs the same key as the Anthropic backend.** `auto`
+  stays "Anthropic if a key is set, else none"; Claude Code is chosen
+  explicitly. What it adds is Claude Code's own agent loop and the user's
+  choice of it; with a subscription ruled out, little else. Onboarding's
+  tutor step stays the key form.
+- **Agent SDK not used.** `@anthropic-ai/claude-agent-sdk` bundles its own
+  native Claude Code binary (an optional dependency per platform) and spawns
+  it; it would add a large binary for a feature meant to use the user's own
+  installation, and its auth rules are the same. The app spawns the user's
+  `claude` directly with the same stream-json protocol.
+- **The command** (checked against Claude Code 2.1.328: `claude --help`,
+  the CLI reference and headless docs, and runs of the real CLI through the
+  backend): `--bare -p --input-format text --output-format stream-json
+  --verbose --include-partial-messages --system-prompt-file <f> --tools ""
+  --mcp-config <f> --strict-mcp-config --allowedTools mcp__tutor__<a>,…
+  --permission-mode dontAsk --setting-sources "" --disable-slash-commands
+  --max-turns 24 --model <m> --effort <e> [--resume <id>]`.
+  `--system-prompt-file` and `--max-turns` work but are no longer listed in
+  `--help` (they are in the CLI reference). `--tools ""` removes every
+  built-in tool; MCP tools are limited by `--strict-mcp-config` (only ours)
+  and `dontAsk` (only pre-approved calls run). The environment is built from
+  nothing (search path, OS basics, `HOME`/`USERPROFILE`/`CLAUDE_CONFIG_DIR` =
+  `<data>/agent-home`, temp dirs under it, the relay URL and token, switches
+  off for auto-update, telemetry, error reporting and non-essential traffic,
+  `NO_PROXY` for loopback, no proxy variables); `cwd` is an empty scratch
+  directory; the MCP token is only in a `0600` config file in a per-turn
+  `0700` directory deleted after the turn.
+- **Minimum version 2.1.328**, the one checked; older ones are refused with
+  "run `claude update`". Detection: `tutor.claudeCodePath` (new setting,
+  absolute), else `PATH`, else the installers' places (`~/.local/bin`,
+  `~/.claude/local`, `/opt/homebrew/bin`, `/usr/local/bin`; an app started
+  from the macOS Dock has no shell `PATH`). On Windows only `claude.exe`
+  (the native build) is started: `.cmd` shims need a shell. Cached; Settings'
+  Recheck or a new path looks again. "Signed in" is not checked: the CLI's
+  own login is never used.
+- **MCP server written by hand** (`main/mcp/`), not `@modelcontextprotocol/sdk`
+  1.32.2 (which would bring Express, Hono and about fifteen packages into the
+  main process): Streamable HTTP, stateless, JSON responses, one message per
+  POST (batches left the protocol in 2025-06-18); `initialize` (versions
+  2025-11-25, 2025-06-18, 2025-03-26), `ping`, `tools/list`, `tools/call`;
+  `GET`/`DELETE` 405. Checks before the body is read: loopback peer,
+  loopback `Host` and `Origin` (DNS rebinding), a live bearer grant (SHA-256
+  hashed, 15-minute expiry, revoked at turn end); the grant is looked up
+  again when a call runs. The real CLI connects to it (`status: connected`
+  in the fixtures) and calls tools through it.
+- **Turns** (ported from `dsa-tutor`): one process per turn in its own
+  process group; stream-json parsed as before (auth retries end the turn
+  at once, rate limits after 3); the CLI's session id is kept in
+  `backend_state` and resumed, with one fresh retry plus a transcript recap
+  if the session is gone; cancel and the 10-minute limit kill the group and
+  wait (up to 60 s) for a tool already running so its result is reported.
+- **Fixtures** `tutor/claude-code/fixtures/{turn,auth}.jsonl` were recorded
+  from Claude Code 2.1.328 through the real backend, MCP server and relay,
+  with the relay pointed at a loopback stand-in for the Messages API
+  (`record.ts`, `mock-messages-api.ts`); no provider was contacted. Unit tests
+  replay them through a fake CLI (`fake-claude.mjs`) that makes real MCP
+  calls. `ALGOTUTOR_TEST_CLAUDE=<claude>` adds a Vitest case with the real
+  CLI, and `npm run e2e:claude-code` runs it in the real app.
+- **Data:** `<data>/agent-home/` holds the CLI's sessions; never exported,
+  removed by "reset everything".

@@ -61,7 +61,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | done |
 | T09 | Onboarding and Settings | v1 | 2d | T08 | done |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | done |
-| T11 | Tutor: Claude Code backend | v1 | 2d | T10 | in-progress |
+| T11 | Tutor: Claude Code backend | v1 | 2d | T10 | done |
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | todo |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | todo |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
@@ -913,11 +913,72 @@ found.
 - Loopback MCP server exposing the tutor tools with a per-turn token; spawn with built-in tools disabled and only tutor tools allowed (port `dsa-tutor/dsa_tutor/backends/claude_code.py` and `server/mcp.py`).
 
 **Acceptance.**
-- [ ] Test: the spawned command leaves no built-in tool enabled.
-- [ ] Test against recorded stream-json fixtures (port `tests/fixtures/claude_code/`).
-- [ ] MCP token rejected after the turn ends (test).
+- [x] Test: the spawned command leaves no built-in tool enabled.
+- [x] Test against recorded stream-json fixtures (port `tests/fixtures/claude_code/`).
+- [x] MCP token rejected after the turn ends (test).
 
 **Notes.**
+
+**The VERIFY came out as "API key only"** (D-25). The current Claude Code
+legal and Agent SDK docs say third-party apps may not offer Claude.ai login
+or route requests through a user's Free/Pro/Max/Ultra plan, and apps built
+on Claude should use API keys. So the SPEC default applies: Claude Code
+runs in `--bare` mode (it never reads OAuth or the keychain) with the
+app's own API key. That makes it need the same key as the Anthropic
+backend, so it is chosen explicitly (`auto` is unchanged) and onboarding's
+tutor step stays the key form. If the owner wants the subscription path,
+that is a question for Anthropic, not code. No Agent SDK: it bundles its
+own Claude Code binary.
+
+Built: `main/mcp/` (per-turn grants, a hand-written stateless Streamable
+HTTP MCP server on loopback with Host/Origin checks), and
+`main/tutor/claude-code/`: detection (configured path, `PATH`, installer
+places; version ≥ 2.1.328; Windows `.exe` only), the command and a minimal
+environment, a loopback relay that swaps a per-turn token for the real key
+(the key never reaches the CLI), the stream-json parser, and the backend
+(one process group per turn, resume with a fresh-session fallback and
+recap, cancel and timeout that let a running tool report). Fixtures
+re-recorded from Claude Code 2.1.328 through the real backend against a
+loopback stand-in API (`fixtures/record.ts`); unit tests replay them
+through a fake CLI that makes real MCP calls. Settings → Tutor shows
+Claude Code's path and version (Recheck, a path field) when it is the
+chosen backend.
+
+Checks: `npm run typecheck`, `lint`, `format:check`, `test` (678 tests,
+including the opt-in real-CLI case with `ALGOTUTOR_TEST_CLAUDE`, green 4
+runs in a row), `validate:content`, `npm run e2e` (practice, tutor and
+settings, unchanged and green) and `check:security` pass on Linux. New
+`npm run e2e:claude-code` ran the real app with the real `claude` 2.1.328
+against the stand-in API: 10/10 checks (reply streamed, `get_status` called
+through the MCP server, every API request carried the app's key and only
+`mcp__tutor__*` tools, the second message resumed the session, Settings
+showed the path and version).
+
+Wiring outside **Owns**: core `settings.ts` (`tutor.claudeCodePath`) and
+its test; `shared/settings.ts`, `shared/tutor.ts`, `shared/channels.ts`,
+`shared/ipc.ts` (channel `tutor:claude-code`); `main/ipc/handlers/tutor.ts`;
+`main/tutor/index.ts` (backend choice, detection cache, servers started on
+the first Claude Code turn and stopped at quit); `main/setup.ts`;
+`storage/paths.ts` (`agentHome`) and `data/archive.ts` (reset removes it);
+`SettingsTutor.tsx`, `OnboardingPage.tsx` (comment), `SettingsPage.test.tsx`;
+`tutor.test.ts`, `settings.test.ts` and `scripts/smoke-ai.ts` (new deps);
+`e2e/claude-code.e2e.ts` and the `e2e:claude-code` scripts; SPEC §4.1, §4.3,
+§7.3, §10, §12, §13, §14; CONTEXT.
+
+Not done or not tested:
+- **No turn with a real API key or a real model.** Every Claude Code run
+  here used a dummy key against the loopback stand-in; the relay to the
+  real API is tested only against that stand-in.
+- **A Claude subscription login is deliberately not supported** (above).
+- Only Linux was run. macOS paths and Windows (`claude.exe` only, process
+  kill without process groups, `USERPROFILE` as home) are untested; `.cmd`
+  shims are refused rather than run through a shell.
+- Claude Code versions other than 2.1.328 were not tried; the minimum is set
+  to that version.
+- The MCP server implements only what Claude Code uses (stateless JSON
+  responses); other MCP clients were not tried.
+- The real-CLI test and `e2e:claude-code` are opt-in (they need Claude Code
+  installed), so CI does not run them.
 
 ### T12 — New problems: generate, paste, import
 

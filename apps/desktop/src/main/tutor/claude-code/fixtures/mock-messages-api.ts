@@ -24,6 +24,8 @@ export interface MockRequest {
   authorization: string | null;
   hasResult: boolean;
   lastText: string;
+  /** User and assistant messages in the request. */
+  messages: number;
 }
 
 export interface MockApi {
@@ -133,6 +135,7 @@ export async function startMockApi(mode: 'ok' | 'auth' = 'ok'): Promise<MockApi>
         authorization: header('authorization'),
         hasResult,
         lastText,
+        messages: msgs.filter((m) => m.role === 'user' || m.role === 'assistant').length,
       });
       const json = (status: number, obj: Obj): void => {
         const b = JSON.stringify(obj);

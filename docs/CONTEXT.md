@@ -33,7 +33,7 @@ Paths below are relative to the `dsa-tutor` root.
 | `dsa_tutor/tools/` (registry, schema, tutor tools) | `packages/core/src/tools/` | T06 | Port tool names, descriptions and schemas (SPEC §7.1). |
 | `dsa_tutor/prompt.py` | `packages/core/src/tutor/prompt.ts` | T10 | Port. |
 | `dsa_tutor/backends/anthropic.py` and its notes in `docs/SPEC.md` §5.3 | `apps/desktop/src/main/tutor/anthropic/` | T10 | Port to the TypeScript SDK; re-verify every note. |
-| `dsa_tutor/backends/claude_code.py`, `server/mcp.py` | `apps/desktop/src/main/tutor/claude-code/`, `src/main/mcp/` | T11 | Port after the T11 VERIFY. |
+| `dsa_tutor/backends/claude_code.py`, `agent_cli.py`, `server/mcp.py`, `tests/fixtures/claude_code/` | `apps/desktop/src/main/tutor/claude-code/`, `src/main/mcp/` | T11 | Ported (D-25): API key only, bare mode; fixtures re-recorded. |
 | `dsa_tutor/backends/fake.py`, `web/tests/fixtures/chat/*.sse`, `intake/*.sse` | fake backend and fixtures | T10, T12 | Port the scenarios. |
 | `dsa_tutor/intake/` (jobs, prompt, open sets, Exercism index and LICENSE) | `packages/core/src/intake/`, `content/open-sets/` | T12 | Port; fetch stays in the main process, `raw.githubusercontent.com` only. |
 | `dsa_tutor/core/explanations.py`, `assets/explanation.html`, `scripts/render_explanation.py` | explanations module | T10 | Port; versions per slug. |

@@ -131,6 +131,7 @@ problems/generated/<slug>/  problems the tutor made
 problems/imported/<slug>/   pasted and imported problems (+ origin.md / NOTICE.md)
 explanations/<slug>/        explanation pages, one file per version
 cache/                      downloaded open-set files, runner image metadata
+agent-home/                 Claude Code's home while it is the tutor (its sessions; 7.3); never exported
 logs/                       app log (no credentials, no chat bodies)
 backups/                    automatic exports made before an import or reset (4.5)
 pending/                    an import or reset waiting for the next start (4.5)
@@ -172,9 +173,10 @@ nested in the file: `tutor.backend` is `{"tutor": {"backend": "auto"}}`.
 
 | Key | Default | Notes |
 |---|---|---|
-| `tutor.backend` | `auto` | `auto` / `anthropic` / `claude-code` / `none`. `auto`: Anthropic if a key is stored, else Claude Code if found, else none. |
+| `tutor.backend` | `auto` | `auto` / `anthropic` / `claude-code` / `none`. `auto`: Anthropic if a key is set, else none. Claude Code needs the same key (D-25), so it is chosen explicitly. |
 | `tutor.model` | `null` | `null` means the backend's default: `claude-opus-5-5` for Anthropic (D-23). |
 | `tutor.effort` | `medium` | |
+| `tutor.claudeCodePath` | `null` | Absolute path to `claude`; `null`: `PATH`, then the installers' places (D-25). |
 | `execution.runtime` | `local` | v2: `local` / `podman` / `docker` for Rust and Go. Python always uses Pyodide. |
 | `execution.timeScale` | `1.0` | Multiplier on per-test time limits (slow machines). |
 | `editor.fontSize`, `editor.keymap` | `14`, `default` | `default` / `vim` / `emacs`. |
@@ -505,14 +507,16 @@ renderer over IPC as a stream per turn; the turn can be cancelled.
   every request, check `stop_reason`, replay content blocks unchanged, cache
   breakpoint after system prompt and tools, map SDK error classes to `error`
   events). Verified against the current API docs in T10 (D-23).
-- **`claude-code`**: available when a `claude` executable is found on `PATH`
-  (or configured path) and reports being signed in. Spawns it headless per
-  turn with every built-in tool disabled and only the tutor tools allowed, via
-  an MCP server the main process serves on loopback with a per-turn token
-  (port the `dsa-tutor` 5.3/5.4 notes). **VERIFY** in T11: current CLI flags,
-  whether the Claude Agent SDK is the better integration, and that the
-  intended use of a user's own Claude login this way is permitted by current
-  terms. If it is not, ship T11 as "Claude Code with an API key" only.
+- **`claude-code`**: the user's installed Claude Code (2.1.328 or later),
+  found at `tutor.claudeCodePath` or on `PATH`, **with the app's API key
+  only** (D-25: current terms do not let an app use a user's Claude
+  subscription login). Spawned headless per turn in bare mode (no OAuth or
+  keychain, hooks, plugins, CLAUDE.md, skills or subagents), with every
+  built-in tool disabled and only the tutor tools allowed, through an MCP
+  server the main process serves on loopback with a per-turn token. The key
+  never reaches the CLI: it gets a per-turn token for a loopback relay in
+  the main process that swaps in the key. Available when found, recent
+  enough, and a key is set. The CLI's session is resumed across turns.
 - **`fake`**: scripted events for tests and UI work; not selectable in
   Settings (enabled with `ALGOTUTOR_FAKE_TUTOR=<script>`).
 
@@ -571,6 +575,7 @@ language).
 | API key leaks | `safeStorage`, main process only, never logged, never sent to renderer or code under test (4.4). |
 | Prompt injection via pasted/imported problems | Delimited untrusted data; the tutor has no tool that writes code, files or reaches the network. |
 | Compromised renderer | `contextIsolation`, `sandbox` (also `app.enableSandbox()`), no `nodeIntegration`, `webSecurity` on. The UI is served over the app's own `tutor-app://` protocol (never `file://`) with a strict CSP header (`connect-src 'none'`); every request from a page to anything else is cancelled, so no remote content. IPC only through the typed `window.tutor` bridge, `zod`-validated in main, accepted only from the UI page's main frame. Navigation, redirects, `window.open`, `<webview>`, permissions and downloads blocked in every web contents. Electron fuses (D-17): `RunAsNode`, `NODE_OPTIONS`, `--inspect` and `file://` extra privileges off; cookie encryption, ASAR integrity (macOS, Windows) and load-only-from-ASAR on. |
+| Claude Code as the tutor gets more than the tutor tools | Bare mode, `--tools ""`, only the app's MCP server (`--strict-mcp-config`), only the tutor tools pre-approved with everything else denied (`dontAsk`), no user settings, a minimal environment, an empty working directory, a private home; tokens per turn (D-25). |
 | Malicious update | Updates only from the project's GitHub Releases over HTTPS; signed builds (11) verified by the OS/updater. |
 
 ## 11. Packaging and updates
@@ -591,8 +596,9 @@ language).
 
 Only for development and tests: `ALGOTUTOR_DATA_DIR`, `ALGOTUTOR_FAKE_TUTOR`,
 `ALGOTUTOR_LOG_LEVEL`, and `ANTHROPIC_API_KEY` (4.4). The Anthropic SDK's own
-`ANTHROPIC_BASE_URL` also applies; the Settings e2e uses it to point the
-connection test at a local stand-in. Nothing a normal user
+`ANTHROPIC_BASE_URL` also applies (also as the Claude Code relay's upstream);
+the Settings and Claude Code e2e checks use it to point at a local stand-in.
+`ALGOTUTOR_TEST_CLAUDE` (tests only) names a `claude` for the real-CLI checks. Nothing a normal user
 needs.
 
 ## 13. Quality bar
@@ -605,6 +611,9 @@ needs.
   next problem, edit, run, submit, hint, progress.
 - No test calls a real AI provider. A manual `npm run smoke:ai` makes one real
   call when `ANTHROPIC_API_KEY` is set.
+- With Claude Code installed, `ALGOTUTOR_TEST_CLAUDE=<path> npm test` and
+  `npm run e2e:claude-code` also run the real CLI against a loopback stand-in
+  for the API.
 - CI runs on Linux, macOS and Windows.
 
 ## 14. Open items
@@ -617,5 +626,5 @@ needs.
 | **DECISION** code signing | 11, T13 | ship unsigned, document it |
 | ~~**VERIFY** Electron `safeStorage` API and Linux fallback~~ | 4.4, T09 | Resolved: async API, `basic_text` warning (D-24) |
 | ~~**VERIFY** Anthropic API behaviour notes~~ | 7.3, T10 | Resolved: checked against current docs and SDK 1.5.0 (D-23) |
-| **VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login | 7.3, T11 | API key only if unclear |
+| ~~**VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login~~ | 7.3, T11 | Resolved: API key only, bare mode, no Agent SDK (D-25) |
 | ~~**VERIFY** Pyodide can be fully network-blocked and package loading disabled~~ | 6.2, T07 | Resolved: yes, with `connect-src 'self'` for workers (D-14) |
