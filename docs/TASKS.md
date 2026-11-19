@@ -65,7 +65,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | done |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | done |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
-| T15 | Rust and Go harness generators | v2 | 5d | T04 | todo |
+| T15 | Rust and Go harness generators | v2 | 5d | T04 | in-progress |
 | T16 | Local toolchain executor | v2 | 2d | T15 | todo |
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | todo |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | todo |
