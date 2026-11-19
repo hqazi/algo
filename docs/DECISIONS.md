@@ -1046,7 +1046,52 @@ protocol** (2026-11-19, T15; resolves the Rust `int` DECISION)
 - **Offered vs. supported.** `languageSupports` (content validation) knows
   Rust and Go now; `languagesWithHarness()` (what profiles, tutor tools and
   new problems may use) stays `["python"]` until an executor runs them
-  (T16/T17), and `teaching.start` refuses languages not offered.
+  (T16/T17), and `teaching.start` refuses languages not offered. (Superseded by D-30: T16 offers Rust and Go.)
 - **Checked with** cargo 1.97.0 and go 1.24.7 on Linux (`npm run
   check:harnesses`, CI job `harnesses`). Not checked: macOS and Windows,
   older toolchains.
+
+**D-30 Local toolchain executor: per-test kill timer, respawn, offered
+always** (2026-11-19, T16)
+
+- **Rust and Go are offered whether or not the toolchain is installed**
+  (`languagesWithHarness()` is now `python, rust, go`). Profiles, the tutor's
+  tools and new problems can name them; a run without `cargo` / `go` is
+  `runtime-missing` with what to install, and the language picker marks the
+  language "not installed" (with the reason). Rejected: making the offered
+  set depend on detection — core would need runtime state, and a profile
+  choice would change meaning when a toolchain is removed.
+- **Cache key:** `RunJob.slug` (new, optional; SPEC §6.1), else
+  `sig-<sha256 of the signature>`. A stamp file holds a hash of every
+  project file, the toolchain version and the platform; when it matches and
+  the binary exists the build is skipped. Files are written only when their
+  content changed (mtimes kept), so `cargo` / `go build` stay incremental.
+  One job at a time per project folder.
+- **Timeouts:** one harness process for all tests (start-up is paid once);
+  the kill timer is re-armed with `limit + 250 ms` at each result line (the
+  first test also gets 1 s for start-up). On timeout or crash the process
+  tree is killed and a fresh process runs the remaining tests, so one
+  endless loop costs one test, as in Pyodide. POSIX: the child is spawned
+  detached (its own process group) and the group gets SIGKILL, also after a
+  normal exit (left-over children). Windows: `taskkill /pid <pid> /T /F`
+  (not a job object: no native module needed). Output over 32 MB kills the
+  run (reported as a crash).
+- **Environment:** the app's environment without `ANTHROPIC_*`,
+  `ELECTRON_*`, `ALGORITHM_TUTOR_*`, `GOFLAGS`, `NODE_OPTIONS`; PATH plus
+  `~/.cargo/bin`, `/usr/local/go/bin`, `/opt/homebrew/bin`, `/usr/local/bin`,
+  `~/go/bin` (Windows: `~/.cargo/bin`, `C:\Program Files\Go\bin`), because
+  an app started from the desktop may not get the shell's PATH;
+  `GOTOOLCHAIN=local` (D-29), `GOPROXY=off` (no module downloads; the project
+  has no dependencies), `CARGO_TERM_COLOR=never`. On Windows only `cargo.exe`
+  / `go.exe` are accepted (no shell for `.cmd`); Go builds `harness.exe`.
+- **Compile errors:** `load-error` with type `compile error`; Rust keeps
+  only `error…` blocks (not warnings or "could not compile"), Go drops the
+  `# package` line; the project folder is replaced by `.`; the line is the
+  first `solution.rs:N` / `solution.go:N`.
+- **Language switch** (`problems:language`, `Teaching.switchLanguage`):
+  saves, then updates the open attempt's language (or opens one) and
+  creates the language's file from the stub if missing. The attempt is
+  recorded in the language it ends in. The editor highlights Python only
+  (no new CodeMirror language packages); Go indents with tabs.
+- **Checked with** cargo 1.97.0 and go 1.24.7 on Linux (Vitest suites that
+  run when the toolchain is on PATH). Not checked: macOS and Windows.

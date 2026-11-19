@@ -324,7 +324,8 @@ interface Executor {
 }
 
 interface RunJob {
-  language: Language;                           // "python" in v1
+  language: Language;
+  slug?: string;                                // the problem, if any: the local build cache key
   code: string;                                 // the solution source
   signature: Signature;
   compare: CompareSpec;
@@ -424,10 +425,25 @@ in the local toolchain or a container, in every version.
   The project has no third-party dependencies (Rust parses JSON itself), so
   it builds offline. Core's `parseHarnessStream` turns stdout into the same
   `HarnessOutput` the Python harness produces.
-- **Local executor:** uses `cargo` / `go` on `PATH`. One cached project per
-  problem under `cache/build/<lang>/<slug>/` so reruns compile incrementally.
-  Process per run, killed (with its process group) on timeout. No sandbox: the
-  user's own code, with the user's own rights. Settings says so plainly.
+- **Local executor** (D-30): uses `cargo` / `go` on `PATH` (plus the
+  installers' usual folders, e.g. `~/.cargo/bin`, `/usr/local/go/bin`). One
+  cached project per problem under `cache/build/<lang>/<slug>/` (a signature
+  hash when there is no slug); files are rewritten only when they change, so
+  reruns compile incrementally, and an unchanged project is not rebuilt. A
+  build failure is `compile` with the compiler's errors (warnings dropped)
+  and the solution line. One harness process runs all tests; each test gets
+  its limit + 250 ms from the previous result line, then the process tree is
+  killed (POSIX process group; Windows `taskkill /T /F`), the test is
+  `timeout` and a fresh process runs the rest (a crash continues the same
+  way). Toolchains run with the app's environment minus `ANTHROPIC_*` and
+  `ELECTRON_*`, and `GOTOOLCHAIN=local`, `GOPROXY=off`. A missing toolchain
+  is `runtime-missing` with what to install. No sandbox: the user's own code,
+  with the user's own rights; memory limits are not enforced. Settings says
+  so plainly.
+- **Language picker** (practice view): the problem's languages, each marked
+  available or not (toolchain found). Switching saves first, then moves the
+  open attempt (opening one if needed) to the new language; each language
+  keeps its own solution file.
 - **Container executor:** runs the same harness in the runner image (6.5).
 
 ### 6.5 Container runtimes (v2): detect and choose, never install

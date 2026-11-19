@@ -66,7 +66,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | done |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | done |
-| T16 | Local toolchain executor | v2 | 2d | T15 | in-progress |
+| T16 | Local toolchain executor | v2 | 2d | T15 | done |
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | todo |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | todo |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
@@ -1211,10 +1211,18 @@ and Go.
 - Language picker in the practice view for problems that support it; workspace file per language.
 
 **Acceptance.**
-- [ ] Tests (CI with toolchains): pass, fail, compile error, timeout, rerun is incremental.
-- [ ] Works on Linux, macOS, Windows CI.
+- [x] Tests (CI with toolchains): pass, fail, compile error, timeout, rerun is incremental.
+- [ ] Works on Linux, macOS, Windows CI. (Linux checked here; the `check` job runs the same tests on macOS and Windows, not yet seen.)
 
 **Notes.**
+
+- Built: `apps/desktop/src/main/exec/local/` — `LocalExecutor` (`id: 'local'`; `status`, `statusFor(language)`, `toolchains`, `recheck`, `run`), `detect.ts` (find `cargo`/`go` on PATH plus the installers' folders, parse versions), `process.ts` (spawn with stdin, output cap, kill the process tree: POSIX process group, Windows `taskkill /T /F`). Cached project per problem in `<data>/cache/build/<lang>/<slug>/` (signature hash without a slug), files rewritten only when changed, build skipped when a stamp (files + toolchain version + platform) matches; build failure → `compile` with the compiler errors and solution line; per-test kill timer re-armed at each result line, then a fresh process runs the remaining tests after a timeout or crash; cancellation kills the tree. Toolchain env drops `ANTHROPIC_*`/`ELECTRON_*`, sets `GOTOOLCHAIN=local`, `GOPROXY=off`. Decisions in D-30; SPEC §6.1 (`RunJob.slug`) and §6.4 (local executor, language picker) updated.
+- Language picker: practice view toolbar (`problems:languages`, `problems:language` channels; `Practice.languages` / `switchLanguage`; core `Teaching.switchLanguage`). Switching saves, moves the open attempt (or opens one) to the new language and loads that language's own file; the file watch follows. Unavailable languages are disabled with the reason; if the current one cannot run, a notice says why. Editor: Python highlighting only; Go indents with tabs.
+- Rust and Go are now offered everywhere (`languagesWithHarness()` = python, rust, go; D-30), so new problems list them too.
+- Tests: `exec/local/local-executor.test.ts` — per toolchain found (Rust and Go): detection, pass, rerun skips the build, changed code rebuilds in the same project without touching other files, fail, compile error (message, line, no temp path; fixed code then passes), one test times out and the rest pass in a second process, cancellation, cache key without a slug; without toolchains: missing toolchain (`runtime-missing`), fake `cargo` detection, version parsing, child env, compile-error parsing, cache key, process-group kill. `practice.test.ts`: switching languages keeps each file; a Go solution of `rotate-playlist` submits and records with the real `go`. `teaching.test.ts`: `switchLanguage`. `PracticePage.test.tsx`: picker saves first, loads the new file, re-watches.
+- Checks here (Linux, cargo 1.97.0, go 1.24.7): typecheck, lint, format:check, `npm test` (all passed; the toolchain suites ran), `validate:content`, `check:harnesses`, `build`, `xvfb-run npm run e2e` passed.
+- Wiring outside Owns: `core/exec/types.ts` (`RunJob.slug`), `core/tools/run.ts` (passes the slug), `core/problems/validate.ts` (offered languages), `core/teaching/teaching.ts` (`switchLanguage`), tests in `core/intake/create.test.ts`, `core/langs/langs.test.ts`, `core/teaching/teaching.test.ts`; `main/practice/{index,service}.ts`, `main/ipc/handlers/practice.ts`, `shared/{ipc,channels,practice}.ts`, `renderer/.../PracticePage.tsx`, `Editor.tsx`; SPEC, DECISIONS.
+- Not done / not tested: not run on macOS or Windows (the Windows paths — `.exe` names, `taskkill`, `harness.exe` for Go — are untested); no CI job pins toolchain versions (the `check` job relies on the runner images' preinstalled `cargo`/`go`, and the suites skip silently where one is missing). Memory limits are not enforced locally. No Rust/Go syntax highlighting. The reference solution is still Python only. Settings → Code execution (runtime choice, Recheck, "no sandbox" wording) is T18; the main process does not log detection results. The app does not fall back from a container runtime (T17).
 
 ### T17 — Container executor (Docker and Podman)
 
