@@ -28,6 +28,17 @@ const problemStatus = z.enum(PROBLEM_STATUSES);
 const caseStatus = z.enum(['pass', 'fail', 'error', 'timeout']);
 
 export const slugRequest = z.strictObject({ slug });
+export const languageRequest = z.strictObject({ slug, language });
+
+/** A language the problem is offered in, and whether it can run here (T16). */
+export const languageOption = z.strictObject({
+  language,
+  available: z.boolean(),
+  /** Why not, e.g. "cargo was not found on PATH; install Rust from …". */
+  reason: z.string().optional(),
+  /** e.g. "cargo 1.97.0". */
+  version: z.string().optional(),
+});
 
 const stats = {
   attempted: z.int(),
@@ -277,6 +288,7 @@ export const attemptView = z.strictObject({
 
 export const themeView = z.strictObject({ theme: z.enum(['system', 'light', 'dark']) });
 
+export type LanguageOption = z.output<typeof languageOption>;
 export type TopicView = z.output<typeof topicView>;
 export type ProfileView = z.output<typeof profileView>;
 export type ProfileResponse = z.output<typeof profileResponse>;

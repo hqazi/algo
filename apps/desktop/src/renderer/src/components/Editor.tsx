@@ -32,12 +32,20 @@ export interface EditorProps {
   label?: string;
   fontSize?: number | undefined;
   keymap?: EditorKeymap | undefined;
+  /** Python gets highlighting; Rust and Go are plain text for now (Go indents with tabs). */
+  language?: 'python' | 'rust' | 'go' | undefined;
 }
 
 function keymapExtension(k: EditorKeymap | undefined): Extension {
   if (k === 'vim') return vim();
   if (k === 'emacs') return emacs();
   return [];
+}
+
+function languageExtension(language: EditorProps['language']): Extension {
+  if (language === 'go') return indentUnit.of('\t');
+  if (language === 'rust') return indentUnit.of('    ');
+  return [indentUnit.of('    '), python()];
 }
 
 function fontExtension(px: number | undefined): Extension {
@@ -58,6 +66,7 @@ export function Editor(props: EditorProps) {
   const ro = useRef(new Compartment());
   const keys = useRef(new Compartment());
   const font = useRef(new Compartment());
+  const lang = useRef(new Compartment());
   const external = useRef(false);
 
   useEffect(() => {
@@ -94,8 +103,7 @@ export function Editor(props: EditorProps) {
         basicSetup,
         font.current.of(fontExtension(initial.fontSize)),
         keymap.of([indentWithTab]),
-        indentUnit.of('    '),
-        python(),
+        lang.current.of(languageExtension(initial.language)),
         theme.current.of(prefersDark() ? oneDark : []),
         ro.current.of(EditorState.readOnly.of(!!initial.readOnly)),
         EditorView.contentAttributes.of({ 'aria-label': initial.label ?? 'Solution code' }),
@@ -117,7 +125,10 @@ export function Editor(props: EditorProps) {
     };
   }, []);
 
-  const { value, docKey, readOnly, fontSize, keymap: keymapSetting } = props;
+  const { value, docKey, readOnly, fontSize, keymap: keymapSetting, language } = props;
+  useEffect(() => {
+    view.current?.dispatch({ effects: lang.current.reconfigure(languageExtension(language)) });
+  }, [language]);
   useEffect(() => {
     const v = view.current;
     if (!v) return;

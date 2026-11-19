@@ -169,7 +169,18 @@ describe('start', () => {
   });
 
   it('refuses a language the problem is not offered in', async () => {
-    await rejects(t.start('tree-depth', 'rust'), /not available in rust/);
+    // Every curated problem offers Python, Rust and Go (T15/T16).
+    await rejects(t.start('tree-depth', 'cobol' as never), /not available in cobol/);
+  });
+
+  it('switches the open attempt to another offered language', async () => {
+    await t.start('tree-depth');
+    const r = await t.switchLanguage('tree-depth', 'rust');
+    expect(r).toMatchObject({ resumed: true, language: 'rust', workspace_created: true });
+    expect(workspace.files.get(workspacePath('tree-depth', 'rust'))).toContain('pub fn max_depth');
+    expect(storage.read((db) => db.listAttempts())).toMatchObject([{ language: 'rust' }]);
+    expect(t.languageFor('tree-depth')).toBe('rust');
+    await rejects(t.switchLanguage('tree-depth', 'cobol' as never), /not available in cobol/);
   });
 
   it('marks the topic as learning', async () => {

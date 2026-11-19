@@ -348,6 +348,30 @@ export class Teaching {
     };
   }
 
+  /**
+   * Work `slug` in `language` from now on: switches the open attempt's
+   * language (opening one if there is none) and creates that language's
+   * solution file if missing. Each language keeps its own file, so switching
+   * back finds the code where it was left.
+   */
+  async switchLanguage(slug: string, language: Language): Promise<StartResult> {
+    const problem = await this.problem(slug);
+    const offered = problem.meta.languages.filter((l) => languagesWithHarness().includes(l));
+    if (!offered.includes(language))
+      throw new TutorError(
+        `${slug} is not available in ${language}; languages: ${offered.join(', ')}`,
+        'no_language',
+      );
+    const switched = await this.deps.storage.write((db) => {
+      const open = db.getOpenAttempt(slug);
+      if (!open || open.language === language) return false;
+      db.updateAttempt(open.id, { language });
+      return true;
+    });
+    const started = await this.start(slug, language);
+    return switched ? { ...started, resumed: true } : started;
+  }
+
   // ------------------------------------------------------------ hints, explanations
 
   /** Count a hint; returns the ladder level to give (`null` once all four are used). */

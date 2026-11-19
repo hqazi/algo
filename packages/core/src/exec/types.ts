@@ -38,8 +38,12 @@ export interface Executor {
 }
 
 export interface RunJob {
-  /** "python" in v1. */
   language: Language;
+  /**
+   * The problem, when there is one: executors that keep a build per problem
+   * (the local toolchain executor, SPEC §6.4) key their cache by it.
+   */
+  slug?: string | undefined;
   /** The solution source. */
   code: string;
   signature: Signature;

@@ -13,6 +13,8 @@ export const INVOKE_CHANNELS = [
   'problems:get',
   'problems:next',
   'problems:start',
+  'problems:languages',
+  'problems:language',
   'problems:reference',
   'workspace:get',
   'workspace:save',

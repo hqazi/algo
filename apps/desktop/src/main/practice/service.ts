@@ -11,6 +11,7 @@
 import {
   checkSlug,
   runProblemTests,
+  languagesWithHarness,
   runView,
   SlugBusyError,
   SlugGuard,
@@ -20,6 +21,7 @@ import {
   TutorError,
   workspacePath,
   type Executor,
+  type ExecutorStatus,
   type JsonValue,
   type Language,
   type Problem,
@@ -34,6 +36,7 @@ import type {
   CaseView,
   ExampleView,
   GiveUpResponse,
+  LanguageOption,
   ProblemDetail,
   ProblemFilters,
   ProblemListItem,
@@ -53,6 +56,8 @@ export interface PracticeDeps {
   catalog: FileCatalog;
   workspace: FileWorkspace;
   executorFor: (language: Language) => Executor | null;
+  /** Whether `language` can run here (the toolchain is found); default: if it has an executor. */
+  languageStatus?: (language: Language) => Promise<ExecutorStatus>;
   timeScale: () => number;
   now: () => string;
 }
@@ -245,6 +250,40 @@ export class Practice {
 
   attempts(options: { slug?: string | undefined; last?: number | undefined }): AttemptView[] {
     return this.teaching.attempts(options).attempts.map((a) => ({ ...a }));
+  }
+
+  // ------------------------------------------------------------ languages
+
+  /** The languages the problem is offered in, and whether each can run here. */
+  async languages(slug: string): Promise<LanguageOption[]> {
+    const p = await this.teaching.problem(slug);
+    const offered = p.meta.languages.filter((l) => languagesWithHarness().includes(l));
+    return Promise.all(
+      offered.map(async (language): Promise<LanguageOption> => {
+        const s: ExecutorStatus = this.deps.languageStatus
+          ? await this.deps.languageStatus(language).catch((e: unknown) => ({
+              available: false,
+              reason: e instanceof Error ? e.message : String(e),
+            }))
+          : { available: this.deps.executorFor(language) !== null };
+        const out: LanguageOption = { language, available: s.available };
+        if (s.reason) out.reason = s.reason;
+        const v = Object.entries(s.versions ?? {})[0];
+        if (v) out.version = `${v[0]} ${v[1]}`;
+        return out;
+      }),
+    );
+  }
+
+  /** Work `slug` in `language`: switches the attempt; returns that language's workspace. */
+  async switchLanguage(slug: string, language: Language): Promise<WorkspaceResponse> {
+    if (this.guard.isBusy(slug))
+      throw new PracticeRefusal(
+        'busy',
+        'Tests are running for this problem; switch languages when they finish.',
+      );
+    await this.teaching.switchLanguage(slug, language);
+    return this.workspace(slug);
   }
 
   // ------------------------------------------------------------ workspace

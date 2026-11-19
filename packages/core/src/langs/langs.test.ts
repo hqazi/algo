@@ -147,8 +147,8 @@ describe('support', () => {
     }
   });
 
-  it('the app offers only languages it can run (Python until T16)', () => {
-    expect(languagesWithHarness()).toEqual(['python']);
+  it('the app offers Python, Rust and Go (T16 runs the compiled ones locally)', () => {
+    expect(languagesWithHarness()).toEqual(['python', 'rust', 'go']);
   });
 
   it('starter code uses the stubs', () => {

@@ -195,6 +195,42 @@ describe('PracticePage', () => {
     expect(screen.queryByTestId('disk-changed')).toBeNull();
   });
 
+  it('switches language: saves first, loads that language’s file, re-watches it', async () => {
+    bridge
+      .on('problems:languages', () => ({
+        languages: [
+          { language: 'python', available: true },
+          { language: 'rust', available: false, reason: 'cargo was not found on PATH' },
+          { language: 'go', available: true, version: 'go 1.24.7' },
+        ],
+      }))
+      .on('problems:language', ({ language }) => ({
+        ...WORKSPACE,
+        language,
+        code: 'package main\n',
+        path: `/data/workspace/${SLUG}/solution.go`,
+      }));
+    await open();
+    const picker = (await screen.findByTestId('language-picker')) as HTMLSelectElement;
+    const rust = [...picker.options].find((o) => o.value === 'rust')!;
+    expect(rust.disabled).toBe(true);
+    expect(rust.textContent).toBe('Rust (not installed)');
+    type('# mine\n');
+    fireEvent.change(picker, { target: { value: 'go' } });
+    await waitFor(() => expect(editorText()).toBe('package main\n'));
+    const channels = bridge.channels();
+    expect(channels.indexOf('workspace:save')).toBeLessThan(channels.indexOf('problems:language'));
+    expect(bridge.calls.find((c) => c.channel === 'problems:language')?.request).toEqual({
+      slug: SLUG,
+      language: 'go',
+    });
+    expect(picker.value).toBe('go');
+    await waitFor(() =>
+      expect(bridge.streams.filter((s) => s.channel === 'workspace:watch')).toHaveLength(2),
+    );
+    expect(bridge.streams.find((s) => s.channel === 'workspace:watch')!.cancelled).toBe(true);
+  });
+
   it('stops watching when the page closes', async () => {
     await open();
     const watch = bridge.streams.find((s) => s.channel === 'workspace:watch')!;

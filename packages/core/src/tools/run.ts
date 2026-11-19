@@ -38,6 +38,7 @@ export async function runProblemTests(
   const tests = only ? problem.tests.filter((t) => t.visibility === only) : problem.tests;
   return executor.run({
     language,
+    slug: problem.meta.slug,
     code,
     signature: problem.meta.signature,
     compare: problem.meta.compare as CompareSpec,

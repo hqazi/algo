@@ -6,7 +6,12 @@
  * `show_results` events show in the results panel.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ProblemDetail, RecordView, ReportView } from '../../../shared/practice';
+import type {
+  LanguageOption,
+  ProblemDetail,
+  RecordView,
+  ReportView,
+} from '../../../shared/practice';
 import { ChatPane } from '../chat/ChatPane';
 import { useChatStore, useTutorStatus } from '../chat/store';
 import { Editor } from '../components/Editor';
@@ -23,6 +28,8 @@ type Busy = 'run' | 'submit' | 'give_up' | null;
 type SaveState = 'saved' | 'unsaved' | 'saving' | 'error';
 
 export const AUTOSAVE_MS = 700;
+
+const LANGUAGE_LABEL = { python: 'Python', rust: 'Rust', go: 'Go' } as const;
 
 export function PracticePage({ slug }: { slug: string }) {
   const { notify, refresh, topicName, settings } = useApp();
@@ -43,6 +50,7 @@ export function PracticePage({ slug }: { slug: string }) {
   const [reference, setReference] = useState<string | null>(null);
   const [onDisk, setOnDisk] = useState<string | null>(null);
   const [tab, setTab] = useState('code');
+  const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const chat = useChatStore();
   const tutor = useTutorStatus(chat);
 
@@ -85,6 +93,13 @@ export function PracticePage({ slug }: { slug: string }) {
       .catch((err: unknown) => {
         if (!cancelled) setLoadError(errorText(err));
       });
+    // Which languages can run here (cargo / go found); the picker only.
+    invoke('problems:languages', { slug }).then(
+      (r) => {
+        if (!cancelled) setLanguages(r.languages);
+      },
+      () => undefined,
+    );
     return () => {
       cancelled = true;
       live.current = false;
@@ -92,9 +107,10 @@ export function PracticePage({ slug }: { slug: string }) {
   }, [slug, replaceDoc]);
 
   // Edits made to the solution file in another editor.
-  const loaded = detail !== null;
+  // The watch follows the language's file, so it restarts when the language changes.
+  const watchLanguage = detail?.language;
   useEffect(() => {
-    if (!loaded) return;
+    if (!watchLanguage) return;
     const watch = stream('workspace:watch', { slug }, ({ code: text }) => {
       if (text === code.current) return;
       if (dirty.current) {
@@ -107,7 +123,7 @@ export function PracticePage({ slug }: { slug: string }) {
     });
     watch.result.catch(() => undefined);
     return () => watch.cancel();
-  }, [loaded, slug, replaceDoc, notify]);
+  }, [watchLanguage, slug, replaceDoc, notify]);
 
   /** Start the attempt (once) and save the current code; serialised. */
   const flush = useCallback((): Promise<void> => {
@@ -208,6 +224,33 @@ export function PracticePage({ slug }: { slug: string }) {
     },
     [flush],
   );
+
+  /** Save, then work the problem in `next` (its own solution file). */
+  async function changeLanguage(next: ProblemDetail['language']): Promise<void> {
+    if (busyRef.current || !detail || next === detail.language) return;
+    try {
+      await flush();
+      const step = chain.current.then(async () => {
+        const w = await invoke('problems:language', { slug, language: next });
+        if (!live.current) return;
+        needsStart.current = false;
+        dirty.current = false;
+        setDetail((d) =>
+          d ? { ...d, language: w.language, status: d.status === 'new' ? 'active' : d.status } : d,
+        );
+        setStarter(w.starter);
+        setFilePath(w.path);
+        setOnDisk(null);
+        setReport(null);
+        replaceDoc(w.code, `language-${w.language}`);
+        setSaveState('saved');
+      });
+      chain.current = step.catch(() => undefined);
+      await step;
+    } catch (err) {
+      notify(errorText(err), 'error');
+    }
+  }
 
   function celebrate(rec: RecordView | undefined): void {
     if (rec?.level_changed)
@@ -416,6 +459,27 @@ export function PracticePage({ slug }: { slug: string }) {
         >
           Submit
         </button>
+        {languages.length > 1 && (
+          <select
+            aria-label="Language"
+            value={detail.language}
+            disabled={!!busy}
+            onChange={(e) => void changeLanguage(e.target.value as ProblemDetail['language'])}
+            data-testid="language-picker"
+          >
+            {languages.map((l) => (
+              <option
+                key={l.language}
+                value={l.language}
+                disabled={!l.available && l.language !== detail.language}
+                title={l.reason ?? l.version ?? ''}
+              >
+                {LANGUAGE_LABEL[l.language]}
+                {l.available ? '' : ' (not installed)'}
+              </option>
+            ))}
+          </select>
+        )}
         <span
           className={`save-state save-${saveState}`}
           title={saveError ?? filePath}
@@ -442,6 +506,12 @@ export function PracticePage({ slug }: { slug: string }) {
           Reset
         </button>
       </div>
+      {languages.find((l) => l.language === detail.language && !l.available) && (
+        <div className="notice" role="status" data-testid="language-missing">
+          {LANGUAGE_LABEL[detail.language]} cannot run here:{' '}
+          {languages.find((l) => l.language === detail.language)?.reason}
+        </div>
+      )}
       {onDisk !== null && (
         <div className="notice" role="status" data-testid="disk-changed">
           The solution file was changed in another editor. Your unsaved edits here will replace it
@@ -465,6 +535,7 @@ export function PracticePage({ slug }: { slug: string }) {
           onSubmit={() => void execute('submit')}
           fontSize={settings?.settings.editor.fontSize}
           keymap={settings?.settings.editor.keymap}
+          language={detail.language}
         />
       </div>
       <ResultsPanel

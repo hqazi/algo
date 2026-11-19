@@ -3,6 +3,7 @@
  * catalog, SQLite, the file workspace in a temp folder and Python run by the
  * Pyodide executor on Node worker threads (as in `pyodide-executor.test.ts`).
  */
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ import { stringifyJson } from '@algorithm-tutor/core';
 import { PyodidePool } from '../../exec-host/pool';
 import { poolTransport } from '../../exec-host/pool-transport';
 import { nodeWorkerFactory } from '../../exec-host/testing/node-factory';
+import { LocalExecutor } from '../exec/local';
 import { PyodideExecutor } from '../exec/pyodide-executor';
 import { openDatabase } from '../storage/database';
 import { SqliteStorage } from '../storage/sqlite-storage';
@@ -211,6 +213,67 @@ describe('Practice', () => {
       for (const k of Object.keys(c))
         expect(['id', 'visibility', 'category', 'status', 'time_ms']).toContain(k);
   }, 60_000);
+});
+
+const HAS_GO = spawnSync('go', ['version']).status === 0;
+
+describe('languages (T16)', () => {
+  const GO_SOLUTION =
+    'package main\n\nfunc shiftPlaylist(tracks []int, k int) []int {\n\tn := len(tracks)\n' +
+    '\tif n == 0 {\n\t\treturn []int{}\n\t}\n\tk %= n\n' +
+    '\treturn append(append([]int{}, tracks[n-k:]...), tracks[:n-k]...)\n}\n';
+
+  it('switches the attempt between languages, each with its own file', async () => {
+    await practice.teaching.profileDefaults();
+    const offered = await practice.languages('rotate-playlist');
+    expect(offered).toEqual([
+      { language: 'python', available: true },
+      { language: 'rust', available: false },
+      { language: 'go', available: false },
+    ]);
+    await practice.teaching.start('rotate-playlist');
+    await practice.save('rotate-playlist', 'def shift_playlist(tracks, k):\n    return tracks\n');
+    const go = await practice.switchLanguage('rotate-playlist', 'go');
+    expect(go).toMatchObject({ language: 'go', exists: true });
+    expect(go.code).toContain('func shiftPlaylist(tracks []int, k int) []int {');
+    expect(go.path.endsWith('solution.go')).toBe(true);
+    expect((await practice.problem('rotate-playlist')).language).toBe('go');
+    expect(storage.read((db) => db.listAttempts())).toHaveLength(1);
+    // Back to Python: the code is where it was left.
+    const py = await practice.switchLanguage('rotate-playlist', 'python');
+    expect(py.code).toBe('def shift_playlist(tracks, k):\n    return tracks\n');
+  });
+
+  it.skipIf(!HAS_GO)(
+    'runs and submits a Go solution with the local toolchain',
+    async () => {
+      const local = new LocalExecutor({
+        buildDir: join(dataDir, 'cache', 'build'),
+        runnersDir: join(CONTENT, 'runners'),
+      });
+      const withGo = new Practice({
+        storage,
+        catalog,
+        workspace,
+        executorFor: (language) => (language === 'python' ? executor : local),
+        languageStatus: (language) => local.statusFor(language),
+        timeScale: () => 1,
+        now,
+      });
+      await withGo.teaching.profileDefaults();
+      expect(
+        (await withGo.languages('rotate-playlist')).find((l) => l.language === 'go'),
+      ).toMatchObject({ available: true, version: expect.stringMatching(/^go \d/) as unknown });
+      await withGo.switchLanguage('rotate-playlist', 'go');
+      await withGo.save('rotate-playlist', GO_SOLUTION);
+      const r = await withGo.submit('rotate-playlist');
+      expect(reportSchema.safeParse(r.report).success).toBe(true);
+      expect(r.report).toMatchObject({ language: 'go', all_passed: true });
+      expect(r.recorded).toBe(true);
+      expect(storage.read((db) => db.listAttempts())[0]).toMatchObject({ language: 'go' });
+    },
+    300_000,
+  );
 });
 
 describe('caseView', () => {

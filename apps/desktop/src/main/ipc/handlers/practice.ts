@@ -75,6 +75,12 @@ export function registerPracticeHandlers(router: IpcRouter, deps: PracticeHandle
   router.handle('problems:start', ({ slug }) =>
     refusing(async () => withoutOk(await t.start(slug))),
   );
+  router.handle('problems:languages', ({ slug }) =>
+    refusing(async () => ({ languages: await practice.languages(slug) })),
+  );
+  router.handle('problems:language', ({ slug, language }) =>
+    refusing(() => practice.switchLanguage(slug, language)),
+  );
   router.handle('problems:reference', ({ slug }) => refusing(() => practice.reference(slug)));
 
   router.handle('workspace:get', ({ slug }) => refusing(() => practice.workspace(slug)));

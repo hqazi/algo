@@ -61,7 +61,7 @@ describe('createProblem', () => {
       source: 'generated',
       content_version: 1,
       time_limit_ms: 2000,
-      languages: ['python'],
+      languages: ['python', 'rust', 'go'],
       created_at: '2026-11-19T09:00:00Z',
     });
     expect(meta.origin).toBeUndefined();

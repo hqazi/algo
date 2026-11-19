@@ -64,6 +64,16 @@ export const invokeChannels = {
   'problems:next': { request: P.nextRequest, response: P.nextResponse },
   /** Open (or resume) an attempt and create the starter file. */
   'problems:start': { request: P.slugRequest, response: P.startResponse },
+  /** The problem's languages and whether each can run here (cargo / go found). */
+  'problems:languages': {
+    request: P.slugRequest,
+    response: z.strictObject({ languages: z.array(P.languageOption) }),
+  },
+  /**
+   * Work the problem in another language: switches (or opens) the attempt and
+   * creates that language's solution file. Refused (`busy`) while tests run.
+   */
+  'problems:language': { request: P.languageRequest, response: P.workspaceResponse },
   /** Refused (`locked`) until an attempt on the problem is recorded. */
   'problems:reference': { request: P.slugRequest, response: P.referenceResponse },
   'workspace:get': { request: P.slugRequest, response: P.workspaceResponse },

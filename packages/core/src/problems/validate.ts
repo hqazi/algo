@@ -22,11 +22,12 @@ const HARNESS_LIMIT: Record<Language, (sig: Signature) => string | null> = {
 };
 
 /**
- * Languages the app can run solutions in today: what profiles, the tutor's
- * tools and new problems may use. Rust and Go have harnesses (T15) but no
- * executor until T16/T17, so they are not offered yet.
+ * Languages the app can run solutions in: what profiles, the tutor's tools
+ * and new problems may use. Python runs in Pyodide; Rust and Go with the
+ * user's own `cargo` / `go` (T16), which may be missing: a run then reports
+ * `runtime-missing` and says what to install.
  */
-const RUNNABLE: readonly Language[] = ['python'];
+const RUNNABLE: readonly Language[] = ['python', 'rust', 'go'];
 
 export function languagesWithHarness(): Language[] {
   return [...RUNNABLE];
