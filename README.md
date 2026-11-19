@@ -36,11 +36,14 @@ your goals (or skip them) and offers to connect the tutor.
 
 ## Optional: a container sandbox
 
-*(v2.)* Rust and Go solutions run with your own `cargo` and `go` by default:
-that is your own code with your own permissions, like running it in a
-terminal. If you would rather run them isolated (no network, no access to your
-files), install a container runtime. The app never installs one; it finds what
-you have, and you choose it in **Settings → Code execution**.
+*(v2.)* Rust and Go solutions run with your own `cargo` and `go` by default
+(see [Installing Rust and Go](#installing-rust-and-go)): that is your own code
+with your own permissions, like running it in a terminal. If you would rather
+run them isolated (no network, no access to your files, limited memory and
+processes), install a container runtime. The app never installs or starts
+one; it finds what you have, and you choose it in
+**Settings → Code execution**. Python always runs in the in-app sandbox and
+needs none of this.
 
 ### Podman (recommended)
 
@@ -58,48 +61,93 @@ Free for everyone, runs without root, no background daemon.
   podman machine start
   ```
 
-  Or install [Podman Desktop](https://podman-desktop.io/).
+  Or install [Podman Desktop](https://podman-desktop.io/), which can create
+  and start the machine for you. Run `podman machine start` again after a
+  restart.
 - **Windows:**
 
   ```bash
   winget install RedHat.Podman-Desktop
   ```
 
-  Podman needs WSL2. If it is missing, run `wsl --install` from an
-  administrator terminal and restart Windows.
-- **Linux:** install the `podman` package (`sudo apt install podman`,
-  `sudo dnf install podman` or `sudo pacman -S podman`).
+  Podman runs inside WSL2. If WSL2 is missing, run `wsl --install` from an
+  administrator terminal and restart Windows. Then create and start the
+  Podman machine from Podman Desktop, or with `podman machine init` and
+  `podman machine start`.
+- **Linux:** install the `podman` package; there is no machine to start.
+
+  ```bash
+  sudo apt install podman
+  ```
+
+  (Fedora: `sudo dnf install podman`; Arch: `sudo pacman -S podman`.)
+  Memory limits need cgroup v2, the default on current distributions.
 
 ### Docker
 
-- **macOS and Windows:** [Docker Desktop](https://docs.docker.com/desktop/).
-  Docker Desktop's licence requires a paid subscription for use at larger
+- **macOS and Windows:** install
+  [Docker Desktop](https://docs.docker.com/desktop/) and start it. Docker
+  Desktop's licence requires a paid subscription for use at larger
   companies; check its terms.
-- **Linux:** [Docker Engine](https://docs.docker.com/engine/install/). To
-  use it without `sudo`, add yourself to the `docker` group, then log out and
-  back in:
+- **Linux:** install [Docker Engine](https://docs.docker.com/engine/install/).
+  To use it without `sudo`, add yourself to the `docker` group, then log out
+  and back in (membership of that group is equivalent to root access):
 
   ```bash
   sudo usermod -aG docker "$USER"
   ```
 
+The app honours `DOCKER_HOST` and the current Docker context.
+
 ### Other runtimes
 
 [Colima](https://github.com/abiosoft/colima) and
 [OrbStack](https://orbstack.dev/) on macOS provide the `docker` command and
-are detected as Docker.
+are detected as Docker. Start them first (for example `colima start`).
+
+### The runner image
+
+Jobs run in the runner image `ghcr.io/hqazi/algorithm-tutor-runner`, tagged
+with the app version, which has the Python, Rust and Go toolchains. The app
+never downloads it on its own: press **Pull image** in
+**Settings → Code execution** (once per runtime; Podman and Docker keep
+separate image stores), and **Update image** after an app update.
+
+> **Not published yet.** The image is built and published by CI in a later
+> ticket (T19). Until then **Pull image** fails, and the container sandbox
+> cannot be used; Rust and Go run with your local toolchains.
 
 ### Check that it works
 
-Open **Settings → Code execution**, press **Recheck**, choose the runtime,
-then press **Test sandbox**. If the runtime is installed but not running, the
-app shows the command that starts it (for example `podman machine start`).
+Open **Settings → Code execution** and press **Recheck runtimes**. Each
+runtime shows as not found (with a **How to install →** link here), installed
+but not running (with the command that starts it, for example
+`podman machine start`), or running. Choose a running runtime, pull the image,
+then press **Test sandbox**: it builds and runs a hello world in Rust and in
+Go inside that runtime's container, and never falls back to your local
+toolchains.
 
 ## Installing Rust and Go
 
-*(v2.)* Install Rust with [rustup](https://rustup.rs/) and Go from
-[go.dev/dl](https://go.dev/dl/). Restart the app (or press **Recheck**) and
-they appear in **Settings → Code execution**.
+*(v2.)* Rust and Go are optional; Python needs nothing installed.
+
+- **Rust:** install with [rustup](https://rustup.rs/), which provides
+  `cargo`. On macOS and Linux:
+
+  ```bash
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  ```
+
+  On Windows, run `rustup-init.exe` from the same site.
+- **Go:** download the installer for your OS from
+  [go.dev/dl](https://go.dev/dl/) and follow
+  [go.dev/doc/install](https://go.dev/doc/install).
+
+Open a new terminal and check that `cargo --version` and `go version` work.
+Then restart the app, or press **Recheck runtimes** in
+**Settings → Code execution**, and they show as found. With the
+[container sandbox](#optional-a-container-sandbox) you do not need them
+installed locally: the runner image has its own.
 
 ## Contributing
 

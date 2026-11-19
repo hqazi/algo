@@ -70,7 +70,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | done |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
-| T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | in-progress |
+| T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
 
 ## Order
 
@@ -1315,6 +1315,10 @@ and Go, multi-arch, published on release tags.
 - Stable anchors matching the Settings links.
 
 **Acceptance.**
-- [ ] Every Settings link resolves to a heading in the README (test).
+- [x] Every Settings link resolves to a heading in the README (test).
 
 **Notes.**
+- Built: README sections "Optional: a container sandbox" (Podman on macOS/Windows/Linux with the WSL2 note; Docker Desktop with the licence note, Docker Engine with the `docker` group and log out/in; Colima and OrbStack; `DOCKER_HOST` and contexts; "The runner image"; "Check that it works" via **Recheck runtimes**, Pull image and **Test sandbox**) and "Installing Rust and Go" (rustup, go.dev, check with `cargo --version` / `go version`, then Recheck). Headings unchanged, so `INSTALL_HELP` (D-32) still matches.
+- Test: `apps/desktop/src/main/ipc/handlers/install-help.test.ts` reads `README.md`, slugs its headings the GitHub way and checks every `INSTALL_HELP` URL (and every in-README `#` link) resolves; checked that it fails when a heading is renamed. This file is outside **Owns** (the ticket asks for a test).
+- The runner image is documented as not published yet (T19 not done): Pull fails until then and Rust/Go run locally.
+- Not done / not tested: the install commands were not run on macOS, Windows or Linux here (written from the tools' documentation and T17/T18 notes). The anchor slugging is a reimplementation of GitHub's, checked only for these headings; the links were not opened on github.com.
