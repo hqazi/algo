@@ -1185,3 +1185,31 @@ checked in main, README links by topic, Test sandbox without fallback**
   hello world passes in both languages), cargo 1.97.0 and go 1.24.7
   locally, and `xvfb-run npm run e2e`. Not checked: Podman, macOS, Windows,
   a real pull of the published image (T19 has not published it).
+
+**D-33 v1 release check: release-candidate tags, the README's install
+steps, one e2e for the §13 flow (T14).**
+
+- **Release-candidate tags.** `release.yml` also accepts `vX.Y.Z-rc.N`
+  (D-27 allowed only stable and beta). An rc builds and uploads like any
+  release, to a draft marked as a pre-release. electron-builder takes the
+  update channel from the version's pre-release part, so an rc's metadata
+  is `rc*.yml`, not `latest*.yml` or `beta*.yml`: installed apps on
+  `stable` or `beta` never update to an rc, which is what a test release
+  should do. rc drafts are for checking the workflow and the installers and
+  are deleted or left as drafts, never published.
+- **README install steps for unsigned builds** (D-27 left these to T14),
+  checked against current Apple, Microsoft and Ubuntu behaviour rather than
+  tried on each OS: macOS 15 and later no longer offer Control-click → Open
+  for unnotarized apps; the path is System Settings → Privacy & Security →
+  Open Anyway, with `xattr -dr com.apple.quarantine` as the fallback.
+  Windows SmartScreen: More info → Run anyway. Ubuntu 24.04 restricts
+  unprivileged user namespaces, which Electron's sandbox needs: the `.deb`
+  installs an AppArmor profile (electron-builder 26's `after-install`), the
+  AppImage has none, so the README points AppImage users at the `.deb` or
+  the sysctl, and never at `--no-sandbox`. AppImages on Ubuntu 24.04 need
+  `libfuse2t64`.
+- **e2e.** `e2e/v1.e2e.ts` is the single §13 run with the fake tutor
+  (onboarding, next problem, run, hint, edit, run, submit, progress); the
+  older suites stay as they cover more. The Progress checks wait for the
+  topic counts to refresh instead of reading the first paint (CI on Linux
+  failed on that race).

@@ -257,7 +257,8 @@ describe('PyodideExecutor', { timeout: 60_000 }, () => {
     // stack, a JavaScript stack overflow: both end as a RecursionError.
     const report = await executor.run(
       job(code, [test('deep', { n: 10 ** 6 }, 0), test('shallow', { n: 3 }, 3)], {
-        timeLimitMs: 10_000,
+        // Slow CI runners (Windows took over 10 s) need the room.
+        timeLimitMs: 30_000,
       }),
     );
     expect(report.results[0]).toMatchObject({ status: 'error', errorType: 'RecursionError' });

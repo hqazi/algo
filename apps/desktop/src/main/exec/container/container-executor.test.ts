@@ -82,7 +82,9 @@ case "$1" in
            [ '${server}' = 'null' ] && { echo 'Cannot connect to the Docker daemon' >&2; exit 1; }
            exit 0 ;;
   image) exit ${opts.image === false ? 1 : 0} ;;
-  run) ls -l "$(echo "$*" | sed 's/.*--volume \\([^:]*\\):.*/\\1/')" >> '${log}.files'; echo abc123; exit 0 ;;
+  run) vol=; prev=
+       for a in "$@"; do [ "$prev" = --volume ] && vol="\${a%%:*}"; prev="$a"; done
+       ls -l "$vol" >> '${log}.files' 2>&1; echo abc123; exit 0 ;;
   exec) echo './solution.go:4:15: cannot use "no" (untyped string constant) as int value' >&2; exit 1 ;;
   rm) exit 0 ;;
   pull) echo '1.0.0: Pulling from runner'
@@ -234,8 +236,8 @@ describe.skipIf(process.platform === 'win32')('with a fake docker', () => {
     ]);
     // The project was readable by others when the container started, and is gone now.
     const listing = await readFile(`${f.log}.files`, 'utf8');
-    expect(listing).toMatch(/-rw-r--r-- .* go\.mod/);
-    expect(listing).toMatch(/-rw-r--r-- .* solution\.go/);
+    expect(listing).toMatch(/-rw-r--r--[@+.]? .* go\.mod/);
+    expect(listing).toMatch(/-rw-r--r--[@+.]? .* solution\.go/);
     expect(await readdir(join(dir, 'jobs'))).toEqual([]);
   });
 

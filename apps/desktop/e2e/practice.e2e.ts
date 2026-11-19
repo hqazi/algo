@@ -110,8 +110,24 @@ try {
 
   await page.getByRole('link', { name: 'Progress' }).click();
   await page.getByRole('heading', { name: 'Recent attempts' }).waitFor();
+  // The topic counts refresh after the page opens; wait for them, not the first paint.
+  const solved = await page
+    .waitForFunction(
+      (s) => {
+        const t = document.querySelector('main')?.textContent ?? '';
+        return t.includes('1/3 unaided') && t.includes(s);
+      },
+      slug,
+      { timeout: 10_000 },
+    )
+    .then(() => true)
+    .catch(() => false);
   const progress = await page.locator('main').innerText();
-  check('progress shows the solve', progress.includes('1/3 unaided') && progress.includes(slug));
+  check(
+    'progress shows the solve',
+    solved,
+    progress.match(/\d+\/3 unaided · [1-9]\d* solved[^\n]*/)?.[0],
+  );
   await shot(page, '3-progress');
 
   await page.getByRole('link', { name: 'Settings' }).click();

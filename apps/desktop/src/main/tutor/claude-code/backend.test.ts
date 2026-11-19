@@ -168,7 +168,8 @@ describe('a turn against the recorded stream', () => {
 
     const d = await readDump(dump);
     expect(d.prompt).toContain('How am I doing?');
-    expect(d.cwd).toBe(join(r.home, 'scratch'));
+    // macOS reports the temp folder through its /private/var real path.
+    expect(d.cwd.replace(/^\/private(?=\/var\/)/, '')).toBe(join(r.home, 'scratch'));
     // Nothing is left behind.
     expect(await readdir(join(r.home, 'run'))).toEqual([]);
     expect(r.gateway.active()).toBe(0);

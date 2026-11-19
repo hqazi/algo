@@ -3,8 +3,9 @@
 # beta*.yml, blockmaps), to a draft GitHub Release. A maintainer checks the
 # draft and publishes it; installed apps only see published releases.
 #
-# Tags: vX.Y.Z (stable) or vX.Y.Z-beta.N (beta channel; the draft is marked
-# as a pre-release). The tag sets the app's version; package.json stays 0.0.0.
+# Tags: vX.Y.Z (stable), vX.Y.Z-beta.N (beta channel) or vX.Y.Z-rc.N (test
+# release candidates, D-33); the draft of a beta or rc is marked as a
+# pre-release. The tag sets the app's version; package.json stays 0.0.0.
 #
 # Signing runs only when its secrets exist (DECISIONS D-27); without them the
 # builds are unsigned:
@@ -39,8 +40,8 @@ jobs:
         shell: bash
         run: |
           v="${GITHUB_REF_NAME#v}"
-          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]]; then
-            echo "::error::tag $GITHUB_REF_NAME is not vX.Y.Z or vX.Y.Z-beta.N"
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-(beta|rc)\.[0-9]+)?$ ]]; then
+            echo "::error::tag $GITHUB_REF_NAME is not vX.Y.Z, vX.Y.Z-beta.N or vX.Y.Z-rc.N"
             exit 1
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"

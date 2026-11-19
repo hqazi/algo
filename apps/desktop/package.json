@@ -20,7 +20,7 @@
     "check:fuses": "tsx packaging/fuses.ts --check",
     "check:security": "electron-vite build && electron out/main/security-check.js",
     "check:storage": "electron-vite build && electron out/main/storage-check.js",
-    "e2e": "electron-vite build && tsx e2e/practice.e2e.ts && tsx e2e/tutor.e2e.ts && tsx e2e/settings.e2e.ts && tsx e2e/intake.e2e.ts",
+    "e2e": "electron-vite build && tsx e2e/v1.e2e.ts && tsx e2e/practice.e2e.ts && tsx e2e/tutor.e2e.ts && tsx e2e/settings.e2e.ts && tsx e2e/intake.e2e.ts",
     "e2e:claude-code": "electron-vite build && tsx e2e/claude-code.e2e.ts",
     "package": "electron-vite build && tsx packaging/package.ts",
     "package:dir": "electron-vite build && tsx packaging/package.ts --dir"
