@@ -60,7 +60,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | done |
 | T09 | Onboarding and Settings | v1 | 2d | T08 | todo |
-| T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | in-progress |
+| T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | done |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | todo |
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | todo |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | todo |
@@ -731,11 +731,94 @@ restart; the API key in the OS keychain.
 - `npm run smoke:ai` (manual, one real hint turn).
 
 **Acceptance.**
-- [ ] Fake-backend tests for: explain, hint (level climbs one per press), review, run-tests tool, refusal, rate limit, auth error, cancel.
-- [ ] Hidden test data never appears in any request built for the API (test inspects built requests).
+- [x] Fake-backend tests for: explain, hint (level climbs one per press), review, run-tests tool, refusal, rate limit, auth error, cancel.
+- [x] Hidden test data never appears in any request built for the API (test inspects built requests).
 - [ ] With a real key (manual), a hint turn works; noted in done notes whether it was run.
 
 **Notes.**
+
+Done 2026-11-19, except the manual real-key run (below). Decisions in D-23
+(default model `claude-opus-5-5`, the re-checked API notes, SDK pin).
+
+Built:
+- Core `packages/core/src/tutor/`: `ChatEvent`s (`chat-events.ts`; not
+  `events.ts`, which the core lint rule takes for Node's `events`), the
+  `TutorBackend` interface, the teaching rules ported from `SKILL.md`
+  (`rules.ts`), `buildSystemPrompt` / `renderUserMessage` /
+  `compactReport`, `ChatService` (threads in storage, one turn per thread,
+  cancel, reset), `FakeBackend` with its script format, and the
+  explanation page renderer and template.
+- Main `src/main/tutor/`: `AnthropicBackend` (streaming tool loop,
+  append-only transcript, stop reasons, fallbacks, error mapping),
+  `ExplanationStore` (versions on disk), `openTutor` (backend choice, the
+  registry over the practice service with `render_explanation`, the
+  per-turn context, the prompt from `content/references/`).
+- Renderer `src/renderer/src/chat/` and `explanation/`: `ChatPane`,
+  `MessageView`, `ChatEffects`, the chat store over the `chat:send` stream,
+  the explanation viewer (sandboxed iframe, version picker) and the list
+  under the statement; the practice page shows the tutor's test runs; the
+  top bar says whether the tutor is on.
+- `npm run smoke:ai` (`apps/desktop/scripts/smoke-ai.ts`): one real hint
+  turn through the app's own wiring.
+
+Evidence: core `tutor/chat.test.ts` (the ported chat scenarios with the fake
+backend over the real tools and content: hint climbing 1 → 2, review and
+record, run tests, explain, failed tool, refusal / rate limit / auth /
+network / max_tokens, a backend that throws or stops early, cancel mid-text
+and mid-tool, busy, reset and archive, per-backend state, and a hidden-data
+sweep over events and stored messages) and `tutor/prompt.test.ts`;
+`main/tutor/anthropic/backend.test.ts` against a scripted SDK client (the
+exact request: model, adaptive thinking, effort, cache breakpoints, eager
+streaming, fallbacks; append-only replay; the tool loop and schema
+validation; every stop reason; error classes from real SDK error objects;
+cancel while streaming and while a tool runs; the API key never in a
+message or log; and the hidden-data check, which inspects every request
+built across two turns with tools that touch hidden tests on three
+problems, plus the last stored report in the context);
+`main/tutor/tutor.test.ts` (the channels through the IPC router with real
+content, files and the fake backend, including a hidden-data check of what
+reaches the renderer and the backend); renderer `chat/ChatPane.test.tsx`
+with the `dsa-tutor` chat recordings ported to `test/chat-fixtures.ts`.
+`npm run e2e` now also runs `e2e/tutor.e2e.ts` in the real app with
+`e2e/fake-tutor.json`: what next opens a problem, Hint twice climbs, Review
+fills the results panel, Explain renders in the sandboxed frame with its
+styles, Stop, the chat survives a reload, New chat. All 15 checks pass, as
+do the practice e2e and `check:security` (run as root here, so with
+`--no-sandbox`). `npm run typecheck`, `lint`, `format:check`, `test` (578
+tests, six full runs in a row green) and `validate:content` pass on Linux.
+`PracticePage.test.tsx` had a race from T08 (tests used the editor and the
+file watch before the file had loaded; it failed about 1 run in 4 on the
+pre-T10 commit too): `open()` now waits for the file to load.
+
+Wiring outside **Owns**: `shared/tutor.ts`, `shared/ipc.ts`,
+`shared/channels.ts` (channels `tutor:status`, `chat:thread`, `chat:reset`,
+`chat:send`, `explanations:*`); `main/ipc/handlers/tutor.ts`;
+`main/setup.ts` (`startPractice` also starts the tutor); the router and
+preload change for stream results (D-23); `ipc/testing.ts` (the fake
+`ipcMain` moved out of `router.test.ts`); `archiveThread` in core's
+`Storage`, `MemoryStorage` and `SqliteStorage` with tests;
+`hiddenNeedles` moved to core's test support; `ResultsPanel` kind `tutor`;
+`PracticePage`, `HomePage`, `App`, styles, `PracticePage.test.tsx`
+(above); the e2e script and
+`tsconfig.node.json`; the `smoke:ai` root script; SPEC §4.3, §7.3, §7.4,
+§14. `components/TutorPane.tsx` is gone. The renderer code lives under
+`renderer/src/chat/`, not `renderer/chat/` as **Owns** says (the renderer's
+root is `src/`).
+
+Not done or not tested:
+- **The real-key hint turn was not run**: this environment has no API
+  key. `npm run smoke:ai` was run once with a dummy key, so one request did
+  reach the Anthropic API and came back 401, mapped to the `auth` error as
+  intended; that checks the wiring up to authentication, not a real reply.
+  Run `ANTHROPIC_API_KEY=... npm run smoke:ai` once by hand.
+- The API key comes from `ANTHROPIC_API_KEY` only; key entry, the keychain
+  and the model/effort pickers are T09. Claude Code is T11 (selecting it
+  says "not supported yet").
+- Long chats are not compacted; the model's context-window stop asks the
+  learner to reset the chat.
+- Python highlighting in explanation pages is a small scanner, not Python's
+  tokenizer as in `dsa-tutor`; other languages are not highlighted.
+- The e2e runs on Linux only, as before.
 
 ### T11 — Tutor: Claude Code backend
 

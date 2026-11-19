@@ -593,3 +593,82 @@ ported tool tests.
   | @testing-library/react / dom | 16.3.3 / 10.4.2 | Dev. |
   | jsdom | 30.1.3 | Dev; 31.0 was under two weeks old. UI tests opt in per file (`@vitest-environment jsdom`). |
   | playwright-core | 1.64.1 | Dev; `npm run e2e`. |
+
+
+**D-23 Tutor: Anthropic backend checked, default model, chat over IPC**
+(2026-11-19, T10; resolves the §14 default-model DECISION and the Anthropic
+VERIFY)
+
+- **Default model `claude-opus-5-5`** (`tutor.model: null`), never
+  date-suffixed: the current Opus and the default the API documentation
+  recommends. `tutor.model` overrides it. Effort is sent explicitly from
+  `tutor.effort` (`low` / `medium` / `high`, default `medium`), because Opus
+  5.5's own default is `medium` and other models default to `high`.
+- **The `dsa-tutor` notes, re-checked** against the current API docs and
+  `@anthropic-ai/sdk` 1.5.0, all hold: every request streams
+  (`client.beta.messages.stream` + `finalMessage()`); `thinking: adaptive`
+  (Opus 5.5 rejects `disabled` and `budget_tokens`); `tool_choice` left at
+  `auto` (forced choice is a 400 on Opus 5.5); no sampling parameters (a 400
+  from API version 2026-10-21); `eager_input_streaming: true` on every tool,
+  with every input validated by the registry before a handler runs;
+  `stop_reason` checked before content is used (`refusal` ends the turn and
+  keeps nothing, with `stop_details.category` in the message; `max_tokens`
+  never runs a tool call and answers each with an error result; `pause_turn`
+  continues; `model_context_window_exceeded` asks to reset the chat);
+  assistant content replayed unchanged (Opus 5.5 checks thinking blocks
+  against the conversation, so the transcript is append-only, also on
+  cancel); a cache breakpoint on the system prompt (which covers the tools,
+  rendered first) plus top-level automatic caching for the conversation;
+  server-side refusal fallback on by default for the models that take it
+  (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`), with the
+  declined attempt's model-internal blocks before a `fallback` block dropped
+  when echoing; SDK errors mapped by class, most specific first
+  (`APIUserAbortError` → cancelled, `APIConnectionError` incl. timeouts →
+  network, 401/403 → auth, 429/529 → rate_limit, others → other with the
+  API's own message, the key redacted). The SDK's own retries (2) stay on.
+- **Not used** (yet): message threads, compaction, context editing, task
+  budgets, `display: "updates"` progress notes. A chat that outgrows the
+  context window is reset by the learner.
+- **Turns are streams.** `chat:send` is an IPC stream; its cancel aborts the
+  turn's signal, which aborts the HTTP stream. A tool already running
+  finishes and its result is recorded before the turn ends as `cancelled`.
+  One turn per thread (`busy` otherwise); reset is refused while one runs.
+- **Stream results travel after their events.** In the real app the invoke
+  reply to `STREAM_START` overtook the last `STREAM_EVENT`s (different IPC
+  pipes), and the preload dropped them: the tutor's `open_problem` was lost.
+  The router now also sends the result on the event channel, in order, and
+  the preload resolves from that message (replies refused before a stream
+  starts still come back at once). The renderer also shows the stored reply
+  if a turn's last event is ever missing.
+- **Context comes from main.** The renderer sends only the editor's code
+  (after saving it); main adds the problem, title, language and the open
+  attempt's last stored (already redacted) test report. `compactReport`
+  keeps only id, category and status of hidden cases, a second guard.
+  `show_results` UI events are converted to the practice `reportView`, whose
+  strict schema already keeps hidden data out of the renderer.
+- **Threads.** `threads.backend_state` holds `{ <backend>: state }`, so
+  switching backends keeps both. "Reset chat" archives with the new storage
+  operation `archiveThread`: the thread and its messages move to
+  `<id>~<n>` with `archived_at` set (the `threads` key is the id, so the
+  archived copy needs its own), no migration needed.
+- **System prompt.** The `SKILL.md` sections are kept as rewritten text in
+  `core/tutor/rules.ts` instead of `dsa-tutor`'s start-up regexes; the
+  `content/references/` guides are appended as they are (already written for
+  tools in T04). `problem_spec` and the generate rows appear only when
+  `create_problem` is offered (T12). The prompt is built once at start-up.
+- **Explanations.** Rendered in core (`renderExplanationPage`; Python
+  highlighting by a small scanner instead of Python's tokenizer), stored by
+  main as `explanations/<slug>/<YYYYMMDDTHHMMSSmmmZ>.html`, newest 20 kept;
+  shown in an iframe with an empty `sandbox` through `srcdoc` with its own
+  CSP meta, which works under the UI's `frame-src 'none'` (checked in the
+  real app by the e2e).
+- **Backend choice.** `auto`: Anthropic when a key is set, else none
+  (Claude Code joins in T11); `claude-code` is "not supported yet" until
+  T11. The key is `ANTHROPIC_API_KEY` from the environment until T09 adds
+  the keychain. `ALGOTUTOR_FAKE_TUTOR=<script.json>` replaces the choice;
+  fake scripts can refer to `$context.slug`.
+- **Versions pinned:**
+
+  | Package | Version | Note |
+  |---|---|---|
+  | @anthropic-ai/sdk | 1.5.0 | 1.6.0 and later were under two weeks old. |

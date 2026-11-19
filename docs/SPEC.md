@@ -170,7 +170,7 @@ nested in the file: `tutor.backend` is `{"tutor": {"backend": "auto"}}`.
 | Key | Default | Notes |
 |---|---|---|
 | `tutor.backend` | `auto` | `auto` / `anthropic` / `claude-code` / `none`. `auto`: Anthropic if a key is stored, else Claude Code if found, else none. |
-| `tutor.model` | `null` (T10) | **DECISION**: default model, chosen in T10 from the current models list. `null` means the backend's default. |
+| `tutor.model` | `null` | `null` means the backend's default: `claude-opus-5-5` for Anthropic (D-23). |
 | `tutor.effort` | `medium` | |
 | `execution.runtime` | `local` | v2: `local` / `podman` / `docker` for Rust and Go. Python always uses Pyodide. |
 | `execution.timeScale` | `1.0` | Multiplier on per-test time limits (slow machines). |
@@ -489,14 +489,14 @@ interface TutorBackend {
 
 `ChatEvent`: `text_delta`, `tool_start`, `tool_end`, `ui_event`, `error`
 (kind: `auth` / `rate_limit` / `network` / `refusal` / `max_tokens` /
-`other`, user-readable message), `done`. Chat events go to the renderer over
-IPC as a stream per turn; the turn can be cancelled.
+`cancelled` / `other`, user-readable message), `done`. Chat events go to the
+renderer over IPC as a stream per turn; the turn can be cancelled.
 
 - **`anthropic`**: `@anthropic-ai/sdk`, Messages API, streaming, client tools,
   the tool loop run by the main process. Port the `dsa-tutor` notes (stream
   every request, check `stop_reason`, replay content blocks unchanged, cache
   breakpoint after system prompt and tools, map SDK error classes to `error`
-  events). **VERIFY** each against the current API docs in T10.
+  events). Verified against the current API docs in T10 (D-23).
 - **`claude-code`**: available when a `claude` executable is found on `PATH`
   (or configured path) and reports being signed in. Spawns it headless per
   turn with every built-in tool disabled and only the tutor tools allowed, via
@@ -511,7 +511,8 @@ IPC as a stream per turn; the turn can be cancelled.
 ### 7.4 Threads
 
 One thread per problem plus `home`, stored in `threads` / `messages`. "Reset
-chat" archives the thread and starts a new one.
+chat" archives the thread and starts a new one: the archived thread keeps its
+messages under the id `<id>~<n>` with `archived_at` set (D-23).
 
 ## 8. UI
 
@@ -600,11 +601,11 @@ needs.
 
 | Item | Where | Default until decided |
 |---|---|---|
-| **DECISION** default tutor model | 4.3, T10 | chosen in T10 from current models |
+| ~~**DECISION** default tutor model~~ | 4.3, T10 | Resolved: `claude-opus-5-5` (D-23) |
 | ~~**DECISION** Pyodide time limits~~ | 6.2, T07 | Resolved: default kept, measured (D-15) |
 | **DECISION** Rust `int` width | 5.2, T15 | `i64` |
 | **DECISION** code signing | 11, T13 | ship unsigned, document it |
 | **VERIFY** Electron `safeStorage` API and Linux fallback | 4.4, T09 | |
-| **VERIFY** Anthropic API behaviour notes | 7.3, T10 | |
+| ~~**VERIFY** Anthropic API behaviour notes~~ | 7.3, T10 | Resolved: checked against current docs and SDK 1.5.0 (D-23) |
 | **VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login | 7.3, T11 | API key only if unclear |
 | ~~**VERIFY** Pyodide can be fully network-blocked and package loading disabled~~ | 6.2, T07 | Resolved: yes, with `connect-src 'self'` for workers (D-14) |

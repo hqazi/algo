@@ -53,6 +53,10 @@ async function open(): Promise<void> {
     </ChatStoreContext.Provider>,
   );
   await screen.findByText('Two Receipts');
+  // The file has loaded once its watch has started.
+  await waitFor(() =>
+    expect(bridge.streams.some((s) => s.channel === 'workspace:watch')).toBe(true),
+  );
 }
 
 const editor = (): EditorView => {
