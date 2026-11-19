@@ -477,3 +477,61 @@ queue** (2026-11-18, T05)
   (T10 may widen it); `execution.timeScale` is limited to 0.5–10 like the
   clamp in D-15; `editor.fontSize` is an integer 8–40. The file is not
   watched for edits made while the app runs.
+
+**D-21 Teaching logic and tools: ported as-is, over injected services**
+(2026-11-19, T06)
+
+`packages/core/src/teaching/` (ported from `dsa-tutor/dsa_tutor/core/state.py`,
+`catalog.py`, the topics parsing in `common.py`) and `packages/core/src/tools/`
+(from `dsa_tutor/tools/`). Behaviour is `dsa-tutor`'s: the ported learning
+loop test (`test_learning_loop`) passes unchanged in substance, as do the
+ported tool tests.
+
+- **Injected, not imported:** `Teaching` takes `Storage`, a `ProblemCatalog`
+  (`topics()`, synchronous `list()` in catalog order, async `load(slug)`), a
+  `Workspace` (read / create-if-missing solution files) and a clock. The
+  tools add `executorFor(language)`, `timeScale()`, a `SlugGuard` and,
+  optionally, the T12 `createProblem` and T10 `renderExplanation` services.
+  `memoryCatalog`, `memoryWorkspace` and `MemoryStorage` (the same queue and
+  rollback contract as `SqliteStorage`) are exported for tests and UI work.
+- **Levels are always derived from `attempts`**, as `dsa-tutor` derived
+  `progress.json` from `attempts.jsonl`. Every state change also rewrites the
+  touched topic's `topic_progress` row (level, unaided solves) as a cache for
+  the UI. An attempt's topic comes from the catalog, else the `problems`
+  index, so history on a problem removed by an update still counts once T08
+  keeps that index; attempts whose problem is in neither are left out.
+- **Open attempts are rows with `outcome` null** (`dsa-tutor`'s `active` map).
+  `take_hint` and `record_attempt` open one if none is open, as before. The
+  attempt keeps its language; a resumed attempt keeps it even if the profile
+  language changes. `start_problem` refuses a language the problem does not
+  list.
+- **`onboarded`:** saving the profile through `set_profile` or the defaults
+  sets it, as a saved `profile.json` meant onboarded in `dsa-tutor`. A profile
+  row with `onboarded = false` (for T09, if it saves answers part-way) reads as
+  not onboarded.
+- **Runs and records:** `record_attempt` runs every test itself inside
+  `storage.serial`, so no other write lands between the run and the record,
+  then stores the redacted report as a `submit` test run. `run_tests` does
+  not hold the write queue; it stores a `run` test run when an attempt is
+  open. Both hold the slug in the `SlugGuard` (`busy` otherwise), shared with
+  the UI's Run and Submit (T08), as `RUN_GUARD` was in `dsa-tutor`. Tool
+  outputs carry the redacted report (`runView`): hidden cases keep `id`,
+  `visibility`, `category`, `status`, `timeMs`; a load or executor failure is
+  `run_error`, not `error`, because `error` means the tool failed.
+- **Tool results** stay `dsa-tutor`'s compact snake_case JSON (the ported
+  descriptions name those fields). The registry validates inputs with the
+  ported JSON Schema subset validator, so one schema serves the API, MCP and
+  validation; handlers throw `TutorError` (with a `code` where useful:
+  `not_onboarded`, `no_problem`, `invalid_slug`, `no_language`,
+  `runtime_missing`) and anything else becomes `internal error in <tool>`,
+  logged, never shown to the model.
+- **Small changes from `dsa-tutor`:** `interview_date` must be a real
+  calendar date (not only `YYYY-MM-DD`-shaped); `next_problem` picks only
+  problems offered in the learner's language; `get_problem` adds `language`,
+  `languages` and `code_signature` (the Python `def` line); the starter file
+  says to use Run tests in the app instead of naming a script; `take_hint`'s
+  `guide` is `hint_ladder.md`; `start_problem` returns `language`, not a
+  problem path. The topics parser is stricter (bad rows, duplicate ids and
+  unknown prerequisites are errors) and is now also what the content scripts
+  use.
+

@@ -463,6 +463,12 @@ injected storage and executors.
 Deliberately absent: writing the solution file, reading hidden test data,
 shell, file access, network access.
 
+The registry (`packages/core/src/tools/`) offers `create_problem` and
+`render_explanation` only when the app supplies the service behind them
+(T12, T10). `start_problem` and `set_profile` also take a `language` (one with
+a harness; Python in v1). `run_tests` keeps its redacted report as a `run`
+test run when an attempt is open, `record_attempt` as a `submit` (D-21).
+
 ### 7.2 System prompt
 
 Built from the teaching rules (ported from `dsa-tutor/SKILL.md`, rewritten for

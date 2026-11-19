@@ -56,7 +56,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T03 | Problem format v2 and neutral types | v1 | 2d | T01 | done |
 | T04 | Port the curated problems and references | v1 | 2d | T03, T07 | done |
 | T05 | SQLite storage and migrations | v1 | 2d | T01 | done |
-| T06 | Port the core teaching logic | v1 | 3d | T05 | in-progress |
+| T06 | Port the core teaching logic | v1 | 3d | T05 | done |
 | T07 | Executor interface and Pyodide execution host | v1 | 3d | T03 | done |
 | T08 | Port the UI shell and practice flow | v1 | 4d | T02, T06, T07 | todo |
 | T09 | Onboarding and Settings | v1 | 2d | T08 | todo |
@@ -485,11 +485,59 @@ tool handlers, in TypeScript.
 - Behaviour must match `dsa-tutor`: port its tests (`tests/test_scripts.py`, `tests/test_tools.py`) as the spec.
 
 **Acceptance.**
-- [ ] Ported tests pass with an in-memory storage fake.
-- [ ] `record_attempt` runs the tests itself (no pass counts from the caller).
-- [ ] `get_problem` never returns hidden tests (test).
+- [x] Ported tests pass with an in-memory storage fake.
+- [x] `record_attempt` runs the tests itself (no pass counts from the caller).
+- [x] `get_problem` never returns hidden tests (test).
 
 **Notes.**
+
+Built: `packages/core/src/teaching/`: `parseTopics` (topics.md), the
+`ProblemCatalog` interface and `memoryCatalog`, `Workspace` and Python
+`starterCode`, profile rules, levels (`computeTopics`), the recommender
+(`recommend`, `pickProblem`) and `Teaching` (status, profile/defaults/set,
+focus, next problem, start, hint, mark explained, record, attempts), plus
+`MemoryStorage`, an in-memory `Storage` with the same queue and rollback
+contract as `SqliteStorage`. `packages/core/src/tools/`: the ported JSON
+Schema subset validator, `ToolRegistry` (validation, error results, UI
+events, Anthropic and MCP exports, `subset`), `SlugGuard`,
+`runProblemTests`/`runView` (executor → grade → redact, shared with T08's
+Run/Submit), and the 15 tools of SPEC §7.1 with `dsa-tutor`'s descriptions
+and schemas. Design and the small behaviour changes: D-21; SPEC §7.1 got a
+paragraph on optional tools, `language` and stored test runs.
+
+Wiring outside **Owns**: `languagesWithHarness()` in
+`packages/core/src/problems/validate.ts`; core exports both modules from
+`index.ts`; an `import.meta.glob` declaration in `packages/core/src/raw.d.ts`
+(tests load the real content with it); `scripts/content/topics.ts` now
+re-exports core's parser; one integration test,
+`apps/desktop/src/main/exec/tutor-tools-pyodide.test.ts`.
+
+Evidence: `teaching/teaching.test.ts` ports `test_scripts.py`'s `TestState`
+(the full learning loop, hint ladder cap, defaults start at the basics),
+explanation-counts-as-hint and the bad-input cases, on the real curated
+content; `tools/tutor-tools.test.ts` ports every `test_tools.py` case
+(registry, exports, validation, crash handling, each tool, busy guard,
+untrusted pasted text, and the hidden-data sweep over three problems with
+echoing, raising and non-loading solutions, now also over stored test runs)
+with a scripted executor graded by core's real `gradeRun` and
+`redactReport`; `record_attempt` rejects `passed`/`total` inputs and is
+checked to submit one job with every test. The integration test runs the
+starter code, a reference and a wrong/looping solution through real Pyodide
+and SQLite. `npm run typecheck`, `lint`, `format:check`, `test` (440 tests),
+`validate:content` (50 problems) and `build` pass locally on Linux.
+
+Not done / not tested: `create_problem` and `render_explanation` have their
+definitions, schemas, guard and explained-marking here, but their handlers
+call services that T12 (spec validation, self-check, saving) and T10
+(rendering, versions) must supply; without them the tools are not offered.
+`test_create_problem*`, `test_render_explanation`'s page checks and
+`test_scripts.py`'s `TestNewProblem` move with those tickets.
+`TestRunTests` (harness behaviour) was T07's; `TestDataRoot` is replaced by
+T05's data folder. Nothing in the app constructs `Teaching` yet: the catalog
+over `content/` and the data folder, the workspace on disk, keeping the
+`problems` index in SQLite (which the removed-problem fallback relies on) and
+IPC are T08. `MemoryStorage` detects re-entry only synchronously (no
+`AsyncLocalStorage` in core). Only checked on Linux; CI covers the rest.
 
 ### T07 — Executor interface and Pyodide execution host
 
