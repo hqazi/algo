@@ -67,7 +67,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | done |
 | T16 | Local toolchain executor | v2 | 2d | T15 | done |
-| T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | todo |
+| T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | in-progress |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | todo |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | todo |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | todo |
