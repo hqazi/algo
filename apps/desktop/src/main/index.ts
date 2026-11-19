@@ -1,6 +1,8 @@
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, nativeTheme } from 'electron';
 import { APP_NAME } from '@algorithm-tutor/core';
+import { registerPracticeHandlers } from './ipc/handlers/practice';
+import { contentDir, openPractice, type AppPractice } from './practice';
 import { afterReady, beforeReady } from './setup';
 import { openAppStorage, resolveDataDir, type AppStorage } from './storage';
 import { createMainWindow, type UiOptions } from './window';
@@ -33,14 +35,48 @@ function openStorage(): AppStorage | null {
   }
 }
 
-void app.whenReady().then(() => {
-  // Kept for the IPC handlers that use it (T06, T08).
+/** Loads the problems and starts the executor; on failure, tells the user and quits. */
+async function startPractice(storage: AppStorage): Promise<AppPractice | null> {
+  try {
+    return await openPractice(storage, {
+      content: contentDir(app.isPackaged, process.resourcesPath, import.meta.dirname),
+      host: {
+        rendererDir: ui.rendererDir,
+        preloadPath: join(import.meta.dirname, '../preload/exec-host.cjs'),
+        devServerUrl: ui.devServerUrl,
+      },
+    });
+  } catch (e) {
+    dialog.showErrorBox(
+      `${APP_NAME} cannot load its problems`,
+      e instanceof Error ? e.message : String(e),
+    );
+    return null;
+  }
+}
+
+void app.whenReady().then(async () => {
   const storage = openStorage();
-  if (!storage) {
+  const practice = storage && (await startPractice(storage));
+  if (!storage || !practice) {
     app.exit(1);
     return;
   }
-  afterReady(ui);
+  // The theme setting drives `prefers-color-scheme` in every window.
+  nativeTheme.themeSource = storage.settings.get().ui.theme;
+  const router = afterReady(ui);
+  registerPracticeHandlers(router, {
+    practice: practice.practice,
+    theme: {
+      get: () => storage.settings.get().ui.theme,
+      set: (theme) => {
+        const next = storage.settings.update({ ui: { theme } }).ui.theme;
+        nativeTheme.themeSource = next;
+        return next;
+      },
+    },
+  });
+  app.on('before-quit', () => practice.dispose());
   createMainWindow(APP_NAME, ui);
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow(APP_NAME, ui);

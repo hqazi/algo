@@ -3,8 +3,27 @@
  * preload cannot `require` packages, and it needs nothing but the names.
  * `ipc.ts` checks at compile time that these lists match the contract.
  */
-export const INVOKE_CHANNELS = ['app:version'] as const;
-export const STREAM_CHANNELS = ['example:count'] as const;
+export const INVOKE_CHANNELS = [
+  'app:version',
+  'catalog:topics',
+  'profile:get',
+  'profile:defaults',
+  'status:get',
+  'problems:list',
+  'problems:get',
+  'problems:next',
+  'problems:start',
+  'problems:reference',
+  'workspace:get',
+  'workspace:save',
+  'runs:run',
+  'runs:submit',
+  'attempts:give-up',
+  'attempts:list',
+  'settings:theme',
+  'settings:set-theme',
+] as const;
+export const STREAM_CHANNELS = ['example:count', 'workspace:watch'] as const;
 
 /** Internal Electron channels used to carry streams. */
 export const STREAM_START = 'ipc:stream:start';

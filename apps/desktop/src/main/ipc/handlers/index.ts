@@ -2,7 +2,7 @@
  * Handlers for the channels in `shared/ipc.ts`. Later tickets add theirs
  * here (or in a sibling module registered from `registerHandlers`).
  */
-import type { IpcRouter } from './router';
+import type { IpcRouter } from '../router';
 
 export interface AppInfo {
   version: string;

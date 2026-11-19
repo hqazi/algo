@@ -17,6 +17,7 @@
  */
 import { z } from 'zod';
 import { INVOKE_CHANNELS, STREAM_CHANNELS } from './channels';
+import * as P from './practice';
 
 export {
   INVOKE_CHANNELS,
@@ -39,6 +40,44 @@ export const invokeChannels = {
       node: z.string(),
     }),
   },
+
+  // ---- practice (T08): progress, problems, workspace files, runs, attempts
+  /** Topics in teaching order, with the learner's level in each. */
+  'catalog:topics': {
+    request: z.undefined(),
+    response: z.strictObject({ topics: z.array(P.topicView) }),
+  },
+  'profile:get': { request: z.undefined(), response: P.profileResponse },
+  /** Save the default profile (onboarding's "use defaults"; T09 adds the questions). */
+  'profile:defaults': { request: z.undefined(), response: P.profileResponse },
+  'status:get': { request: z.undefined(), response: P.statusResponse },
+  'problems:list': {
+    request: P.problemFilters,
+    response: z.strictObject({ problems: z.array(P.problemListItem) }),
+  },
+  'problems:get': { request: P.slugRequest, response: P.problemDetail },
+  /** Recommend the next problem (SPEC §9.2); may move the focus topic. */
+  'problems:next': { request: P.nextRequest, response: P.nextResponse },
+  /** Open (or resume) an attempt and create the starter file. */
+  'problems:start': { request: P.slugRequest, response: P.startResponse },
+  /** Refused (`locked`) until an attempt on the problem is recorded. */
+  'problems:reference': { request: P.slugRequest, response: P.referenceResponse },
+  'workspace:get': { request: P.slugRequest, response: P.workspaceResponse },
+  /** Save as you type. Refused (`busy`) while the problem's tests run. */
+  'workspace:save': { request: P.saveRequest, response: P.saveResponse },
+  /** Visible tests only; stored as a `run` when an attempt is open. */
+  'runs:run': { request: P.slugRequest, response: P.reportView },
+  /** Every test; records the attempt only when all pass. */
+  'runs:submit': { request: P.slugRequest, response: P.submitResponse },
+  /** Runs every test once more and records the attempt as gave up. */
+  'attempts:give-up': { request: P.giveUpRequest, response: P.giveUpResponse },
+  /** Recorded attempts, oldest first. */
+  'attempts:list': {
+    request: P.attemptsRequest,
+    response: z.strictObject({ attempts: z.array(P.attemptView) }),
+  },
+  'settings:theme': { request: z.undefined(), response: P.themeView },
+  'settings:set-theme': { request: P.themeView, response: P.themeView },
 } as const;
 
 export const streamChannels = {
@@ -54,6 +93,15 @@ export const streamChannels = {
     }),
     event: z.strictObject({ n: z.int() }),
     result: z.strictObject({ counted: z.int() }),
+  },
+  /**
+   * Edits to a problem's solution file made outside the app (another
+   * editor): one event per change, until the renderer cancels.
+   */
+  'workspace:watch': {
+    request: P.slugRequest,
+    event: P.watchEvent,
+    result: P.watchResult,
   },
 } as const;
 
@@ -89,10 +137,12 @@ export type IpcErrorCode =
   | 'unknown_channel'
   | 'forbidden' // the sender is not the app's own page
   | 'cancelled'
+  | 'refused' // the handler declined on purpose; `reason` says why (e.g. `busy`, `locked`)
   | 'internal'; // the handler threw, or its reply failed its schema
 
 export type IpcResult<T> =
-  { ok: true; value: T } | { ok: false; error: { code: IpcErrorCode; message: string } };
+  | { ok: true; value: T }
+  | { ok: false; error: { code: IpcErrorCode; message: string; reason?: string } };
 
 /** What a running stream gives the renderer. */
 export interface StreamHandle<R> {

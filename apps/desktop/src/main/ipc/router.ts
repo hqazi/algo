@@ -78,6 +78,26 @@ const fail = (code: IpcErrorCode, message: string): IpcResult<never> => ({
   error: { code, message },
 });
 
+/**
+ * Thrown by a handler that declines on purpose (the problem is busy, the
+ * reference is locked…): the renderer gets code `refused` with this `reason`
+ * and message, and nothing is logged as an error.
+ */
+export class IpcRefusal extends Error {
+  constructor(
+    readonly reason: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'IpcRefusal';
+  }
+}
+
+const refused = (e: IpcRefusal): IpcResult<never> => ({
+  ok: false,
+  error: { code: 'refused', message: e.message, reason: e.reason },
+});
+
 function describe(error: z.ZodError): string {
   return error.issues
     .map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message))
@@ -120,6 +140,7 @@ export class IpcRouter {
         }
         return { ok: true, value: out.data };
       } catch (e) {
+        if (e instanceof IpcRefusal) return refused(e);
         this.opts.onError?.(channel, e);
         return fail('internal', e instanceof Error ? e.message : String(e));
       }
@@ -215,6 +236,7 @@ export class IpcRouter {
         return { ok: true, value: out.data };
       } catch (e) {
         if (signal.aborted) return fail('cancelled', 'cancelled');
+        if (e instanceof IpcRefusal) return refused(e);
         this.opts.onError?.(channel, e);
         return fail('internal', e instanceof Error ? e.message : String(e));
       }
