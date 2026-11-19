@@ -63,7 +63,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | done |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | done |
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | done |
-| T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | in-progress |
+| T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | done |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | todo |
 | T16 | Local toolchain executor | v2 | 2d | T15 | todo |
@@ -1081,7 +1081,65 @@ Not done or not tested:
 - [ ] A tagged test release produces installers that install and launch on each OS (done notes say which were actually tried).
 - [ ] An older build updates to a newer test release (at least on one OS; say which).
 
-**Notes.**
+**Notes.** (2026-11-19) Both boxes stay unticked: no tag was pushed and no
+GitHub release was made from this session, so neither was done against a
+real release. What was checked instead is below; the first tagged test
+release (T14's release check) should tick them.
+
+- **Built.** `electron-builder.yml` (targets per §11; macOS per arch x64 +
+  arm64, NSIS x64, AppImage + deb x64; app id
+  `io.github.hqazi.algorithmtutor`; no file associations; `content/` to
+  `<resources>/content`; `LICENSE` and a Pyodide MPL-2.0 notice to
+  `<resources>/notices/`). `packaging/package.ts` (`npm run package`,
+  `npm run package:dir`) runs electron-builder with an `afterPack` hook that
+  flips the fuses with `applyFuses` and reads them back. `build/icon.png`
+  (1024², new). `main/updater/` (service over electron-updater, `stable` /
+  `beta`, background checks and download when automatic updates are on,
+  install on quit, "Restart to update") with `updates:status`,
+  `updates:check`, `updates:download`, `updates:restart` and the
+  `updates:watch` stream; Settings → Updates shows the state and the one
+  action that fits. `.github/workflows/release.yml`: on `vX.Y.Z` /
+  `vX.Y.Z-beta.N`, one job makes the draft (pre-release for betas), then
+  three OS jobs set the version from the tag, run the unit tests, package
+  and upload with update metadata, and smoke-test the packaged app.
+  Signing and notarization run only when their secrets exist.
+- **Decisions.** D-27 (code signing DECISION resolved: unsigned until
+  secrets exist; no `node_modules` in the app; fuses in afterPack; channel
+  behaviour checked in electron-updater's source; updater behaviour;
+  workflow), D-28 (versions). SPEC §11 and §14 updated.
+- **Wiring outside Owns.** `apps/desktop/package.json`: every dependency
+  moved to `devDependencies` (the main process is fully bundled; D-27),
+  `author`, `homepage`, `package` scripts; root `package.json` scripts;
+  `src/shared/updates.ts`, `ipc.ts`, `channels.ts` (contract);
+  `src/main/setup.ts` (opens the updater); `SettingsPage.tsx` (Updates
+  section moved to `SettingsUpdates.tsx`); `packaging/smoke.ts` and
+  `packaging/update-check.ts` (new); `ci.yml` packages and smoke-tests on
+  Linux.
+- **Tests.** `main/updater/service.test.ts` (7: settings → flags, states,
+  manual download, restart only when downloaded, errors, timers),
+  `SettingsUpdates.test.tsx` (3). typecheck, lint, format, `npm test` (726
+  passed, 1 skipped), `validate:content` (50 valid), `check:fuses`,
+  `check:security`, `check:exec-host`, `check:storage`, `npm run e2e`
+  (4 suites) all pass on Linux.
+- **Tried, Linux x64 only (this container):** `npm run package` built the
+  AppImage and the deb. The deb installed with apt; the installed app, the
+  AppImage (`APPIMAGE_EXTRACT_AND_RUN=1`) and `linux-unpacked` each passed
+  `packaging/smoke.ts` (starts with fuses flipped, 50 problems from
+  `<resources>/content`, a Run in Pyodide out of `app.asar`, updater
+  present). Update: AppImages 0.0.1 and 0.0.2 built with `--feed` (generic
+  provider on a local HTTP server); `packaging/update-check.ts` made 0.0.1
+  check, download (it fetched `latest-linux.yml` and the AppImage) and
+  "Restart to update"; the AppImage on disk became the 0.0.2 file and
+  started as 0.0.2.
+- **Not done or not tested.** The release workflow has never run (no tag
+  pushed). No macOS or Windows build was made or launched; the macOS and
+  Windows smoke paths in the workflow are untried. The GitHub provider
+  (`stable` / `beta` against real releases) is untested; only the generic
+  provider was. deb self-update (electron-updater's `DebUpdater`, needs
+  `pkexec`) untested. No signing, notarization or Windows signing (no
+  certificates); unsigned macOS builds cannot install updates (D-27). No
+  `latest-mac.yml` / `beta*.yml` produced or read here. The README's
+  install and unsigned-app instructions are T14's.
 
 ### T14 — README, end-to-end test, v1 release check
 

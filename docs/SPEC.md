@@ -581,15 +581,15 @@ language).
 
 ## 11. Packaging and updates
 
-- electron-builder targets: macOS `dmg` + `zip` (universal or per-arch),
+- electron-builder targets: macOS `dmg` + `zip` (per arch: x64 and arm64),
   Windows `nsis`, Linux `AppImage` + `deb`.
 - `electron-updater` with the GitHub provider; channels `stable` and `beta`
   (pre-releases). Download in background, install on quit, "Restart to update"
   button.
-- **DECISION**: code signing. macOS auto-update requires a signed and
+- Code signing (resolved, D-27). macOS auto-update requires a signed and
   notarized app (Apple Developer account); unsigned Windows builds show a
-  SmartScreen warning. v1 can ship unsigned with instructions in the README;
-  the release workflow takes signing secrets when they exist.
+  SmartScreen warning. v1 ships unsigned with instructions in the README;
+  the release workflow signs when the signing secrets exist.
 - CI release workflow on a version tag: build all three OSes, publish a draft
   release with update metadata. v2 adds the runner image to GHCR.
 
@@ -624,7 +624,7 @@ needs.
 | ~~**DECISION** default tutor model~~ | 4.3, T10 | Resolved: `claude-opus-5-5` (D-23) |
 | ~~**DECISION** Pyodide time limits~~ | 6.2, T07 | Resolved: default kept, measured (D-15) |
 | **DECISION** Rust `int` width | 5.2, T15 | `i64` |
-| **DECISION** code signing | 11, T13 | ship unsigned, document it |
+| ~~**DECISION** code signing~~ | 11, T13 | Resolved: unsigned until secrets exist; the workflow signs when they do (D-27) |
 | ~~**VERIFY** Electron `safeStorage` API and Linux fallback~~ | 4.4, T09 | Resolved: async API, `basic_text` warning (D-24) |
 | ~~**VERIFY** Anthropic API behaviour notes~~ | 7.3, T10 | Resolved: checked against current docs and SDK 1.5.0 (D-23) |
 | ~~**VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login~~ | 7.3, T11 | Resolved: API key only, bare mode, no Agent SDK (D-25) |

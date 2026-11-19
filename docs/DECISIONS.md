@@ -910,3 +910,85 @@ Exercism pinned, Node `fetch`** (2026-11-19, T12)
   (not checked). Node's `fetch` does not use the system proxy settings;
   behind a proxy that needs configuring, an import fails with a
   `fetch` error. Not checked against the live host from the app.
+
+**D-27 Packaging and updates: one bundled main process, fuses in afterPack,
+GitHub drafts, unsigned until secrets exist** (2026-11-19, T13)
+
+- **Code signing (the SPEC §11 DECISION): resolved, default kept.** v1 ships
+  unsigned. `release.yml` signs only when its secrets exist: macOS
+  `MAC_CSC_LINK` / `MAC_CSC_KEY_PASSWORD` (notarized with
+  `APPLE_API_KEY_P8` / `APPLE_API_KEY_ID` / `APPLE_API_ISSUER`, and only
+  when signing), Windows `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD`. Without
+  them macOS sets `CSC_IDENTITY_AUTO_DISCOVERY=false`. Consequences to put
+  in the README (T14): Gatekeeper blocks the unsigned app until it is
+  allowed in System Settings, Windows SmartScreen warns, and **macOS cannot
+  install updates** (Squirrel.Mac requires a signed app; the download works
+  and the install fails with an error shown in Settings → Updates). No
+  certificates exist yet; no signed build was made.
+- **No `node_modules` in the app.** electron-vite externalizes a package's
+  `dependencies`, and electron-builder copies them into the asar from the
+  npm workspace. Every desktop package is now a `devDependency`, so the main
+  process is one bundle (`@anthropic-ai/sdk`, zod, fflate and
+  electron-updater included; only `electron` and `node:` built-ins stay
+  external, checked in `out/main`) and electron-builder copies nothing
+  ("no node modules returned"). `npmRebuild: false`: nothing is native
+  (D-20). `app.asar` is 18 MB, mostly Pyodide. Rejected: keeping
+  `dependencies` and filtering `node_modules` with `files` patterns (renderer
+  packages such as Pyodide and CodeMirror would be packed twice and
+  workspace hoisting is fragile).
+- **Fuses** (D-17): `packaging/package.ts` runs electron-builder with
+  `electron-builder.yml` plus an `afterPack` hook that calls `applyFuses`
+  and reads every fuse back, failing the build on a mismatch. afterPack runs
+  after the asar integrity data is embedded (macOS, Windows) and before
+  signing. electron-builder's own `electronFuses` option was not used: it
+  would duplicate the table in `fuses.ts`.
+- **Targets** (SPEC §11): macOS `dmg` + `zip` for x64 and arm64 (per arch,
+  not universal; the zip is what the macOS updater downloads), Windows
+  `nsis` x64 (assisted installer, per user), Linux `AppImage` + `deb` x64.
+  App id `io.github.hqazi.algorithmtutor`, executable `algorithm-tutor`, no
+  file associations. Icon `build/icon.png` (1024², electron-builder makes
+  the `.icns` / `.ico`). `content/` ships as `<resources>/content` (D-22);
+  the app's `LICENSE` and a Pyodide MPL-2.0 notice ship in
+  `<resources>/notices/` (T07's open licence item).
+- **Channels, checked in electron-updater 6.8.11's source**
+  (`GitHubProvider.getLatestVersion`, `AppUpdater`): `stable` sets
+  `allowPrerelease = false`, which follows GitHub's `/releases/latest`
+  (published, non-pre-release only). `beta` sets `allowPrerelease = true`:
+  from a stable version it takes the newest release in the feed, from a
+  beta version the newest `beta` or stable one, and reads `beta*.yml` for a
+  `-beta.N` tag (falling back to `latest*.yml`). The updater's `channel`
+  property is never set: setting it turns `allowDowngrade` on. Switching
+  beta → stable does not downgrade; the next stable release above the
+  installed beta arrives as usual. Drafts are invisible to installed apps.
+- **Updater behaviour** (`main/updater/`): automatic updates on → first
+  check 30 s after start, then every 4 hours, background download, install
+  on quit; off → no background checks, "Check now" and "Download" in
+  Settings. A downloaded update always installs on quit and offers "Restart
+  to update" (`quitAndInstall(false, true)`). Errors show in Settings and
+  never discard a finished download. Development builds report
+  `unsupported`. State reaches the UI over the `updates:watch` stream.
+- **Release workflow** (`.github/workflows/release.yml`): on `vX.Y.Z` or
+  `vX.Y.Z-beta.N` tags. One job creates the draft first (`gh release
+  create --draft --verify-tag`, `--prerelease` for betas, so concurrent
+  builds cannot create duplicates; electron-builder uploads to an existing
+  draft for the tag). Three OS jobs set the version from the tag
+  (`package.json` stays `0.0.0`), run the unit tests, package with
+  `--publish always` (`releaseType: draft`), then start the packaged app
+  (`packaging/smoke.ts`). A maintainer publishes the draft.
+- **Checked here (Linux x64 only):** `npm run package` builds the AppImage
+  and deb; the deb installs with apt and the installed app, the AppImage and
+  the unpacked app pass `smoke.ts` (problems from `<resources>/content`,
+  Python in Pyodide out of `app.asar` with the fuses flipped, updater
+  present). `packaging/update-check.ts`: a 0.0.1 AppImage updated itself
+  to 0.0.2 from a local feed (`--feed`, generic provider) through the same
+  IPC as Settings, the file was replaced and relaunched as 0.0.2. Not
+  checked: the GitHub provider against real releases, macOS and Windows
+  builds, signing, notarization, and the workflow itself (never run: no
+  tag was pushed).
+
+**D-28 Versions pinned in T13** (2026-11-19, T13)
+
+| Package | Version | Note |
+|---|---|---|
+| electron-builder | 26.18.1 | Desktop dev dependency; also downloads Electron, appimagetool and fpm at package time. |
+| electron-updater | 6.8.11 | Bundled into the main process. The update check (D-27) ran with this version; 6.8.12 is newer and untried. |
