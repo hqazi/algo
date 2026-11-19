@@ -15,6 +15,8 @@
   "scripts": {
     "dev": "npm run dev --workspace apps/desktop",
     "build": "npm run build --workspace apps/desktop",
+    "package": "npm run package --workspace apps/desktop --",
+    "package:dir": "npm run package:dir --workspace apps/desktop",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc -p tsconfig.scripts.json",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -1,0 +1,79 @@
+# Packaging (T13, SPEC §11). Run through `npm run package` (packaging/package.ts),
+# which adds the afterPack hook that flips the Electron fuses (D-17).
+# The main process is fully bundled by electron-vite, so the app has no
+# node_modules: `apps/desktop/package.json` lists everything as devDependencies
+# (D-27).
+appId: io.github.hqazi.algorithmtutor
+extraMetadata:
+  # Linux: the .desktop file, Electron's app_id and WM_CLASS all match.
+  desktopName: algorithm-tutor.desktop
+productName: Algorithm Tutor
+executableName: algorithm-tutor
+copyright: Copyright © 2026 the Algorithm Tutor authors
+artifactName: algorithm-tutor-${version}-${os}-${arch}.${ext}
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - package.json
+  - out/**
+  # Development checks, not part of the app.
+  - '!out/main/{exec-check,security-check,storage-check}.js'
+  - '!**/*.map'
+
+asar: true
+# Nothing native to rebuild: the main process is one bundle.
+npmRebuild: false
+
+extraResources:
+  # Curated problems and open-set indexes: `<resources>/content` (D-22).
+  - from: ../../content
+    to: content
+  - from: ../../LICENSE
+    to: notices/LICENSE.txt
+  - from: build/notices
+    to: notices
+
+publish:
+  provider: github
+  owner: hqazi
+  repo: algorithm-tutor
+  # The workflow uploads to a draft; a maintainer publishes it (ticking
+  # "pre-release" for a beta tag).
+  releaseType: draft
+
+mac:
+  category: public.app-category.education
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    # The zip is what the macOS updater downloads.
+    - target: zip
+      arch: [x64, arm64]
+  hardenedRuntime: true
+  # Notarizes only when APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER are set.
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+linux:
+  category: Education
+  synopsis: Practise data structures and algorithms with an AI tutor
+  description: Practise data structures and algorithms with an AI tutor.
+  syncDesktopName: true
+  maintainer: Algorithm Tutor <https://github.com/hqazi/algorithm-tutor>
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]

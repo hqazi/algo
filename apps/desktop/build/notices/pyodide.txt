@@ -1,0 +1,13 @@
+Pyodide
+
+This application ships Pyodide's runtime files (pyodide.mjs, pyodide.asm.mjs,
+pyodide.asm.wasm, python_stdlib.zip, pyodide-lock.json) unmodified, from the
+`pyodide` npm package, inside the app's resources (app.asar, renderer/pyodide/).
+
+Pyodide is licensed under the Mozilla Public License, version 2.0:
+https://www.mozilla.org/en-US/MPL/2.0/
+
+Source code: https://github.com/pyodide/pyodide
+
+Pyodide includes CPython, licensed under the Python Software Foundation
+License: https://docs.python.org/3/license.html

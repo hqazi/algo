@@ -1,0 +1,141 @@
+# Release (T13, SPEC §11): on a version tag, build the installers on all three
+# OSes and upload them, with electron-updater's metadata (latest*.yml or
+# beta*.yml, blockmaps), to a draft GitHub Release. A maintainer checks the
+# draft and publishes it; installed apps only see published releases.
+#
+# Tags: vX.Y.Z (stable) or vX.Y.Z-beta.N (beta channel; the draft is marked
+# as a pre-release). The tag sets the app's version; package.json stays 0.0.0.
+#
+# Signing runs only when its secrets exist (DECISIONS D-27); without them the
+# builds are unsigned:
+#   macOS:   MAC_CSC_LINK (base64 .p12, one line), MAC_CSC_KEY_PASSWORD;
+#            notarization: APPLE_API_KEY_P8 (the .p8 key's text),
+#            APPLE_API_KEY_ID, APPLE_API_ISSUER
+#   Windows: WIN_CSC_LINK (base64 .pfx, one line), WIN_CSC_KEY_PASSWORD
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: draft release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        name: version from the tag
+        shell: bash
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-beta\.[0-9]+)?$ ]]; then
+            echo "::error::tag $GITHUB_REF_NAME is not vX.Y.Z or vX.Y.Z-beta.N"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+      # One draft up front, so the three builds upload to the same release.
+      - name: create the draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME exists; uploading to it"
+            exit 0
+          fi
+          pre=()
+          [[ "$VERSION" == *-* ]] && pre=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag "${pre[@]}" \
+            --title "Algorithm Tutor $VERSION" --generate-notes
+
+  build:
+    name: build (${{ matrix.os }})
+    needs: draft
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: set the version
+        shell: bash
+        run: npm version "${{ needs.draft.outputs.version }}" --no-git-tag-version --workspace apps/desktop
+      - run: npm test
+      - name: signing (only the secrets that exist)
+        shell: bash
+        env:
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            if [ -n "$MAC_CSC_LINK" ]; then
+              { echo "CSC_LINK=$MAC_CSC_LINK"; echo "CSC_KEY_PASSWORD=$MAC_CSC_KEY_PASSWORD"; } >> "$GITHUB_ENV"
+              echo "macOS: signing"
+            else
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+              echo "macOS: unsigned (no MAC_CSC_LINK)"
+            fi
+            if [ -n "$APPLE_API_KEY_P8" ] && [ -n "$MAC_CSC_LINK" ]; then
+              key="$RUNNER_TEMP/apple-api-key.p8"
+              printf '%s\n' "$APPLE_API_KEY_P8" > "$key"
+              { echo "APPLE_API_KEY=$key"; echo "APPLE_API_KEY_ID=$APPLE_API_KEY_ID"; echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"; } >> "$GITHUB_ENV"
+              echo "macOS: notarizing"
+            fi
+          elif [ "$RUNNER_OS" = Windows ]; then
+            if [ -n "$WIN_CSC_LINK" ]; then
+              { echo "WIN_CSC_LINK=$WIN_CSC_LINK"; echo "WIN_CSC_KEY_PASSWORD=$WIN_CSC_KEY_PASSWORD"; } >> "$GITHUB_ENV"
+              echo "Windows: signing"
+            else
+              echo "Windows: unsigned (no WIN_CSC_LINK)"
+            fi
+          fi
+      # Builds (fuses flipped in afterPack), then uploads installers and
+      # update metadata to the draft.
+      - name: package and upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run package -- --publish always
+      # Start the packaged app: problems load, Python runs, updater present.
+      - name: smoke test the packaged app
+        shell: bash
+        run: |
+          case "$RUNNER_OS" in
+            Linux)
+              sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+              xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algorithm-tutor ;;
+            macOS)
+              dir=$(ls -d apps/desktop/dist/mac-arm64 apps/desktop/dist/mac 2>/dev/null | head -1)
+              npx tsx apps/desktop/packaging/smoke.ts "$dir/Algorithm Tutor.app/Contents/MacOS/Algorithm Tutor" ;;
+            Windows)
+              npx tsx apps/desktop/packaging/smoke.ts "apps/desktop/dist/win-unpacked/Algorithm Tutor.exe" ;;
+          esac
+      - name: remove the notarization key
+        if: always() && runner.os == 'macOS'
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/apple-api-key.p8"
