@@ -25,7 +25,8 @@
     "check:storage": "npm run check:storage --workspace apps/desktop",
     "check:fuses": "npm run check:fuses --workspace apps/desktop",
     "schema:export": "tsx scripts/export-schemas.ts",
-    "validate:content": "tsx scripts/validate-content.ts"
+    "validate:content": "tsx scripts/validate-content.ts",
+    "e2e": "npm run e2e --workspace apps/desktop --"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

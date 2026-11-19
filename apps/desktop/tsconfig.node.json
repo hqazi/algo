@@ -8,6 +8,7 @@
     "electron.vite.config.ts",
     "vitest.config.ts",
     "packaging",
+    "e2e",
     "src/main",
     "src/shared",
     "src/preload",

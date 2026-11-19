@@ -14,7 +14,8 @@
     "check:exec-host": "electron-vite build && electron out/main/exec-check.js",
     "check:fuses": "tsx packaging/fuses.ts --check",
     "check:security": "electron-vite build && electron out/main/security-check.js",
-    "check:storage": "electron-vite build && electron out/main/storage-check.js"
+    "check:storage": "electron-vite build && electron out/main/storage-check.js",
+    "e2e": "electron-vite build && tsx e2e/practice.e2e.ts"
   },
   "dependencies": {
     "@algorithm-tutor/core": "*",
@@ -43,6 +44,7 @@
     "electron": "45.3.4",
     "electron-vite": "6.0.0",
     "jsdom": "30.1.3",
+    "playwright-core": "1.64.1",
     "vite": "8.3.8"
   }
 }

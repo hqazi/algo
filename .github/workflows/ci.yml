@@ -46,6 +46,11 @@ jobs:
       - name: check security baseline
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run check:security
+      # The practice flow in the real app (T08): next problem, run, an edit
+      # from another editor, submit, progress, theme.
+      - name: end-to-end practice smoke
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run e2e
       # SQLite storage inside the real Electron main process: better-sqlite3's
       # prebuilt binary loads under Electron's Node, migrations and settings work.
       - name: check storage under Electron

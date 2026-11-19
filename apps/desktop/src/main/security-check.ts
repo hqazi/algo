@@ -16,10 +16,13 @@
  *
  * Prints JSON lines; exits 1 if a check fails.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow, session } from 'electron';
 import { APP_NAME } from '@algorithm-tutor/core';
-import { afterReady, beforeReady } from './setup';
+import { afterReady, beforeReady, startPractice } from './setup';
+import { openAppStorage } from './storage';
 import { APP_ORIGIN, createMainWindow, type UiOptions } from './window';
 
 const failures: string[] = [];
@@ -53,6 +56,14 @@ async function until(what: string, f: () => Promise<boolean>, ms = 10_000): Prom
 
 async function checks(): Promise<void> {
   const router = afterReady(ui);
+  // The practice channels too, over a throwaway data folder, as the app wires them.
+  const dataDir = mkdtempSync(join(tmpdir(), 'algotutor-security-'));
+  const storage = openAppStorage(dataDir);
+  const practice = await startPractice(router, storage, ui, import.meta.dirname);
+  app.on('will-quit', () => {
+    practice.dispose();
+    void storage.close().finally(() => rmSync(dataDir, { recursive: true, force: true }));
+  });
   const win = createMainWindow(APP_NAME, ui);
   const page = (code: string): Promise<unknown> => win.webContents.executeJavaScript(code);
   await until('the page to load', async () => !win.webContents.isLoading());
@@ -60,14 +71,20 @@ async function checks(): Promise<void> {
     url: win.webContents.getURL(),
   });
 
-  // The UI rendered and fetched its versions over IPC (app:version).
-  await until('versions', async () => Boolean(await page('!!document.querySelector(".versions")')));
+  // The UI rendered over IPC: a fresh data folder shows the Welcome page.
+  await until('the welcome page', async () =>
+    Boolean(await page('document.body.innerText.includes("Use defaults and start")')),
+  );
   const text = await page('document.body.innerText');
+  check('renders the app over IPC', String(text).includes(APP_NAME), text);
+  const version = (await page(`window.tutor.invoke('app:version', undefined)`)) as {
+    ok: boolean;
+    value?: { electron: string };
+  };
   check(
-    'renders and calls app:version',
-    String(text).includes(APP_NAME) &&
-      String(text).includes(`Electron ${process.versions.electron}`),
-    text,
+    'app:version answers',
+    version.ok && version.value?.electron === process.versions.electron,
+    version,
   );
 
   const globals = (await page(`({
