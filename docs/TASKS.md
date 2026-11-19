@@ -62,7 +62,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T09 | Onboarding and Settings | v1 | 2d | T08 | done |
 | T10 | Tutor: Anthropic backend and chat | v1 | 5d | T06, T08 | done |
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | done |
-| T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | todo |
+| T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | in-progress |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | todo |
 | T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | todo |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | todo |
