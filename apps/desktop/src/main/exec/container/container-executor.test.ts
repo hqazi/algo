@@ -82,9 +82,9 @@ case "$1" in
            [ '${server}' = 'null' ] && { echo 'Cannot connect to the Docker daemon' >&2; exit 1; }
            exit 0 ;;
   image) exit ${opts.image === false ? 1 : 0} ;;
-  run) vol=; prev=
+  run) vol=; prev=  # /bin/ls: the PATH the executor passes on macOS has no /bin
        for a in "$@"; do [ "$prev" = --volume ] && vol="\${a%%:*}"; prev="$a"; done
-       ls -l "$vol" >> '${log}.files' 2>&1; echo abc123; exit 0 ;;
+       /bin/ls -l "$vol" >> '${log}.files' 2>&1; echo abc123; exit 0 ;;
   exec) echo './solution.go:4:15: cannot use "no" (untyped string constant) as int value' >&2; exit 1 ;;
   rm) exit 0 ;;
   pull) echo '1.0.0: Pulling from runner'
