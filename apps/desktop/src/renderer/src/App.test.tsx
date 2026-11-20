@@ -41,7 +41,7 @@ describe('App', () => {
         topic_name: 'Hash maps & sets',
         difficulty: 'easy',
         focus_changed: true,
-        reason: 'Starting with hash maps.',
+        reason: 'staying on your focus topic, hash maps',
       }))
       .on('problems:start', () => ({
         slug: 'pair-with-target',
@@ -59,7 +59,10 @@ describe('App', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Next problem' })[0]!);
     expect(await screen.findByText('Two Receipts', { selector: 'h1' })).toBeTruthy();
     expect(window.location.hash).toBe('#/p/pair-with-target');
-    expect(screen.getByText('Starting with hash maps.')).toBeTruthy();
+    // A capitalised sentence that names the problem, not core's raw reason.
+    expect(
+      screen.getByText('Next problem: Two Receipts. Staying on your focus topic, hash maps.'),
+    ).toBeTruthy();
   });
 
   it('changes the theme in Settings through the main process', async () => {

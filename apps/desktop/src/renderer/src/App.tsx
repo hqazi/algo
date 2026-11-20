@@ -14,6 +14,7 @@ import { AppProvider } from './lib/app';
 import { errorText, useApp } from './lib/app-context';
 import { navigate, useRoute } from './lib/router';
 import { HomePage } from './pages/HomePage';
+import { reasonText } from './pages/dashboard';
 import { PracticePage } from './pages/PracticePage';
 import { ProblemsPage } from './pages/ProblemsPage';
 import { ProgressPage } from './pages/ProgressPage';
@@ -54,7 +55,7 @@ export function Shell() {
       const r = await invoke('problems:next', {});
       if (r.action === 'solve') {
         await invoke('problems:start', { slug: r.slug });
-        app.notify(r.reason, 'info');
+        app.notify(`Next problem: ${r.title}. ${reasonText(r)}`, 'info');
         navigate(`/p/${r.slug}`);
       } else {
         setSuggestion({ topic: r.topic, difficulty: r.difficulty, reason: r.reason });

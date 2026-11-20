@@ -16,6 +16,7 @@ import {
 import { Dialog } from '../components/Dialog';
 import { AutoGrowTextarea, Button, Segmented } from '../components/ui';
 import { titleCase } from '../lib/format';
+import { reasonText } from '../pages/dashboard';
 import { ImportPanel, type ImportChoice } from './ImportPanel';
 import { useIntakeJob, type JobState } from './useIntakeJob';
 import './intake.css';
@@ -195,7 +196,7 @@ export function NewProblemDialog({
       />
       {mode === 'generate' ? (
         <div role="tabpanel" id="np-panel" aria-label="Generate">
-          {suggestion && <p className="intake-suggestion">{suggestion.reason}</p>}
+          {suggestion && <p className="intake-suggestion">{reasonText(suggestion)}</p>}
           <div className="intake-row">
             <label className="field">
               Topic
