@@ -83,7 +83,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | done |
 | T27 | README, user guide, logo, screenshots; rename to Algo | polish | 1d | T26 | done |
 | T28 | Design foundations: tokens, fonts, icons, controls | design | 2d | T27 | done |
-| T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | in-progress |
+| T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | done |
 | T30 | Practice page refresh | design | 2d | T29 | todo |
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | todo |
 | T32 | Library refresh | design | 2d | T30 | todo |
@@ -2085,13 +2085,67 @@ looks cleaner before any page is reworked.
 **Goal.** `design.md` → App frame.
 
 **Acceptance.**
-- [ ] Navigation in the title bar: macOS `hiddenInset` with room for the traffic lights, Windows/Linux `titleBarOverlay` coloured from the theme (updates when the theme changes); draggable bar, non-draggable controls. A window test covers the options per platform.
-- [ ] Logo mark + **Algo**; nav links with icons and a non-button active state; **New problem** and **Next problem** on the right; tutor status as a dot + label with a tooltip.
-- [ ] Nav hidden during onboarding.
-- [ ] Panes edge to edge with 1px dividers as resize handles (keyboard-resizable, as today), and a shared pane header component used by Practice and Library.
-- [ ] Checks and e2e pass; screenshots looked at in both themes.
+- [x] Navigation in the title bar: macOS `hiddenInset` with room for the traffic lights, Windows/Linux `titleBarOverlay` coloured from the theme (updates when the theme changes); draggable bar, non-draggable controls. A window test covers the options per platform.
+- [x] Logo mark + **Algo**; nav links with icons and a non-button active state; **New problem** and **Next problem** on the right; tutor status as a dot + label with a tooltip.
+- [x] Nav hidden during onboarding.
+- [x] Panes edge to edge with 1px dividers as resize handles (keyboard-resizable, as today), and a shared pane header component used by Practice and Library.
+- [x] Checks and e2e pass; screenshots looked at in both themes.
 
-**Notes.**
+**Notes.** (2026-11-20)
+- **Built.** `main/window.ts`: `titleBarOptions(platform, dark)` (macOS
+  `hiddenInset` with the traffic lights centred in the 44px bar; Windows and
+  Linux `hidden` + `titleBarOverlay` in the theme's `--bg`/`--muted`) and
+  `followThemeInTitleBar`, which recolours the overlay and window background
+  on `nativeTheme` `updated` and stops when the window closes; the
+  `webPreferences` baseline is untouched. `components/AppFrame.tsx`
+  (`TitleBar`, `LogoMark`) with `app-frame.ts` (platform, tooltip): inline
+  logo mark + **Algo**, nav links Home / Problems / Progress / Library /
+  Settings with lucide icons and an accent-subtle pill plus
+  `aria-current="page"` for the current page (icons only under 1100px,
+  names kept), **New problem** (secondary) and **Next problem** (primary),
+  tutor status as a dot + "Tutor" (visually hidden "on"/"off"; backend and
+  model or the reason in the tooltip). The bar is a drag region, its
+  controls are not; only the logo and name show during onboarding.
+  `components/PaneHeader.tsx` and `Panes.tsx`: panes edge to edge on
+  `--surface`, 1px dividers as separators (wider hit area, accent on hover
+  and drag, focus ring, arrow keys as before, `aria-valuenow`), a
+  `PaneHeader` per pane from its title and `actions`, or `header: false`
+  for content with its own. Tests: 4 new window tests (options per
+  platform, recolouring and unsubscribing, colours and height match
+  `styles.css`), `AppFrame.test.tsx` (6) and `Panes.test.tsx` (2).
+- **Decisions.** D-50.
+- **Wiring outside Owns.** `PracticePage.tsx`: the editor toolbar's
+  controls moved unchanged into the Code pane's header (`actions`), the
+  Tutor pane is `header: false`. `chat/ChatPane.tsx`: its `chat-head` div is
+  now a `PaneHeader` (same children). `LibraryPage.tsx`: **Refresh** moved
+  from the filter row into the Articles pane's header; the Chats pane is
+  `header: false` once an article is open. `library/chat/ArticleChatPane.tsx`:
+  the "Chats" head is a `PaneHeader` (the open thread's head is unchanged).
+  `components/Link.tsx`: passes `aria-current`. `styles.css`: the shell
+  section rewritten, the old pane, gutter, tab and `.toolbar` rules removed
+  from the practice section, `--titlebar-h` and `--pane-header-h` tokens.
+- **Checked.** `npm run typecheck`, `npm run lint`, `npm run format:check`,
+  `npm test` (80 files, 1118 passed, 12 skipped), `npm run
+  validate:content` (50 problems), `xvfb-run -a npm run e2e` (all six
+  suites, `failures: []`), the security check (`electron
+  out/main/security-check.js` with `--no-sandbox` as root under xvfb,
+  `failures: []`). Screenshots in light and dark (scratch script, not
+  committed) of onboarding, home (also at 1000 and 860px wide), problems,
+  practice, explanation, New problem, progress, settings and library, plus
+  X-screen captures showing Linux's window controls overlay in the bar
+  colour and recoloured when Settings → Theme changes; fixed the overlay
+  hiding the bar's bottom border.
+- **Not done / not tested.** Seen on Linux (xvfb) only: the macOS
+  `hiddenInset` path (traffic light position and the 84px inset) and
+  Windows' overlay were not seen. Not checked in a packaged build. The
+  explanation dialog, Problems, Progress, Settings and Home content are
+  unchanged (T30–T33). The pane headers hold the old controls as they were
+  (bare buttons, the full Practice toolbar, the chat thread buttons): the
+  Code pane's header wraps to two rows when that pane is narrower than
+  about 520px, until T30 moves Give up and Reset into a menu. Narrow layout
+  (under 900px) keeps the stacked tabs, restyled only. The user guide still
+  says "top bar" (T34).
+
 
 ### T30 — Practice page refresh
 

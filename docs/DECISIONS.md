@@ -1662,3 +1662,53 @@ How `design.md` → Foundations was built, where the plan left a choice.
 - **Practice toolbar.** Run is secondary and Submit primary now (a two-line
   class change in `PracticePage.tsx`), so only one filled button shows; T30
   adds the icons and the "More" menu.
+
+**D-50 App frame: the title bar and edge-to-edge panes** (2026-11-20, T29)
+
+How `design.md` → App frame was built, checked against the Electron 45 docs
+(`BaseWindowConstructorOptions`, `win.setTitleBarOverlay`, the custom title
+bar tutorial) rather than memory.
+- **Window options** (`titleBarOptions` in `main/window.ts`). macOS:
+  `titleBarStyle: 'hiddenInset'` with `trafficLightPosition` `{x: 16, y: 16}`
+  so the 12px lights sit centred in the 44px bar; the renderer leaves 84px
+  for them. Windows and Linux: `titleBarStyle: 'hidden'` with
+  `titleBarOverlay` `{color, symbolColor, height: 44}`; the renderer keeps
+  its controls out of the overlay with `env(titlebar-area-x/width)`. The
+  window's `backgroundColor` is the bar colour, so there is no white flash
+  in dark mode. The `webPreferences` baseline is unchanged
+  (`check:security` passes).
+- **Colours.** The bar is `--bg` and the overlay's symbols `--muted`, per
+  theme. The main process cannot read CSS, so the hex values are repeated in
+  `TITLE_BAR_COLORS` and `window.test.ts` reads `styles.css` to check they
+  (and `--titlebar-h`) match. The theme setting already drives `nativeTheme`
+  (`followTheme` in `ipc/handlers/settings.ts`), so the window listens to `nativeTheme`'s
+  `updated` event and calls `setTitleBarOverlay` and `setBackgroundColor`;
+  no new IPC. On Linux the docs say `symbolColor` is adjusted for contrast
+  by Electron anyway.
+- **Platform in the renderer** comes from `navigator.userAgent` ("Mac"), not
+  a new bridge field: it only chooses the left padding.
+- **Drag regions.** The bar is `app-region: drag` (and the `-webkit-`
+  spelling); links, buttons, inputs, selects and anything with a `title`
+  (the tutor status tooltip) are `no-drag`.
+- **Nav.** Home, Problems, Progress, Library, Settings, each a link with a
+  lucide icon; the current one is an accent-subtle pill with
+  `aria-current="page"` (Problems while practising a problem). Under 1100px
+  the labels are visually hidden (still the links' names) and each link has
+  its label as `title`. The logo mark is an inline, simplified copy of
+  `docs/assets/logo.svg` (no gradients or glow) so nothing is fetched.
+- **Tutor status** is a dot and "Tutor" with a visually hidden " on"/" off",
+  so its text is still "Tutor on"/"Tutor off" for screen readers and the
+  e2e tests; the tooltip names the backend and model, or the reason it is
+  off.
+- **Onboarding.** While the profile is not onboarded (or on `/welcome`) the
+  bar shows only the logo and name; before, New problem and Next problem
+  were shown disabled.
+- **Panes.** 1px grid columns on `--border` are the separators, with an 8px
+  invisible hit area, accent on hover and while dragging, `--focus` when
+  focused; arrow keys resize as before, and the separators now expose
+  `aria-valuenow`. `Pane` gained `actions` (shown in its `PaneHeader`) and
+  `header: false` for content that draws its own `PaneHeader` (the tutor
+  chat, which is also on Home, and the Library chats pane once an article
+  is open). The Practice editor toolbar moved as is into the Code pane's
+  header, and the Library's **Refresh** into the Articles pane's header;
+  T30 and T32 restyle their contents.
