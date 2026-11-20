@@ -4,7 +4,8 @@
  * starter, or an edit made in another editor), so typing never fights with
  * React state. Such replacements do not call `onChange`.
  *
- * The one-dark theme follows `prefers-color-scheme`, which the main process
+ * The light and dark themes take their colours from the design tokens in
+ * styles.css (T28) and follow `prefers-color-scheme`, which the main process
  * sets from the theme setting. Font size and keymap (default, Vim, Emacs)
  * come from the editor settings and change without a reload (T09).
  */
@@ -13,9 +14,9 @@ import { basicSetup } from 'codemirror';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
-import { indentUnit } from '@codemirror/language';
+import { indentUnit, syntaxHighlighting } from '@codemirror/language';
 import { python } from '@codemirror/lang-python';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import { emacs } from '@replit/codemirror-emacs';
 import { vim } from '@replit/codemirror-vim';
 import type { Extension } from '@codemirror/state';
@@ -53,6 +54,69 @@ function fontExtension(px: number | undefined): Extension {
 }
 
 const DARK = '(prefers-color-scheme: dark)';
+
+/** Editor chrome from the tokens: pane background, no gutter border, a faint accent active line. */
+function chrome(dark: boolean): Extension {
+  return EditorView.theme(
+    {
+      '&': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
+      '&.cm-focused': { outline: 'none' },
+      '.cm-scroller': {
+        fontFamily: 'var(--mono)',
+        lineHeight: '1.6',
+        fontVariantLigatures: 'none',
+      },
+      '.cm-content': { caretColor: 'var(--text)', padding: '8px 0' },
+      '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--text)', borderLeftWidth: '2px' },
+      '.cm-gutters': {
+        backgroundColor: 'var(--surface)',
+        color: 'var(--faint)',
+        border: 'none',
+      },
+      '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 12px' },
+      '.cm-activeLine': { backgroundColor: 'var(--active-line)' },
+      '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--muted)' },
+      '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
+        { backgroundColor: 'var(--selection)' },
+      '.cm-selectionMatch': { backgroundColor: 'var(--accent-subtle)' },
+      '&.cm-focused .cm-matchingBracket': {
+        backgroundColor: 'var(--accent-subtle)',
+        outline: '1px solid var(--accent-ring)',
+      },
+      '.cm-foldPlaceholder': {
+        backgroundColor: 'var(--surface-2)',
+        border: 'none',
+        color: 'var(--muted)',
+      },
+      '.cm-tooltip': {
+        backgroundColor: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-sm)',
+        boxShadow: 'var(--shadow)',
+      },
+      '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+        backgroundColor: 'var(--accent-subtle)',
+        color: 'var(--text)',
+      },
+      '.cm-panels': { backgroundColor: 'var(--surface-2)', color: 'var(--text)' },
+      '.cm-panels.cm-panels-bottom': { borderTop: '1px solid var(--border)' },
+      '.cm-panels.cm-panels-top': { borderBottom: '1px solid var(--border)' },
+      '.cm-searchMatch': {
+        backgroundColor: 'color-mix(in srgb, var(--warn) 25%, transparent)',
+      },
+      '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--selection)' },
+    },
+    { dark },
+  );
+}
+
+const LIGHT_THEME: Extension = chrome(false);
+// Light keeps basicSetup's default highlight style; dark uses One Dark's colours.
+const DARK_THEME: Extension = [chrome(true), syntaxHighlighting(oneDarkHighlightStyle)];
+
+function themeFor(dark: boolean): Extension {
+  return dark ? DARK_THEME : LIGHT_THEME;
+}
 
 function prefersDark(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(DARK).matches;
@@ -104,7 +168,7 @@ export function Editor(props: EditorProps) {
         font.current.of(fontExtension(initial.fontSize)),
         keymap.of([indentWithTab]),
         lang.current.of(languageExtension(initial.language)),
-        theme.current.of(prefersDark() ? oneDark : []),
+        theme.current.of(themeFor(prefersDark())),
         ro.current.of(EditorState.readOnly.of(!!initial.readOnly)),
         EditorView.contentAttributes.of({ 'aria-label': initial.label ?? 'Solution code' }),
         EditorView.updateListener.of((u) => {
@@ -116,7 +180,7 @@ export function Editor(props: EditorProps) {
     view.current = v;
     const mq = typeof window.matchMedia === 'function' ? window.matchMedia(DARK) : null;
     const onScheme = (): void =>
-      v.dispatch({ effects: theme.current.reconfigure(prefersDark() ? oneDark : []) });
+      v.dispatch({ effects: theme.current.reconfigure(themeFor(prefersDark())) });
     mq?.addEventListener('change', onScheme);
     return () => {
       mq?.removeEventListener('change', onScheme);
