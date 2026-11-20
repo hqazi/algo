@@ -443,7 +443,6 @@ export function PracticePage({ slug }: { slug: string }) {
       <div className="toolbar">
         <button
           type="button"
-          className="primary"
           onClick={() => void execute('run')}
           disabled={!!busy}
           title="Run visible tests (Ctrl/Cmd+Enter)"
@@ -452,7 +451,7 @@ export function PracticePage({ slug }: { slug: string }) {
         </button>
         <button
           type="button"
-          className="accent"
+          className="primary"
           onClick={() => void execute('submit')}
           disabled={!!busy}
           title="Run all tests and record when they pass (Ctrl/Cmd+Shift+Enter)"
