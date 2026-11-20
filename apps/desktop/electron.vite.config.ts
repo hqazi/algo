@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react';
 
 // Workspace packages ship TypeScript source, so they are bundled rather than
 // left as runtime `require`s like ordinary node_modules dependencies.
-const bundled = ['@algorithm-tutor/core'];
+const bundled = ['@algo/core'];
 
 const src = (p: string): string => resolve(import.meta.dirname, 'src', p);
 
@@ -30,7 +30,7 @@ const pyodideDir = dirname(createRequire(import.meta.url).resolve('pyodide/packa
 
 function pyodideAssets(): Plugin {
   return {
-    name: 'algorithm-tutor:pyodide-assets',
+    name: 'algo:pyodide-assets',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const name = req.url?.match(/^\/pyodide\/([^?]+)/)?.[1];

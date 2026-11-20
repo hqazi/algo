@@ -17,7 +17,7 @@ import {
   type HarnessRequest,
   type RunJob,
   type RunReport,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 
 /** How the executor reaches the execution host. */
 export interface HarnessTransport {

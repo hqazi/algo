@@ -6,7 +6,7 @@
  * every turn, the practice service reads the time scale for every run, and
  * the theme drives `nativeTheme` through a settings listener (`setup.ts`).
  */
-import { TutorError } from '@algorithm-tutor/core';
+import { TutorError } from '@algo/core';
 import type { ProfileUpdate } from '../../../shared/settings';
 import { ArchiveError, type DataService } from '../../data';
 import type { Practice } from '../../practice/service';

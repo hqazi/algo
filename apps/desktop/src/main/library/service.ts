@@ -19,7 +19,7 @@ import {
   planScan,
   type LibraryFolder,
   type TreeFolder,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { SettingsStore, SqliteStorage } from '../storage';
 import {
   applyScan,

@@ -6,7 +6,7 @@
  * pid (the tree).
  */
 import { spawn, spawnSync } from 'node:child_process';
-import type { CancelSignal } from '@algorithm-tutor/core';
+import type { CancelSignal } from '@algo/core';
 
 export interface ProcessOptions {
   cwd: string;

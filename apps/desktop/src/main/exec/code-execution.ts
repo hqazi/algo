@@ -5,7 +5,7 @@
  * last fallback notice. Detection only: nothing here installs or starts a
  * runtime.
  */
-import type { CancelSignal, Language, RunJob, RunReport } from '@algorithm-tutor/core';
+import type { CancelSignal, Language, RunJob, RunReport } from '@algo/core';
 import type { ContainerExecutor, PullProgress } from './container';
 import type { LocalExecutor } from './local';
 import type { Runtime, RuntimeStatus } from '../runtimes';

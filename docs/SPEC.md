@@ -1,4 +1,4 @@
-# Algorithm Tutor: specification
+# Algo: specification
 
 Status: draft 1 (2026-11-17). Tickets that implement it are in
 [`TASKS.md`](TASKS.md); the reasoning behind the main choices is in
@@ -464,7 +464,8 @@ in the local toolchain or a container, in every version.
 - Settings → Code execution shows the runtime choice for Rust/Go
   (`local` / `podman` / `docker`); only detected and running runtimes are
   selectable (main refuses the setting for one that is not running; D-32).
-  Not found: a **How to install →** link to the README section.
+  Not found: a **How to install →** link to the user guide
+  (`docs/guide/code-execution.md`).
   Installed but stopped: the command to start it (e.g. `podman machine start`).
   **Recheck runtimes** detects again. The local choice says plainly that it
   has no sandbox.
@@ -472,7 +473,7 @@ in the local toolchain or a container, in every version.
   detection, `pull` of the runner image, and job runs.
 - If the selected runtime disappears, fall back to `local` with a notice
   (shown in Settings → Code execution while it lasts).
-- **Runner image** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`, built
+- **Runner image** `ghcr.io/hqazi/algo-runner:<app version>`, built
   and published by CI with Python, Rust and Go toolchains (linux/amd64 and
   linux/arm64; on version tags with the app release, and `edge` on manual
   runs; D-34). **Pull / Update**
@@ -641,8 +642,8 @@ language).
   button.
 - Code signing (resolved, D-27). macOS auto-update requires a signed and
   notarized app (Apple Developer account); unsigned Windows builds show a
-  SmartScreen warning. v1 ships unsigned with instructions in the README;
-  the release workflow signs when the signing secrets exist.
+  SmartScreen warning. v1 ships unsigned with instructions in the user guide
+  (`docs/guide/installation.md`); the release workflow signs when the signing secrets exist.
 - CI release workflow on a version tag: build all three OSes, publish a draft
   release with update metadata. v2 adds the runner image to GHCR.
 

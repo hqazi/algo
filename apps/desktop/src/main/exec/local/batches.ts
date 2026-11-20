@@ -13,7 +13,7 @@ import {
   type CancelSignal,
   type HarnessCaseResult,
   type HarnessOutput,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { ProcessResult } from './process';
 
 export interface BatchRun {

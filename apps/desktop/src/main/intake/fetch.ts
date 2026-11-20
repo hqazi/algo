@@ -22,14 +22,14 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { FetchError } from '@algorithm-tutor/core';
+import { FetchError } from '@algo/core';
 
 export const TIMEOUT_MS = 15_000;
 export const DEADLINE_MS = 30_000;
 export const MAX_BYTES = 1_000_000;
 export const MAX_REDIRECTS = 3;
 const REDIRECTS = new Set([301, 302, 303, 307, 308]);
-const USER_AGENT = 'algorithm-tutor-open-set-importer';
+const USER_AGENT = 'algo-open-set-importer';
 
 export type FetchFn = (
   url: string,

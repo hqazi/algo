@@ -1,5 +1,5 @@
 # Runner image (T19, SPEC §6.5 and §11, D-34):
-#   ghcr.io/hqazi/algorithm-tutor-runner:<app version>
+#   ghcr.io/hqazi/algo-runner:<app version>
 # Python, Rust and Go for the container executor. Each architecture is built
 # natively (amd64 and arm64 runners), then checked inside the image: hello
 # world in each language with the executor's hardening (runner-image/smoke.sh)
@@ -39,7 +39,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/hqazi/algorithm-tutor-runner
+  IMAGE: ghcr.io/hqazi/algo-runner
 
 jobs:
   meta:
@@ -103,9 +103,9 @@ jobs:
         run: |
           docker build --pull \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
-            -t algorithm-tutor-runner:ci runner-image
+            -t algo-runner:ci runner-image
       - name: hello world in Python, Rust and Go
-        run: runner-image/smoke.sh algorithm-tutor-runner:ci
+        run: runner-image/smoke.sh algo-runner:ci
       # One file at a time: the executor suite checks that no job container
       # is left, which a parallel file's container would break.
       - name: container executor suites in the image
@@ -113,7 +113,7 @@ jobs:
           npx vitest run apps/desktop/src/main/exec/container
           npx vitest run apps/desktop/src/main/exec/code-execution.test.ts
         env:
-          ALGOTUTOR_TEST_RUNNER_IMAGE: algorithm-tutor-runner:ci
+          ALGOTUTOR_TEST_RUNNER_IMAGE: algo-runner:ci
       - name: push the tested image
         if: needs.meta.outputs.publish == 'true'
         env:
@@ -121,7 +121,7 @@ jobs:
           REF: ${{ env.IMAGE }}:${{ needs.meta.outputs.sha }}-${{ matrix.arch }}
         run: |
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker tag algorithm-tutor-runner:ci "$REF"
+          docker tag algo-runner:ci "$REF"
           docker push "$REF"
 
   publish:

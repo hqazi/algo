@@ -1,5 +1,5 @@
 /** Shared replies for UI tests. */
-import { DEFAULT_SETTINGS } from '@algorithm-tutor/core';
+import { DEFAULT_SETTINGS } from '@algo/core';
 import type {
   ProblemDetail,
   ProfileResponse,

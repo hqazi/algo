@@ -1,10 +1,5 @@
 /** A `HarnessTransport` that runs requests on a `PyodidePool` in the same process. */
-import type {
-  CancelSignal,
-  ExecutorStatus,
-  HarnessOutput,
-  HarnessRequest,
-} from '@algorithm-tutor/core';
+import type { CancelSignal, ExecutorStatus, HarnessOutput, HarnessRequest } from '@algo/core';
 import type { CancelToken, PyodidePool } from './pool';
 
 export function cancelToken(signal?: CancelSignal): CancelToken | undefined {

@@ -104,3 +104,12 @@
   border-radius: 6px;
   background: var(--surface-2);
 }
+/* The article composer has an extra button: the text box gets its own row so
+   a narrow pane does not squeeze it to a few characters. */
+.article-chats .chat-compose {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.article-chats .chat-compose textarea {
+  flex: 1 1 100%;
+}

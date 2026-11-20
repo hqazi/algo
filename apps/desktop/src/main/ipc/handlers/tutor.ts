@@ -14,7 +14,7 @@ import {
   type Language,
   type RunView,
   type StoredMessage,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { ChatEventView, ChatMessageView, UiEventView } from '../../../shared/tutor';
 import { reportView, type Practice } from '../../practice/service';
 import { CLAUDE_CODE_MIN_VERSION, type AppTutor } from '../../tutor';

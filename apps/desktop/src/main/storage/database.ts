@@ -50,7 +50,7 @@ export class DatabaseTooNewError extends Error {
 
 export class NotATutorDatabaseError extends Error {
   constructor(readonly path: string) {
-    super(`${path} is not an Algorithm Tutor database (it has tables but no schema version)`);
+    super(`${path} is not an Algo database (it has tables but no schema version)`);
     this.name = 'NotATutorDatabaseError';
   }
 }

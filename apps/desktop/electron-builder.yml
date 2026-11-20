@@ -3,13 +3,13 @@
 # The main process is fully bundled by electron-vite, so the app has no
 # node_modules: `apps/desktop/package.json` lists everything as devDependencies
 # (D-27).
-appId: io.github.hqazi.algorithmtutor
+appId: io.github.hqazi.algo
 extraMetadata:
   # Linux: the .desktop file, Electron's app_id and WM_CLASS all match.
-  desktopName: algorithm-tutor.desktop
-productName: Algorithm Tutor
-copyright: Copyright © 2026 the Algorithm Tutor authors
-artifactName: algorithm-tutor-${version}-${os}-${arch}.${ext}
+  desktopName: algo.desktop
+productName: Algo
+copyright: Copyright © 2026 the Algo authors
+artifactName: algo-${version}-${os}-${arch}.${ext}
 
 directories:
   output: dist
@@ -39,7 +39,7 @@ extraResources:
 publish:
   provider: github
   owner: hqazi
-  repo: algorithm-tutor
+  repo: algo
   # The workflow uploads to a draft; a maintainer publishes it (ticking
   # "pre-release" for a beta tag).
   releaseType: draft
@@ -67,14 +67,14 @@ nsis:
   deleteAppDataOnUninstall: false
 
 linux:
-  # Linux only: macOS and Windows keep the product name (`Algorithm Tutor.app`,
-  # `Algorithm Tutor.exe`); a top-level executableName renames those too.
-  executableName: algorithm-tutor
+  # Linux only: macOS and Windows keep the product name (`Algo.app`,
+  # `Algo.exe`); a top-level executableName renames those too.
+  executableName: algo
   category: Education
   synopsis: Practise data structures and algorithms with an AI tutor
   description: Practise data structures and algorithms with an AI tutor.
   syncDesktopName: true
-  maintainer: Algorithm Tutor <https://github.com/hqazi/algorithm-tutor>
+  maintainer: Algo <https://github.com/hqazi/algo>
   target:
     - target: AppImage
       arch: [x64]

@@ -21,7 +21,7 @@ import {
   type Problem,
   type Turn,
   type TutorToolContext,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import {
   curatedCatalog,
   curatedProblems,

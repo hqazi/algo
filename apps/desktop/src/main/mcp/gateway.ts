@@ -14,7 +14,7 @@
  * appear in a log line or on a command line.
  */
 import { createHash, randomBytes } from 'node:crypto';
-import type { ChatEvent, TurnTools } from '@algorithm-tutor/core';
+import type { ChatEvent, TurnTools } from '@algo/core';
 
 /** Longer than any turn (the Claude Code backend stops a turn after 10 minutes). */
 export const DEFAULT_TTL_MS = 15 * 60_000;

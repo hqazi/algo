@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { ChatEvent } from '@algorithm-tutor/core';
+import type { ChatEvent } from '@algo/core';
 import { classify, redact, StreamJsonParser } from './stream-json';
 
 const fixture = (name: string): string[] =>

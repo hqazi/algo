@@ -9,7 +9,7 @@ import {
   type Frontmatter,
   type IndexedArticle,
   type ScanPlan,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { Db } from '../storage/database';
 
 export interface ArticleRow extends IndexedArticle {

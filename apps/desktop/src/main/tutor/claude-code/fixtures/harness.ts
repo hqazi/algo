@@ -6,7 +6,7 @@
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ToolResult, Turn, TurnTools } from '@algorithm-tutor/core';
+import type { ToolResult, Turn, TurnTools } from '@algo/core';
 import { McpGateway } from '../../../mcp/gateway';
 import { McpServer } from '../../../mcp/server';
 import { ApiProxy } from '../api-proxy';
@@ -65,7 +65,7 @@ export function fakeTools(): FakeTools {
 export function turn(tools: TurnTools, over: Partial<Turn> = {}): Turn {
   return {
     threadId: 'home',
-    systemPrompt: 'You are the Algorithm Tutor (test).',
+    systemPrompt: 'You are the Algo (test).',
     history: [],
     userText: 'How am I doing?',
     context: {},

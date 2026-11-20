@@ -1,6 +1,6 @@
 import { request } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ChatEvent } from '@algorithm-tutor/core';
+import type { ChatEvent } from '@algo/core';
 import { fakeTools, type FakeTools } from '../tutor/claude-code/fixtures/harness';
 import { bearer, McpGateway } from './gateway';
 import { McpServer, PROTOCOL_VERSIONS } from './server';

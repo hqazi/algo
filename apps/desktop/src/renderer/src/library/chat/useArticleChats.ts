@@ -5,7 +5,7 @@
  * reader now, and the one-time provider notice.
  */
 import { useCallback, useEffect, useState } from 'react';
-import type { AnchorState } from '@algorithm-tutor/core';
+import type { AnchorState } from '@algo/core';
 import type { AnchorView, ArticleThreadView } from '../../../../shared/article-chat';
 import { invoke } from '../../ipc';
 

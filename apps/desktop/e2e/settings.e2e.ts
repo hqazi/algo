@@ -202,8 +202,9 @@ try {
         () => (globalThis as unknown as { opened: string[] }).opened,
       );
       check(
-        `${runtime}: How to install opens the README section`,
-        opened.at(-1) === 'https://github.com/hqazi/algorithm-tutor#optional-a-container-sandbox',
+        `${runtime}: How to install opens the guide section`,
+        opened.at(-1) ===
+          'https://github.com/hqazi/algo/blob/main/docs/guide/code-execution.md#optional-a-container-sandbox',
         opened,
       );
     }

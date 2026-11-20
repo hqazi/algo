@@ -2,7 +2,7 @@
  * Settings → Code execution (SPEC §6.5, §8; T18): Python's status, the time
  * scale, and how Rust and Go run: the local toolchains (no sandbox) or a
  * detected container runtime. Only running runtimes can be chosen; a missing
- * one links to the README, a stopped one shows the command that starts it.
+ * one links to the install guide, a stopped one shows the command that starts it.
  * The app never installs or starts anything: Recheck detects again, Pull /
  * Update fetches the runner image, Test sandbox runs hello world.
  */

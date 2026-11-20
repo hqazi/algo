@@ -19,7 +19,7 @@ import {
   type RunJob,
   type RunReport,
   type TestCase,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import {
   containerRunArgs,
   ContainerExecutor,
@@ -109,7 +109,7 @@ describe('run flags', () => {
   it('are exactly the hardened set (SPEC §6.5)', () => {
     expect(
       containerRunArgs({
-        name: 'algorithm-tutor-job-1',
+        name: 'algo-job-1',
         image: IMAGE,
         memoryMb: 768,
         jobDir: '/data/jobs/1',
@@ -119,9 +119,9 @@ describe('run flags', () => {
       'run',
       '--detach',
       '--name',
-      'algorithm-tutor-job-1',
+      'algo-job-1',
       '--label',
-      'algorithm-tutor.job=1',
+      'algo.job=1',
       '--pull',
       'never',
       '--rm',
@@ -186,7 +186,7 @@ describe('run flags', () => {
   });
 
   it('names the runner image by app version', () => {
-    expect(runnerImage('2.0.0')).toBe('ghcr.io/hqazi/algorithm-tutor-runner:2.0.0');
+    expect(runnerImage('2.0.0')).toBe('ghcr.io/hqazi/algo-runner:2.0.0');
   });
 });
 
@@ -226,7 +226,7 @@ describe.skipIf(process.platform === 'win32')('with a fake docker', () => {
         sleepSeconds: Number(start.args.at(-1)),
       }),
     );
-    expect(start.name).toMatch(/^algorithm-tutor-job-[0-9a-f]{12}$/);
+    expect(start.name).toMatch(/^algo-job-[0-9a-f]{12}$/);
     expect(await lines(f.log)).toEqual([
       'version --format json',
       `image inspect --format {{.Id}} ${IMAGE}`,
@@ -375,11 +375,9 @@ describe.skipIf(!dockerReady())('with the real Docker', { timeout: 300_000 }, ()
       });
 
       it('leaves no container and no job folder behind', async () => {
-        const ps = spawnSync(
-          'docker',
-          ['ps', '--all', '--quiet', '--filter', 'label=algorithm-tutor.job=1'],
-          { encoding: 'utf8' },
-        );
+        const ps = spawnSync('docker', ['ps', '--all', '--quiet', '--filter', 'label=algo.job=1'], {
+          encoding: 'utf8',
+        });
         expect(ps.stdout.trim()).toBe('');
         expect(await readdir(join(dir, 'real-jobs'))).toEqual([]);
       });

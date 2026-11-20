@@ -30,7 +30,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { app, BrowserWindow, dialog, session } from 'electron';
-import { APP_NAME, renderUserMessage, type Turn } from '@algorithm-tutor/core';
+import { APP_NAME, renderUserMessage, type Turn } from '@algo/core';
 import { LIBRARY_ASSET_PREFIX } from '../shared/library';
 import { afterReady, beforeReady, setTestHooks, startPractice } from './setup';
 import { buildHostileVault, EXFIL_URL, HOSTILE_URLS, INJECTION } from './testing/hostile-vault';

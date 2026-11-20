@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in the app does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please check [Troubleshooting](https://github.com/hqazi/algo/blob/main/docs/guide/troubleshooting.md) first.
+        **Security problems:** please report them privately instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Settings → About.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows
+        - Linux (.deb)
+        - Linux (AppImage)
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Install or update
+        - Practice (editor, Run, Submit)
+        - Tutor
+        - New problems
+        - Library
+        - Code execution (Rust, Go, containers)
+        - Settings or data
+        - Other
+  - type: textarea
+    id: log
+    attributes:
+      label: App log (optional)
+      description: From `logs/` in the data folder (Settings → Data). It contains no chat text or credentials.
+      render: text

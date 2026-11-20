@@ -23,7 +23,7 @@ export const NOT_A_PROBLEM = 'NOT_A_PROBLEM:';
 export const AUTHOR_GUIDES = ['problem_spec', 'topics'] as const;
 
 const preamble = (attempts: number): string => `\
-You write practice problems for Algorithm Tutor, a desktop app for practising data structures and \
+You write practice problems for Algo, a desktop app for practising data structures and \
 algorithms. This is an authoring job, not a conversation: nobody reads your replies, the app only watches \
 your tool calls.
 

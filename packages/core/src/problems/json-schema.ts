@@ -9,13 +9,13 @@
 import { z } from 'zod';
 import { metaSchema, testsFileSchema } from './schema';
 
-const BASE_ID = 'https://github.com/hqazi/algorithm-tutor/blob/main/content/schema/';
+const BASE_ID = 'https://github.com/hqazi/algo/blob/main/content/schema/';
 
 export const SCHEMA_FILES = {
-  'meta.v2.schema.json': { schema: metaSchema, title: 'Algorithm Tutor problem meta.json (v2)' },
+  'meta.v2.schema.json': { schema: metaSchema, title: 'Algo problem meta.json (v2)' },
   'tests.v2.schema.json': {
     schema: testsFileSchema,
-    title: 'Algorithm Tutor problem tests.json (v2)',
+    title: 'Algo problem tests.json (v2)',
   },
 } as const;
 

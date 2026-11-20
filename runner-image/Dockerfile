@@ -1,5 +1,5 @@
 # The runner image (T19, SPEC §6.5, D-34):
-#   ghcr.io/hqazi/algorithm-tutor-runner:<app version>
+#   ghcr.io/hqazi/algo-runner:<app version>
 # Python, Rust and Go for the container executor (D-31). Contract: `python3`,
 # `cargo`, `go`, `sh`, `cp`, `sleep` and `kill` on PATH, usable by uid 65534
 # with a read-only root filesystem and no network. The harnesses have no
@@ -35,8 +35,8 @@ ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/
 # Fails the build if a toolchain is missing.
 RUN python3 --version && cargo --version && rustc --version && go version
 
-LABEL org.opencontainers.image.source="https://github.com/hqazi/algorithm-tutor" \
-      org.opencontainers.image.description="Algorithm Tutor runner: Python, Rust and Go for the container sandbox" \
+LABEL org.opencontainers.image.source="https://github.com/hqazi/algo" \
+      org.opencontainers.image.description="Algo runner: Python, Rust and Go for the container sandbox" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 USER 65534:65534

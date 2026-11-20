@@ -12,7 +12,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app, session } from 'electron';
-import { parseJson, type RunJob, type Signature, type TestCase } from '@algorithm-tutor/core';
+import { parseJson, type RunJob, type Signature, type TestCase } from '@algo/core';
 import { EXEC_PARTITION, ExecHost, registerExecScheme } from './host-window';
 import { PyodideExecutor } from './pyodide-executor';
 

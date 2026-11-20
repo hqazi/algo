@@ -26,6 +26,6 @@
   },
   "required": ["schema_version", "tests"],
   "additionalProperties": false,
-  "$id": "https://github.com/hqazi/algorithm-tutor/blob/main/content/schema/tests.v2.schema.json",
-  "title": "Algorithm Tutor problem tests.json (v2)"
+  "$id": "https://github.com/hqazi/algo/blob/main/content/schema/tests.v2.schema.json",
+  "title": "Algo problem tests.json (v2)"
 }

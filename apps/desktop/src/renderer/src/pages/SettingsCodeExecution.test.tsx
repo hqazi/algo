@@ -13,7 +13,7 @@ import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
 import { baseHandlers } from '../test/fixtures';
 import { ExecutionSection } from './SettingsCodeExecution';
 
-const IMAGE = 'ghcr.io/hqazi/algorithm-tutor-runner:0.1.0';
+const IMAGE = 'ghcr.io/hqazi/algo-runner:0.1.0';
 type Row = RuntimesView['runtimes'][number];
 
 function row(runtime: Row['runtime'], state: Row['state'], extra: Partial<Row> = {}): Row {

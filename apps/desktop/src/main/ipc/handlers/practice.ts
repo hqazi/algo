@@ -6,7 +6,7 @@
  * refusals with a reason the UI can act on (`not_onboarded`, `busy`,
  * `locked`, `no_solution`…); anything else is an internal error.
  */
-import { TutorError, type ProfileView } from '@algorithm-tutor/core';
+import { TutorError, type ProfileView } from '@algo/core';
 import { PracticeRefusal, type Practice } from '../../practice/service';
 import { IpcRefusal, type IpcRouter } from '../router';
 

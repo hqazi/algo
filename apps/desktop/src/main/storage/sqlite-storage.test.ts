@@ -1,4 +1,4 @@
-import type { ProblemRecord, ProfileRecord } from '@algorithm-tutor/core';
+import type { ProblemRecord, ProfileRecord } from '@algo/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase } from './database';
 import { SqliteStorage, StorageClosedError } from './sqlite-storage';

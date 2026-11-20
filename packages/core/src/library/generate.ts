@@ -151,7 +151,7 @@ export function renderGeneratedArticle(meta: GeneratedMeta, body: string): strin
 // ---------------------------------------------------------------- the writer
 
 export const WRITER_PROMPT = `\
-You are the tutor inside Algorithm Tutor, a desktop app for practising data structures and algorithms. \
+You are the tutor inside Algo, a desktop app for practising data structures and algorithms. \
 The user asked you to write an article for their library. It is saved on their computer, shown under \
 "Written by the tutor" and labelled as AI-written.
 

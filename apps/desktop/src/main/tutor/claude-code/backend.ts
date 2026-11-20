@@ -40,7 +40,7 @@ import {
   type SignalLike,
   type Turn,
   type TutorBackend,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { McpGateway } from '../../mcp/gateway';
 import { DEFAULT_MODEL, type Effort } from '../anthropic/backend';
 import type { ApiProxy } from './api-proxy';

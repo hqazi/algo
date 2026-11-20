@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DEFAULT_SETTINGS } from '@algorithm-tutor/core';
+import { DEFAULT_SETTINGS } from '@algo/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InvalidSettingsError, SettingsStore, type SettingsChange } from './settings-store';
 

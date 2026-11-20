@@ -17,7 +17,7 @@ import {
   type FakeScript,
   type OpenArticle,
   type Settings,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import {
   curatedProblems,
   hiddenNeedles,

@@ -7,7 +7,7 @@
  */
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { SLUG_RE } from '@algorithm-tutor/core';
+import { SLUG_RE } from '@algo/core';
 
 export const KEEP = 20;
 export const VERSION_RE = /^\d{8}T\d{9}Z$/;

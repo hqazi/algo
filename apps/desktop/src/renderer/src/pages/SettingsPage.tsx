@@ -4,7 +4,7 @@
  * without a restart. Problems found in `settings.json` at start-up are shown
  * at the top.
  */
-import { APP_NAME } from '@algorithm-tutor/core';
+import { APP_NAME } from '@algo/core';
 import { useEffect, useState } from 'react';
 import type { ProfileUpdate, SettingsPatchView } from '../../../shared/settings';
 import { ProfileForm } from '../components/ProfileForm';

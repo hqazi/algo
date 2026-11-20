@@ -1,5 +1,5 @@
 {
-  "name": "algorithm-tutor",
+  "name": "algo",
   "version": "0.0.0",
   "private": true,
   "description": "A desktop app for practising data structures and algorithms with an AI tutor.",
@@ -31,6 +31,7 @@
     "check:harnesses": "tsx scripts/check-harnesses.ts",
     "e2e": "npm run e2e --workspace apps/desktop --",
     "e2e:claude-code": "npm run e2e:claude-code --workspace apps/desktop --",
+    "screenshots": "npm run screenshots --workspace apps/desktop --",
     "smoke:ai": "tsx apps/desktop/scripts/smoke-ai.ts"
   },
   "devDependencies": {

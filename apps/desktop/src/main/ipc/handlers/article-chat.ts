@@ -3,7 +3,7 @@
  * new thread for a passage, renaming, and the one-time provider notice.
  * Turns and transcripts go through the `chat:*` channels.
  */
-import { ChatRefusal, parseAnchor, type Storage } from '@algorithm-tutor/core';
+import { ChatRefusal, parseAnchor, type Storage } from '@algo/core';
 import type { ArticleThreadView } from '../../../shared/article-chat';
 import type { AppTutor } from '../../tutor';
 import { IpcRefusal, type IpcRouter } from '../router';

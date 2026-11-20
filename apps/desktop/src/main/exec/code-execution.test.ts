@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { RunJob, RunReport } from '@algorithm-tutor/core';
+import type { RunJob, RunReport } from '@algo/core';
 import { STREAM_START, type IpcResult } from '../../shared/ipc';
 import { pullEvent, runtimesView, sandboxResult } from '../../shared/settings';
 import { INSTALL_HELP, registerCodeExecutionHandlers } from '../ipc/handlers/code-execution';
@@ -255,7 +255,7 @@ describe('IPC', () => {
     expect((await call('exec:test', { runtime: 'local' })).ok).toBe(false);
   });
 
-  it('exec:install-help opens only the fixed README sections', async () => {
+  it('exec:install-help opens only the fixed install guide sections', async () => {
     const { call, opened } = setup();
     expect(await call('exec:install-help', { topic: 'container' })).toEqual({
       ok: true,

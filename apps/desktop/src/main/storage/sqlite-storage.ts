@@ -23,7 +23,7 @@ import {
   type ThreadKind,
   type ThreadRecord,
   type TopicProgressRecord,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { SQLInputValue, StatementSync } from 'node:sqlite';
 import { transaction, type Db } from './database';
 

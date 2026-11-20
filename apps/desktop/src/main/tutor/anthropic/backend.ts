@@ -50,7 +50,7 @@ import {
   type ToolOutput,
   type Turn,
   type TutorBackend,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 
 type Beta = Anthropic.Beta.Messages.MessageCreateParamsStreaming;
 type MessageParam = Anthropic.Beta.Messages.BetaMessageParam;

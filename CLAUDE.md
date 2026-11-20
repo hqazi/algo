@@ -1,9 +1,11 @@
-# Algorithm Tutor
+# Algo
 
 A desktop app (Electron + React + TypeScript) for practising data structures
 and algorithms with an AI tutor. Second version of `hqazi/dsa-tutor`. v1 (Python)
 and v2 (Rust, Go, containers) are built; T14, the v1 release check, is
-blocked. v3 adds a Library of articles (SPEC §15, tickets T21–T26).
+blocked. v3 adds a Library of articles (SPEC §15, tickets T21–T26). T27
+polished the README and docs and renamed the app from Algorithm Tutor to
+Algo (D-47).
 
 ## Read first
 
@@ -12,6 +14,9 @@ blocked. v3 adds a Library of articles (SPEC §15, tickets T21–T26).
 - `docs/DECISIONS.md`: why things are the way they are. Add an entry when you
   resolve a VERIFY or DECISION, or pin a version.
 - `docs/CONTEXT.md`: what is ported from `dsa-tutor` and where it lives.
+- `docs/architecture.md`: a short tour of the code.
+- `docs/guide/`: the user guide. Keep it in step with UI changes;
+  `npm run screenshots` retakes the pictures in `docs/assets/screenshots/`.
 
 ## Working on tickets
 

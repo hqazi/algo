@@ -112,7 +112,7 @@ export const invokeChannels = {
   'exec:runtimes': { request: S.runtimesRequest, response: S.runtimesView },
   /** Test sandbox: hello world in Rust and Go inside the runtime's container. */
   'exec:test': { request: S.runtimeRequest, response: S.sandboxResult },
-  /** Opens the README section on installing a runtime or the toolchains. */
+  /** Opens the install guide section on installing a runtime or the toolchains. */
   'exec:install-help': {
     request: S.installHelpRequest,
     response: z.strictObject({ opened: z.boolean() }),

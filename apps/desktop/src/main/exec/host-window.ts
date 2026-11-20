@@ -28,12 +28,7 @@ import {
   type MessagePortMain,
   type Session,
 } from 'electron';
-import type {
-  CancelSignal,
-  ExecutorStatus,
-  HarnessOutput,
-  HarnessRequest,
-} from '@algorithm-tutor/core';
+import type { CancelSignal, ExecutorStatus, HarnessOutput, HarnessRequest } from '@algo/core';
 import type { HostToMain, MainToHost } from '../../exec-host/protocol';
 import type { HarnessTransport } from './pyodide-executor';
 

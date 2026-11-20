@@ -35,7 +35,9 @@ import { schemaVersion } from '../storage/database';
 import { MIGRATIONS } from '../storage/migrations';
 import type { DataPaths } from '../storage/paths';
 
-export const EXPORT_FORMAT = 'algorithm-tutor-export';
+export const EXPORT_FORMAT = 'algo-export';
+/** What exports were tagged before the app was renamed Algo; still imported. */
+const LEGACY_EXPORT_FORMATS: readonly string[] = ['algorithm-tutor-export'];
 export const EXPORT_VERSION = 1;
 
 /** Files and folders an export holds, relative to the data folder (`/` separated). */
@@ -98,10 +100,10 @@ function collect(dir: string, prefix: string, out: Zippable): number {
   return n;
 }
 
-/** A file name for an export made at `now`, e.g. `algorithm-tutor-2026-11-19-1430.zip`. */
+/** A file name for an export made at `now`, e.g. `algo-2026-11-19-1430.zip`. */
 export function exportName(now: string, label = ''): string {
   const stamp = now.slice(0, 16).replace('T', '-').replace(':', '');
-  return `algorithm-tutor-${stamp}${label ? `-${label}` : ''}.zip`;
+  return `algo-${stamp}${label ? `-${label}` : ''}.zip`;
 }
 
 /** Writes an export of the data folder to `dest` (atomically). */
@@ -244,7 +246,7 @@ export function readArchive(bytes: Uint8Array): ValidArchive {
   } catch {
     throw new ArchiveError('The export manifest is not valid JSON.');
   }
-  if (manifest.format !== EXPORT_FORMAT)
+  if (manifest.format !== EXPORT_FORMAT && !LEGACY_EXPORT_FORMATS.includes(manifest.format))
     throw new ArchiveError('The file is not an export of this app.');
   if (!Number.isInteger(manifest.version) || manifest.version > EXPORT_VERSION)
     throw new ArchiveError('The export was made by a newer version of the app. Update first.');

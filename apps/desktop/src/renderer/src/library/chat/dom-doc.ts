@@ -4,7 +4,7 @@
  * into that text. Turns a DOM selection into offsets for an anchor, and an
  * anchor's offsets back into a DOM range for its margin marker.
  */
-import { normalizeSpace, type AnchorDoc } from '@algorithm-tutor/core';
+import { normalizeSpace, type AnchorDoc } from '@algo/core';
 
 export interface DomDoc extends AnchorDoc {
   /** Each text node and the offset of its first character in `text`. */

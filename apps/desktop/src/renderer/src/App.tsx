@@ -2,7 +2,7 @@
  * The app shell (ported from `dsa-tutor/web/src/App.tsx`): top bar, routes,
  * toasts, the chat's app-wide effects (T10) and the New Problem dialog (T12).
  */
-import { APP_NAME } from '@algorithm-tutor/core';
+import { APP_NAME } from '@algo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { ChatEffects } from './chat/ChatEffects';
 import { useChatStore, useTutorStatus } from './chat/store';

@@ -49,7 +49,7 @@ describe('system prompt', () => {
     const tools = (await registry(true)).anthropicTools();
     const prompt = buildSystemPrompt(tools, REFERENCES);
     const order = [
-      'You are the tutor inside Algorithm Tutor',
+      'You are the tutor inside Algo',
       '# Rules',
       '# Start of every conversation',
       '# What the user wants → what to do',
@@ -192,7 +192,7 @@ describe('explanation page', () => {
     );
     expect(page).toContain('<span class="tok-com"># count</span>');
     expect(page).toContain('<span class="tok-str">"x"</span>');
-    expect(page).toContain('Generated 2026-11-19 by Algorithm Tutor');
+    expect(page).toContain('Generated 2026-11-19 by Algo');
   });
 
   it('accepts Markdown strings for the structured fields', () => {

@@ -3,7 +3,7 @@
  * workspace, the Pyodide executor behind the execution host, and `Practice`.
  */
 import { join } from 'node:path';
-import { isoNow, type Executor, type ExecutorId } from '@algorithm-tutor/core';
+import { isoNow, type Executor, type ExecutorId } from '@algo/core';
 import { ExecHost, type ExecHostOptions } from '../exec/host-window';
 import { CodeExecution } from '../exec/code-execution';
 import { ContainerExecutor, runnerImage, type ContainerExecutorOptions } from '../exec/container';
