@@ -1525,7 +1525,24 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   rather than committed, so the symlink out and the file outside the vault
   are real on every OS.
 
-**D-45 Docs: the README is a front page, the user guide lives in `docs/guide/`**
+**D-45 npm dependencies wait 14 days before they are locked**
+(2026-11-20, dependency cooldown)
+
+- Hijacked npm releases are usually found and pulled within days, so every
+  version in `package-lock.json` must be at least 14 days old when it is
+  locked. The lock of 2026-11-19 had 81 versions younger than that; the
+  lockfile is now regenerated from scratch with
+  `npm install --before=2026-11-06` (inside a container, with
+  `--ignore-scripts`), and every one of its 564 versions was checked against
+  the registry's publish times.
+- Direct dependencies that were younger are pinned to their newest version
+  at least 14 days old: `electron` 45.2.3, `vite` 8.3.6,
+  `@vitejs/plugin-react` 6.2.1, `eslint` 10.14.0, `typescript-eslint`
+  8.72.1, `eslint-plugin-react-refresh` 0.5.7, `prettier` 3.9.10.
+- To move a dependency forward: pick a version at least 14 days old, then
+  regenerate the lockfile the same way with `--before` set 14 days back.
+
+**D-46 Docs: the README is a front page, the user guide lives in `docs/guide/`**
 (2026-11-20, T27)
 
 - The README had grown to 360 lines of install, sandbox and troubleshooting
@@ -1555,7 +1572,7 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
 - Rejected: a docs site generator (VitePress, Docusaurus). Plain Markdown
   renders on GitHub with no build or hosting; revisit if the guide grows.
 
-**D-46 The app is called Algo** (2026-11-20, T27; supersedes the "Kept" item of D-45)
+**D-47 The app is called Algo** (2026-11-20, T27; supersedes the "Kept" item of D-46)
 
 The owner renamed the app to match the repository; they are its only user,
 so nothing has to stay compatible with installed builds.

@@ -1934,7 +1934,7 @@ project, covering v3.
   troubleshooting sections moved to `docs/guide/` (seven pages, one new for
   the Library); `docs/architecture.md` (Mermaid diagrams), `docs/README.md`
   index, `CONTRIBUTING.md`, `SECURITY.md`, issue forms. CHANGELOG lists the
-  Library. Links use the repository's name, `hqazi/algo` (D-45).
+  Library. Links use the repository's name, `hqazi/algo` (D-46).
 - **Found while taking screenshots, fixed.** The Library chat composer
   squeezed its text box to a few characters beside **Make a problem from
   this** (`article-chat.css`: the text box gets its own row).
@@ -1954,9 +1954,9 @@ project, covering v3.
   `package.json`
   scripts `screenshots`; `content/problems/sliding-window/longest-distinct/tests.json`.
 - **Repository name.** Every reference to the repository is now
-  `hqazi/algo` (D-45), including `publish.repo` for updates and the runner
+  `hqazi/algo` (D-46), including `publish.repo` for updates and the runner
   image's source label; `settings.e2e.ts` expects the guide URL.
-- **Renamed to Algo** (D-46): display name, data folder, installers,
+- **Renamed to Algo** (D-47): display name, data folder, installers,
   executable, app id, workspaces, runner image, export tag (old one still
   imports, tested). Screenshots and the social card retaken.
 - **Not done.** Screenshots are 1x (1440×880): Playwright's Electron pages ignored both

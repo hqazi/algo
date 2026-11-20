@@ -5,7 +5,7 @@ and algorithms with an AI tutor. Second version of `hqazi/dsa-tutor`. v1 (Python
 and v2 (Rust, Go, containers) are built; T14, the v1 release check, is
 blocked. v3 adds a Library of articles (SPEC §15, tickets T21–T26). T27
 polished the README and docs and renamed the app from Algorithm Tutor to
-Algo (D-46).
+Algo (D-47).
 
 ## Read first
 
