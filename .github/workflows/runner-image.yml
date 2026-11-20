@@ -1,0 +1,142 @@
+# Runner image (T19, SPEC §6.5 and §11, D-34):
+#   ghcr.io/hqazi/algorithm-tutor-runner:<app version>
+# Python, Rust and Go for the container executor. Each architecture is built
+# natively (amd64 and arm64 runners), then checked inside the image: hello
+# world in each language with the executor's hardening (runner-image/smoke.sh)
+# and the real-Docker container executor suites. The image that passed is the
+# one pushed; a final job joins both into one multi-arch tag.
+#
+# Publishing (GITHUB_TOKEN only, no other secrets):
+#   - a version tag vX.Y.Z / vX.Y.Z-beta.N / vX.Y.Z-rc.N (with the app
+#     release): tag <X.Y.Z...>, plus `latest` for a stable version;
+#   - workflow_dispatch: the `version` input if given, else `edge`.
+# Every publish also gets `sha-<commit>`, and per-arch `sha-<commit>-amd64`
+# / `-arm64` (the tested images the multi-arch tags point to).
+# Pushes to main and pull requests that touch the image build and check it
+# but never push.
+name: Runner image
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    # Not applied to tag pushes (GitHub ignores path filters for tags).
+    paths: ['runner-image/**', '.github/workflows/runner-image.yml']
+  pull_request:
+    paths: ['runner-image/**', '.github/workflows/runner-image.yml']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version tag (X.Y.Z, X.Y.Z-beta.N or X.Y.Z-rc.N); empty publishes `edge`'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runner-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/hqazi/algorithm-tutor-runner
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.tags.outputs.publish }}
+      sha: ${{ steps.tags.outputs.sha }}
+      tags: ${{ steps.tags.outputs.tags }}
+    steps:
+      - id: tags
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          semver='^[0-9]+\.[0-9]+\.[0-9]+(-(beta|rc)\.[0-9]+)?$'
+          sha="sha-${GITHUB_SHA::12}"
+          publish=false; tags=""
+          if [ "$EVENT" = push ] && [ "$GITHUB_REF_TYPE" = tag ]; then
+            v="${GITHUB_REF_NAME#v}"
+            [[ "$v" =~ $semver ]] || { echo "::error::tag $GITHUB_REF_NAME is not a version tag"; exit 1; }
+            publish=true; tags="$v"
+            [[ "$v" == *-* ]] || tags="$tags latest"
+          elif [ "$EVENT" = workflow_dispatch ]; then
+            publish=true
+            if [ -n "$INPUT_VERSION" ]; then
+              [[ "$INPUT_VERSION" =~ $semver ]] || { echo "::error::version $INPUT_VERSION is not X.Y.Z, X.Y.Z-beta.N or X.Y.Z-rc.N"; exit 1; }
+              tags="$INPUT_VERSION"
+            else
+              tags="edge"
+            fi
+          fi
+          [ "$publish" = true ] && tags="$tags $sha"
+          echo "publish=$publish, tags: ${tags:-none}"
+          { echo "publish=$publish"; echo "sha=$sha"; echo "tags=$tags"; } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: build (${{ matrix.arch }})
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: docker version --format '{{.Server.Version}} {{.Server.Arch}}'
+      - name: build
+        run: |
+          docker build --pull \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t algorithm-tutor-runner:ci runner-image
+      - name: hello world in Python, Rust and Go
+        run: runner-image/smoke.sh algorithm-tutor-runner:ci
+      - name: container executor suites in the image
+        run: npx vitest run apps/desktop/src/main/exec/container apps/desktop/src/main/exec/code-execution.test.ts
+        env:
+          ALGOTUTOR_TEST_RUNNER_IMAGE: algorithm-tutor-runner:ci
+      - name: push the tested image
+        if: needs.meta.outputs.publish == 'true'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF: ${{ env.IMAGE }}:${{ needs.meta.outputs.sha }}-${{ matrix.arch }}
+        run: |
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag algorithm-tutor-runner:ci "$REF"
+          docker push "$REF"
+
+  publish:
+    needs: [meta, build]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: multi-arch tags
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ needs.meta.outputs.sha }}
+          TAGS: ${{ needs.meta.outputs.tags }}
+        shell: bash
+        run: |
+          echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          args=()
+          for t in $TAGS; do args+=(-t "$IMAGE:$t"); done
+          docker buildx imagetools create "${args[@]}" "$IMAGE:$SHA-amd64" "$IMAGE:$SHA-arm64"
+          docker buildx imagetools inspect "$IMAGE:$SHA"

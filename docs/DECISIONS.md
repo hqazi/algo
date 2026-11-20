@@ -1213,3 +1213,33 @@ steps, one e2e for the §13 flow (T14).**
   older suites stay as they cover more. The Progress checks wait for the
   topic counts to refresh instead of reading the first paint (CI on Linux
   failed on that race).
+
+**D-34 Runner image: Rust slim base plus Go and Debian's Python, built
+natively per arch, the tested image is the one pushed** (2026-11-20, T19)
+
+- **Contents** (`runner-image/Dockerfile`): base
+  `rust:1.100.0-slim-trixie` (gcc and libc for linking), `/usr/local/go`
+  copied from `golang:1.27.4-trixie`, `python3-minimal` from Debian trixie
+  (Python 3.13.5 when built; the patch level follows Debian). Both base
+  images are pinned by tag and multi-arch index digest. Docs, Go's
+  `test/`, `doc/`, `api/` removed; ~1.7 GB uncompressed on amd64. No crates
+  or modules pre-fetched (D-29). Env: `RUSTUP_HOME`, `GOTOOLCHAIN=local`,
+  `GOPROXY=off`, `GOFLAGS=-buildvcs=false`, `CGO_ENABLED=0` (the executor
+  sets these too, D-31). `USER 65534:65534`, `WORKDIR /tmp`.
+- **Arches:** amd64 on `ubuntu-24.04`, arm64 on `ubuntu-24.04-arm` (free
+  for public repositories), each built natively with plain `docker build`,
+  not QEMU. Each leg runs `runner-image/smoke.sh` (hello world in Python,
+  Rust and Go with the executor's hardening flags, read-only root, uid
+  65534) and the real-Docker container executor suites
+  (`ALGOTUTOR_TEST_RUNNER_IMAGE`), then pushes that same image as
+  `sha-<12-char commit>-<arch>`; a last job joins both with
+  `docker buildx imagetools create`. No third-party actions; GHCR login
+  with `GITHUB_TOKEN` (`packages: write` only in the build and publish jobs).
+- **Tags:** version tag `vX.Y.Z[-beta.N|-rc.N]` → `X.Y.Z[...]` (the app's
+  version, so `runnerImage(app.getVersion())` finds it), plus `latest` for a
+  stable version; `workflow_dispatch` → its `version` input if given, else
+  `edge`; every publish also `sha-<commit>`. Pushes to `main` and pull
+  requests touching `runner-image/` or the workflow build and check only.
+  The image is not part of `release.yml`: both run on the same tag.
+- **Checked with** Docker 29.10.0 on Linux amd64 (smoke script and the
+  real-Docker suites against the local build). arm64 only in CI.

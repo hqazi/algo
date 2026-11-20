@@ -465,7 +465,9 @@ in the local toolchain or a container, in every version.
 - If the selected runtime disappears, fall back to `local` with a notice
   (shown in Settings → Code execution while it lasts).
 - **Runner image** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`, built
-  and published by CI with Python, Rust and Go toolchains. **Pull / Update**
+  and published by CI with Python, Rust and Go toolchains (linux/amd64 and
+  linux/arm64; on version tags with the app release, and `edge` on manual
+  runs; D-34). **Pull / Update**
   (with progress, per running runtime) and **Test sandbox** buttons
   (hello-world in Rust and Go in that runtime's container, never falling
   back to local).
