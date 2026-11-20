@@ -12,6 +12,7 @@ import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { ExecutionSection } from './SettingsCodeExecution';
 import { DataSection } from './SettingsData';
+import { LibrarySection } from './SettingsLibrary';
 import { TutorSection } from './SettingsTutor';
 import { UpdatesSection } from './SettingsUpdates';
 
@@ -203,6 +204,7 @@ export function SettingsPage() {
       <ExecutionSection />
       <AppearanceSection />
       <ProfileSection />
+      <LibrarySection />
       <DataSection />
       <UpdatesSection version={versions?.app ?? null} />
       <AboutSection versions={versions} />

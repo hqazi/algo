@@ -149,3 +149,18 @@ describe('changedSettings', () => {
     expect(changedSettings(a, defaultSettings())).toEqual([]);
   });
 });
+
+describe('library.folders (T21)', () => {
+  it('accepts {id, path} entries and refuses repeated ids', () => {
+    const folders = [{ id: 'a', path: '/notes' }];
+    const ok = applySettingsPatch(defaultSettings(), { library: { folders } });
+    expect(ok).toMatchObject({ ok: true, settings: { library: { folders } } });
+    const twice = applySettingsPatch(defaultSettings(), {
+      library: { folders: [...folders, { id: 'a', path: '/other' }] },
+    });
+    expect(twice.ok).toBe(false);
+    const read = parseSettings({ library: { folders: 'nope' } });
+    expect(read.settings.library.folders).toEqual([]);
+    expect(read.issues.map((i) => i.key)).toEqual(['library.folders']);
+  });
+});

@@ -765,3 +765,12 @@ button.link {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Settings → Library (T21) */
+.library-folders {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 12px;
+}

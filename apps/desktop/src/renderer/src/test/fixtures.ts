@@ -112,7 +112,14 @@ export const KEY_NONE: KeyStatusView = {
 
 export function settingsFixture(): SettingsResponse {
   return {
-    settings: structuredClone(DEFAULT_SETTINGS),
+    // Library folders hold paths and are not in the settings view (T21).
+    settings: (({ tutor, execution, editor, ui, updates }) => ({
+      tutor,
+      execution,
+      editor,
+      ui,
+      updates,
+    }))(structuredClone(DEFAULT_SETTINGS)),
     issues: [],
     default_model: 'claude-opus-5-5',
   };
@@ -133,6 +140,7 @@ export function baseHandlers(bridge: FakeBridge, profile: ProfileResponse = PROF
       return settings;
     })
     .on('secrets:status', () => KEY_NONE)
+    .on('library:folders', () => ({ folders: [] }))
     .on('tutor:status', () => TUTOR_OFF)
     .on('chat:thread', ({ thread }) => ({ thread, running: false, messages: [] }))
     .on('explanations:list', ({ slug }) => ({ slug, versions: [] }))

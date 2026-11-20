@@ -1317,3 +1317,42 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   the main process** (decoding untrusted images in the process that holds
   the key is the larger risk); **writing downloaded images into the vault**
   (the app does not change the user's notes, D-37).
+
+**D-39 Library frontmatter: the Web Clipper's default template; `yaml` 2.9.1**
+(2026-11-20, T21)
+
+- VERIFY resolved (SPEC §15.1) from the clipper's source,
+  `obsidianmd/obsidian-clipper` at `be99cda` (2026-11-19, version 1.8.3),
+  `createDefaultTemplate()` in `src/managers/template-manager.ts`, the
+  property types beside it, and `generateFrontmatter()` in
+  `src/utils/shared.ts`. Default note: folder `Clippings`, file name
+  `{{title}}`, body `{{content}}`, properties in this order:
+  `title` (text, `{{title}}`), `source` (text, `{{url}}`), `author`
+  (multitext, `{{author|split:", "|wikilink|join}}`), `published` (date),
+  `created` (date, `{{date}}`), `description` (text), `tags` (multitext,
+  `clippings`). Written as: text quoted (`title: "…"`); multitext as a
+  block list of quoted items (`author:\n  - "[[Name]]"`); dates unquoted
+  `YYYY-MM-DD`; an empty value as `key:` (null).
+- Images: the body is Defuddle's Markdown (`defuddle` ^0.19.11). An `img`
+  becomes `![alt](absolute-url "title")` (the largest `srcset` entry), an
+  image inside a link `[![alt](src)](href)`, a figure its images then the
+  caption as a paragraph. The clipper does not download images: they stay
+  remote `https://` links (T23 downloads them). `![[file.png]]` appears only
+  in notes the user writes in Obsidian or after Obsidian's "download
+  attachments" (T22).
+- Parsing: `yaml` **2.9.1** (pure JS, no Node built-ins, so it lives in
+  `packages/core`), `parseDocument` with `schema: 'core'`, `customTags: []`,
+  `merge: false`, aliases capped at 20 expansions. The core schema has no
+  timestamp type, so dates stay strings; an unknown tag leaves a plain
+  string. Bad YAML gives no frontmatter (title from the file name) rather
+  than skipping the note. `author` wikilinks are shown as their names;
+  `tags` may be a list or a comma/space string; a leading `#` is dropped.
+- Identity details (SPEC §15.1): a path seen again keeps its row; among
+  rows gone from their path, a new path takes one with the same hash
+  (same file name preferred), else the same `source`; the rest are marked
+  `missing_since` once. A folder that cannot be read (unplugged drive)
+  keeps its index unchanged and shows why. Folders that are, contain or
+  are inside one already chosen are refused (they would index notes
+  twice). Dot-files are skipped like dot-folders.
+- Fixture: `packages/core/src/library/fixtures/clipped-default.md`, written
+  by hand in that shape, no third-party text.

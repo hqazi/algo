@@ -71,7 +71,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | done |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
-| T21 | Library folders and index | v3 | 3d | T05, T09 | in-progress |
+| T21 | Library folders and index | v3 | 3d | T05, T09 | done |
 | T22 | Reader with local images | v3 | 3d | T21 | todo |
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | todo |
@@ -1483,12 +1483,52 @@ without ever writing to them.
 - IPC: `library:folders`, `library:tree`, `library:refresh` (zod-validated; the renderer gets ids and titles, never absolute paths).
 
 **Acceptance.**
-- [ ] Tests on a temp folder: notes found, dot-folders and large files skipped, a symlink out of the folder ignored, frontmatter read (fixture from the VERIFY), a renamed file keeps its id, a deleted file is marked missing.
-- [ ] A test proves the scan never writes: the folder's files and mtimes are unchanged after scans, refreshes and removal.
-- [ ] Migration test (applies on a v1 database with data; backup made).
-- [ ] Settings UI tests: add, remove with confirm, empty state.
+- [x] Tests on a temp folder: notes found, dot-folders and large files skipped, a symlink out of the folder ignored, frontmatter read (fixture from the VERIFY), a renamed file keeps its id, a deleted file is marked missing.
+- [x] A test proves the scan never writes: the folder's files and mtimes are unchanged after scans, refreshes and removal.
+- [x] Migration test (applies on a v1 database with data; backup made).
+- [x] Settings UI tests: add, remove with confirm, empty state.
 
 **Notes.**
+
+- Built: `packages/core/src/library/` (frontmatter with `yaml` 2.9.1, core
+  schema; scan rules; `planScan` identity: path, then hash with same file
+  name preferred, then `source`; `buildTree`), fixture
+  `fixtures/clipped-default.md`. `apps/desktop/src/main/library/`: read-only
+  folder walk (`scanner.ts`: `.md` only, dot-entries skipped, symlinks only
+  if their real path is inside, dirs visited once by real path, 5 MB cap,
+  sha256), `articles` table access (`index-store.ts`), `LibraryService`
+  (scan at start, Refresh, serialised scans; add with the OS picker, refuses
+  overlapping folders; remove drops index rows only; open in file manager),
+  `watcher.ts` (recursive `fs.watch`, 500 ms debounce; on a watch error a
+  full rescan and a retry after 10 s). Migration `0002-library.sql`.
+  Settings → Library (`SettingsLibrary.tsx`): add, remove with an in-page
+  confirm, open, counts and missing files, empty state, the read-only line.
+- IPC: `library:folders`, `library:add-folder`, `library:remove-folder`,
+  `library:open-folder`, `library:tree`, `library:refresh` and the stream
+  `library:watch` (rescan on open, then a tree after each change-driven
+  scan; T22's page subscribes while open). Ids, names and titles only; a
+  test checks no reply contains the temp folder's path.
+- Decisions: D-39 (the clipper VERIFY, `yaml` pin, identity details);
+  SPEC §15.1 and the open-items table updated.
+- Wiring outside **Owns**: `packages/core/src/settings.ts` (`library.folders`,
+  ids must differ, at most 50) and `index.ts`; `packages/core/package.json`
+  (`yaml`); `apps/desktop/src/shared/{library,ipc,channels}.ts`;
+  `main/setup.ts` (service and handlers); `main/storage/sqlite-storage.ts`
+  (`readSql`/`writeSql` on the one write queue) and `migrations/index.ts`;
+  `main/ipc/handlers/settings.ts` (the settings view leaves out
+  `library`, so paths never reach the renderer); `renderer/.../SettingsPage.tsx`,
+  `styles.css`, `test/fixtures.ts`; schema-version expectation in
+  `sqlite-storage.test.ts`.
+- Checks: typecheck, lint, format, `npm test` (all pass), validate:content;
+  `storage-check` and `security-check` built and run under xvfb with
+  `--no-sandbox` (root container): both pass, schema 1 → 2 with backup.
+- Not done / not tested: removing a folder does not yet delete chats (T24
+  adds article threads). `library.images`, image cache size and **Clear**
+  are T23. Real `fs.watch` events are not exercised by a test (the watcher
+  is tested with a fake watch function; `fsWatch` itself is a thin
+  wrapper); not tried on macOS or Windows. The Library page itself (tree,
+  filter, Refresh button) is T22; the channels are tested through the IPC
+  router only.
 
 ### T22 — Reader with local images
 

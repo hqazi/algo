@@ -682,7 +682,7 @@ needs.
 | ~~**VERIFY** Anthropic API behaviour notes~~ | 7.3, T10 | Resolved: checked against current docs and SDK 1.5.0 (D-23) |
 | ~~**VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login~~ | 7.3, T11 | Resolved: API key only, bare mode, no Agent SDK (D-25) |
 | ~~**VERIFY** Pyodide can be fully network-blocked and package loading disabled~~ | 6.2, T07 | Resolved: yes, with `connect-src 'self'` for workers (D-14) |
-| **VERIFY** Obsidian Web Clipper's default frontmatter keys and image syntax | 15.1, T21 | The keys listed in 15.1 |
+| ~~**VERIFY** Obsidian Web Clipper's default frontmatter keys and image syntax~~ | 15.1, T21 | Resolved: the seven keys in 15.1; remote images as `![alt](https://…)` (D-39) |
 | **DECISION** raw HTML in notes | 15.2, T22 | Dropped |
 
 ## 15. Library (v3)
@@ -706,8 +706,8 @@ job. The only network use is downloading images an article links to (15.4).
   and files over 5 MB. It runs at start, when the Library opens, on
   **Refresh**, and while the Library page is open on file changes
   (`fs.watch`, debounced; a full rescan if watching fails).
-- Each note's YAML frontmatter is read as data. Known keys (the clipper's
-  defaults; **VERIFY** the current default template in T21): `title`,
+- Each note's YAML frontmatter is read as data (YAML core schema, no custom
+  tags, aliases capped). Known keys (the clipper's defaults, D-39): `title`,
   `source`, `author`, `published`, `created`, `description`, `tags`. Missing
   title → file name. Unknown keys are kept and shown, never interpreted.
 - Groups are the folder tree (as in Obsidian) plus `tags`. The app keeps no
