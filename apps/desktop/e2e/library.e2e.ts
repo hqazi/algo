@@ -234,8 +234,10 @@ try {
   await notice.getByRole('button', { name: 'Send' }).click();
   const chat = page.getByTestId('article-chats');
   await chat.getByTestId('msg-assistant').getByText('smallest').waitFor({ timeout: 30_000 });
-  const chips = await chat.getByTestId('tool-chip').allTextContents();
-  check('the reply used an article tool', chips.length === 1 && chips[0]!.startsWith('✓'), chips);
+  const chips = await chat
+    .getByTestId('tool-chip')
+    .evaluateAll((els) => els.map((e) => `${e.getAttribute('data-state')}: ${e.textContent}`));
+  check('the reply used an article tool', chips.length === 1 && chips[0]!.startsWith('ok:'), chips);
   check(
     'chat never renders images (the reply’s image is not shown or requested)',
     (await chat.locator('img').count()) === 0 && !requests.some((u) => u.includes('exfil')),

@@ -59,11 +59,12 @@ try {
   const slug = new URL(page.url()).hash.replace('#/p/', '');
   check('the tutor opened a problem', /^[a-z0-9-]+$/.test(slug), slug);
   await idle(page);
-  const chips = await page.getByTestId('tool-chip').allTextContents();
+  const chips = page.getByTestId('tool-chip');
+  const states = await chips.evaluateAll((els) => els.map((e) => e.getAttribute('data-state')));
   check(
     'the reply shows its tool chips',
-    chips.length === 3 && chips.every((c) => c.startsWith('✓')),
-    chips,
+    states.length === 3 && states.every((s) => s === 'ok'),
+    await chips.allTextContents(),
   );
   check(
     'the problem pane keeps the thread the tutor opened it from',
