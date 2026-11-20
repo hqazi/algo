@@ -1468,3 +1468,27 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
 - The Claude Code article test replays `article-turn.jsonl`: the recorded
   `turn.jsonl` with its tool call rewritten to `read_article_section` by
   hand, not a new recording.
+
+**D-44 How the Library security check and end-to-end test reach a "public" image host (T26)**
+(2026-11-20, T26)
+
+- Both run the real downloader (`downloadImage`: URL checks, every address
+  checked on every hop, manual redirects, caps, magic bytes) and replace
+  only name resolution and the socket (`main/testing/standin.ts`): the
+  stand-in names (`images.example.com`, `redirect.example.com`) resolve to
+  a public-looking address, `private.example.com` to `10.0.0.7`, anything
+  else fails; the transport dials `127.0.0.1:<port>` only when the pinned
+  address is the stand-in's, so nothing can reach the real network. The
+  host is a local HTTPS server with a throwaway self-signed certificate
+  made with `openssl` at run time (no key committed).
+- The replacement goes in through `setTestHooks` (`main/setup.ts`), set only
+  by entries that do not ship: `security-check.js` and a new
+  `e2e-main.js` (imports `index.ts` unchanged, then sets the hook before
+  `app.whenReady()` resolves). `electron-builder.yml` excludes both and the
+  `standin` chunk. No environment variable changes the shipped app's
+  downloader. The same hooks give the check a served-files log
+  (`AssetRegistry` `onServe`); `UiOptions.onRequest` gives it every request
+  a page in the UI session made (the filter itself is unchanged).
+- The hostile vault is built at run time (`main/testing/hostile-vault.ts`)
+  rather than committed, so the symlink out and the file outside the vault
+  are real on every OS.

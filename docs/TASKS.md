@@ -76,7 +76,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | done |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
-| T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
+| T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | done |
 
 ## Order
 
@@ -1624,7 +1624,7 @@ something that is not an image.
 - [x] Tests with an injected fetch and resolver: each blocked address class, a public name that resolves to `127.0.0.1` or `10.x`, a redirect to a private address, `http:`, another port, too many redirects, oversized body (with and without `Content-Length`), slow body, HTML served as `image/png`, a PNG claiming 50,000 × 50,000: all refused with a clear placeholder reason.
 - [x] A test that the connection goes to the checked address (DNS answer changes between check and connect).
 - [x] A served cached image works with the network off; cache cleared from Settings.
-- [ ] No request leaves the UI window's session (request filter log empty during an article open with remote images).
+- [x] No request leaves the UI window's session (request filter log empty during an article open with remote images). (Checked in Electron by T26's `check:security`.)
 
 **Notes.**
 
@@ -1789,7 +1789,60 @@ tests.
 - Add `library.e2e.ts` to `npm run e2e`.
 
 **Acceptance.**
-- [ ] `check:security` passes with the hostile vault; each v3 row in §10 is named in its output.
-- [ ] `library.e2e.ts` passes on Linux; CI runs it on all three OSes.
+- [x] `check:security` passes with the hostile vault; each v3 row in §10 is named in its output.
+- [ ] `library.e2e.ts` passes on Linux; CI runs it on all three OSes. (Passes on Linux; the CI step for macOS and Windows is added but has not run yet.)
 
 **Notes.**
+
+- Built: `main/testing/hostile-vault.ts` (built at run time: `../`,
+  `%2e%2e`, `\`, absolute, `file:`, `notes/../../` and wikilink paths out,
+  a symlink out, raw `<script>`/`<img onerror>`/`<iframe>`/`<object>`/
+  `<style>`/`onclick`, `javascript:` links raw and Markdown, a text file
+  named `.png`, an SVG file and an SVG `data:` URL, linked images to
+  `127.0.0.1`, `169.254.169.254`, `[::1]`, `[::ffff:127.0.0.1]`, `10.x`,
+  `localhost`, `*.local`, a name resolving to `10.0.0.7`, a redirect chain
+  ending there, port 8443, `http:`; a prompt-injection passage with a
+  `</article_text>` breakout). `main/testing/standin.ts`: a local HTTPS
+  image host (self-signed cert from `openssl` at run time), real PNGs, and
+  the real downloader reaching only it (D-44). `check:security` additions:
+  opens every hostile article in the window and checks, each named with its
+  §10 v3 row (a `v3Rows` summary line, and a final check that all seven
+  hold): only `good.png` gets an asset URL and is drawn; nothing from the
+  markup reaches the page or runs; the fake PNG and SVGs refused; the
+  downloader log has each hostile `https:` URL refused with its reason and
+  `http:` never downloaded; the stand-in saw only the good image and the
+  redirect hops; the cached linked image is drawn from an asset URL; the
+  served-files log is inside the vault or the image cache; the UI session's
+  request log holds only `tutor-app://` and nothing was blocked; nothing is
+  sent while reading; a passage chat (fake tutor) has the injection only
+  inside `<article_text>`/`<article_quote>` with the breakout escaped and
+  exactly the three article tools; its reply's image is neither rendered
+  nor requested. `e2e/library.e2e.ts` (+ `fake-tutor-library.json`), from
+  the new `out/main/e2e-main.js`: add folder in Settings, read (vault image
+  and linked image drawn, linked one downloaded once), select text →
+  **Ask about this** → provider notice → reply with a tool chip, no image
+  rendered or requested; second thread on another passage; two markers,
+  each within 30 px of its passage and in order; restart with the image
+  host stopped: images drawn from cache, both threads listed, markers back,
+  a marker reopens its thread; every page request `tutor-app://`.
+- Decisions: D-44.
+- Wiring outside **Owns**: `main/setup.ts` (`setTestHooks`: image
+  downloader, served-file callback; never set by `index.ts`),
+  `main/window.ts` (`UiOptions.onRequest`, called for every page request;
+  filter unchanged), `main/library/assets.ts` (`AssetRegistry` `onServe`),
+  `main/e2e-main.ts` (new entry), `electron.vite.config.ts`,
+  `electron-builder.yml` (excludes `e2e-main.js` and the `standin` chunk),
+  `apps/desktop/package.json` (`npm run e2e` runs `library.e2e.ts`),
+  `.github/workflows/ci.yml` (library e2e on macOS and Windows).
+- Checks: typecheck, lint, format, `npm test` (73 files, 985 passed, 12
+  skipped); `check:security` and `npm run e2e` built and run under xvfb
+  with `--no-sandbox`: all pass.
+- Security bugs found: none; every hostile input was refused as specified.
+- Not done / not tested: the CI step on macOS and Windows has not run
+  (needs `openssl` on the runner's PATH under bash; the symlink case in
+  `check:security` is reported, not required, where it cannot be made;
+  `check:security` itself still runs on Linux only). The stand-in replaces
+  DNS and the socket, so real TLS to a real host and real DNS are still
+  untested. `npm run package:dir` was not re-run to confirm the new
+  exclusions. Selections are made with a DOM `Range` plus a `mouseup`, not a
+  real mouse drag.

@@ -87,6 +87,8 @@ export interface UiOptions {
   libraryAssets?: { handles: (url: string) => boolean; serve: (req: Request) => Promise<Response> };
   /** Called with every request the session blocked (checks and logging). */
   onBlocked?: (url: string) => void;
+  /** Called with every request a page in the session made, allowed or not (checks). */
+  onRequest?: (url: string) => void;
 }
 
 /** The URL the UI page is loaded from. */
@@ -166,6 +168,7 @@ export function secureUiSession(ses: Session, opts: UiOptions): void {
     // Only requests made by pages; the main process's own `net` requests
     // (updates, later) carry no web contents.
     const fromPage = details.webContentsId !== undefined;
+    if (fromPage) opts.onRequest?.(details.url);
     const cancel = fromPage && !isAllowedRequest(details.url, opts.devServerUrl);
     if (cancel) opts.onBlocked?.(details.url);
     callback({ cancel });

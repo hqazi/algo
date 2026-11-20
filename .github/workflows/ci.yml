@@ -51,6 +51,12 @@ jobs:
       - name: end-to-end practice smoke
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run e2e
+      # The Library end to end (T26) on macOS and Windows too (Linux runs it in
+      # `npm run e2e`): a local HTTPS image host stand-in (needs `openssl`).
+      - name: end-to-end library
+        if: runner.os != 'Linux'
+        shell: bash
+        run: npx tsx apps/desktop/e2e/library.e2e.ts
       # SQLite storage inside the real Electron main process: better-sqlite3's
       # prebuilt binary loads under Electron's Node, migrations and settings work.
       - name: check storage under Electron
