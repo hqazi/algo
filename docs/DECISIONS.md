@@ -1615,3 +1615,50 @@ attacks: a hijacked release is usually found and pulled within days.
   version.
 - First run (2026-11-20): 564 versions of 523 packages, none younger than
   14 days.
+
+**D-49 Design foundations: tokens, fonts, icons and controls** (2026-11-20, T28)
+
+How `design.md` → Foundations was built, where the plan left a choice.
+- **Colours.** Zinc-like neutrals and indigo `#4f46e5` as the accent in both
+  themes (white text on it, 6.3:1). The dark accent is too dark to read as
+  text on dark surfaces, so a new token `--accent-fg` is the accent used as
+  text or an icon (links, the selected Library article): `#4338ca` light,
+  `#a5b0fc` dark. `--focus` is the focus ring (`#818cf8` in dark, where the
+  accent would be under 3:1). `--faint` (placeholders, disabled) is held to
+  3:1, not 4.5:1: it is never content. Old names stay as aliases:
+  `--danger` = `--fail`, `--code-bg` = `--surface-2`, `--accent-2` =
+  `--accent` (Submit is no longer green). Colour tokens are plain hex so
+  `styles.test.ts` can compute WCAG ratios for every text/background pair in
+  both themes; vitest processes `styles.css` for that test only
+  (`css.include` in `apps/desktop/vitest.config.ts`).
+- **Fonts.** `@fontsource-variable/inter` 5.3.0 (weight axis, normal and
+  italic) and `@fontsource-variable/jetbrains-mono` 5.3.0 (weight axis,
+  normal), imported in `main.tsx` and emitted by Vite into the renderer
+  bundle; `font-src 'self'` already allows them. Each `@font-face` has a
+  `unicode-range`, so only the subsets a page uses are loaded. Ligatures are
+  off in code (`->` stays two characters for learners).
+- **Icons.** `lucide-react` 1.69.0 (ISC; the Feather-derived icons are MIT,
+  noted in `build/notices/lucide.txt`). A `LucideProvider` in `main.tsx`
+  sets 16px and stroke 1.75 for every icon. Icons without a label are
+  `aria-hidden`.
+- **Controls.** A bare `<button>` is the `secondary` look and a bare
+  `<select>` gets `appearance: none` with a chevron (a `data:` SVG, allowed
+  by `img-src`), so existing screens change without touching their markup.
+  New code uses `components/ui/`. The segmented control is a group of
+  buttons with `aria-pressed` rather than radios: options keep the button
+  role and name that tests and the guide use ("This problem", "General"),
+  while arrow keys move the selection like a radio group with a single tab
+  stop. The menu follows the WAI-ARIA menu button pattern, so its items are
+  `menuitem`s: when T30 moves **Give up** and **Reset** into "More", the e2e
+  tests find them with `getByRole('menuitem', ...)`.
+- **Scrollbars** use `::-webkit-scrollbar` (Electron is Chromium). The
+  standard `scrollbar-width`/`scrollbar-color` are not set: in Chromium they
+  switch the `::-webkit-scrollbar` styles off and cannot hide the thumb
+  until hover.
+- **Editor.** The CodeMirror chrome (background, gutter, active line,
+  selection, panels, tooltips) reads the CSS tokens, so one theme serves
+  both modes; light keeps CodeMirror's default highlight colours and dark
+  uses One Dark's (`oneDarkHighlightStyle`) on the token background.
+- **Practice toolbar.** Run is secondary and Submit primary now (a two-line
+  class change in `PracticePage.tsx`), so only one filled button shows; T30
+  adds the icons and the "More" menu.

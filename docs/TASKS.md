@@ -82,7 +82,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | done |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | done |
 | T27 | README, user guide, logo, screenshots; rename to Algo | polish | 1d | T26 | done |
-| T28 | Design foundations: tokens, fonts, icons, controls | design | 2d | T27 | in-progress |
+| T28 | Design foundations: tokens, fonts, icons, controls | design | 2d | T27 | done |
 | T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | todo |
 | T30 | Practice page refresh | design | 2d | T29 | todo |
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | todo |
@@ -2013,15 +2013,66 @@ existing screen through tokens and base element styles, so the app already
 looks cleaner before any page is reworked.
 
 **Acceptance.**
-- [ ] Colour, type, radius, shadow and motion tokens from `design.md`, light and dark; existing token names still work.
-- [ ] Inter and JetBrains Mono bundled (no network fetch at runtime); `lucide-react` added; licences in `build/notices/` (shipped by `extraResources`) and in Settings → About.
-- [ ] Button variants (`primary`, `secondary`, `ghost`, `danger`, `icon`; sizes `sm`, default, `lg`); styled inputs, selects (chevron), textareas; segmented control, menu (popover), auto-growing textarea, pill/badge, tooltip-on-`title` where useful — as small React components in `components/ui/` with unit tests for behaviour (menu keyboard, segmented control selection, textarea growth).
-- [ ] Thin overlay scrollbars; `prefers-reduced-motion` respected.
-- [ ] CodeMirror light and dark themes match the tokens.
-- [ ] Contrast checked for text and accent pairs in both themes (a unit test that computes WCAG ratios for the token pairs is enough).
-- [ ] Screenshots of every page in light and dark looked at; nothing broken.
+- [x] Colour, type, radius, shadow and motion tokens from `design.md`, light and dark; existing token names still work.
+- [x] Inter and JetBrains Mono bundled (no network fetch at runtime); `lucide-react` added; licences in `build/notices/` (shipped by `extraResources`) and in Settings → About.
+- [x] Button variants (`primary`, `secondary`, `ghost`, `danger`, `icon`; sizes `sm`, default, `lg`); styled inputs, selects (chevron), textareas; segmented control, menu (popover), auto-growing textarea, pill/badge, tooltip-on-`title` where useful — as small React components in `components/ui/` with unit tests for behaviour (menu keyboard, segmented control selection, textarea growth).
+- [x] Thin overlay scrollbars; `prefers-reduced-motion` respected.
+- [x] CodeMirror light and dark themes match the tokens.
+- [x] Contrast checked for text and accent pairs in both themes (a unit test that computes WCAG ratios for the token pairs is enough).
+- [x] Screenshots of every page in light and dark looked at; nothing broken.
 
-**Notes.**
+**Notes.** (2026-11-20)
+- **Built.** Tokens in `styles.css` for light and dark (colour, type,
+  radius, shadow, motion, spacing, control heights), old names kept as
+  aliases; base element styles (headings, links, code, selection, focus
+  ring) and control styles applied to every existing screen through bare
+  elements: buttons (secondary by default, `.primary`, `.danger`), inputs,
+  selects with a chevron, textareas, checkboxes/radios in the accent,
+  20px tinted pills, cards with a soft shadow, dialogs with `--radius-lg`,
+  `--shadow-lg` and a blurred backdrop. Thin overlay scrollbars (thumb on
+  hover); `prefers-reduced-motion` turns transitions and animations off.
+  Inter and JetBrains Mono bundled (`@fontsource-variable/*` 5.3.0) and
+  `lucide-react` 1.69.0 (16px, stroke 1.75 via `LucideProvider`); notices
+  `build/notices/{inter,jetbrains-mono,lucide}.txt` (shipped by the existing
+  `extraResources` entry, so `electron-builder.yml` needed no change) and
+  two lines in Settings → About. `components/ui/`: `Button`, `IconButton`
+  (requires `aria-label`, which is also its `title`), `Select`,
+  `Segmented`, `Menu`, `AutoGrowTextarea`, `Badge`, with 15 unit tests
+  (classes, names, menu keyboard and focus return, outside click and Tab,
+  segmented selection and arrow keys, textarea growth to the cap).
+  CodeMirror chrome from the tokens in both themes (`Editor.tsx`, theme
+  only). `styles.test.ts`: WCAG ratios of 33 text/background pairs per
+  theme (body 16:1, muted ≥ 5.3:1 on every surface, white on accent 6.3:1,
+  links ≥ 7.9:1, statuses on their tints ≥ 4.5:1), every colour token has a
+  dark value, reduced motion present.
+- **Decisions.** D-49 (palette and the new `--accent-fg` / `--focus`
+  tokens, fonts, icons, segmented control as `aria-pressed` buttons, menu
+  items as `menuitem`, scrollbars, editor theme, Run/Submit variants).
+  `check:deps` passes (567 versions, none younger than 14 days).
+- **Wiring outside Owns.** `PracticePage.tsx`: Run lost `primary`, Submit
+  `accent` → `primary` (class names only; names unchanged).
+  `apps/desktop/vitest.config.ts`: `css.include` so `styles.test.ts` can
+  read `styles.css?raw`. `package-lock.json`.
+- **Checked.** `npm run typecheck`, `npm run lint`, `npm run format:check`,
+  `npm test` (78 files, 1106 passed, 12 skipped), `npm run
+  validate:content` (50 problems), `xvfb-run -a npm run e2e` (all six
+  suites, no failures; the Library suite's "every request the page made was
+  tutor-app://" also shows the fonts come from the app). Screenshots of
+  onboarding, home, problems, practice, explanation, New problem, progress,
+  settings (four scroll positions) and library in light and dark, taken
+  with a scratch script (not committed), looked at; fixed the code
+  ligatures they showed in the editor. A check in the same run found
+  `Inter Variable` loaded from the bundle.
+- **Not done / not tested.** The new `ui/` components are not used by any
+  page yet (T29–T33 adopt them). Native widgets still showing: the chat
+  composers' resize grips (T30 uses `AutoGrowTextarea`), the Library tree's
+  disclosure triangles (T32), radios (accent-coloured; choice cards are
+  T33), and the scrollbar inside the explanation iframe, a separate
+  sandboxed document this stylesheet does not reach. No custom tooltip
+  component: tooltips are `title`. `design.md`'s token table does not list
+  `--accent-fg` and `--focus` yet (T34 updates `design.md`). Not checked in
+  a packaged build (`npm run package:dir` not run), on macOS or Windows, or
+  at the minimum window size; `docs/assets/screenshots/` not retaken (T34).
 
 ### T29 — App frame: title-bar navigation and edge-to-edge panes
 
