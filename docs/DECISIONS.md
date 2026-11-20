@@ -1807,3 +1807,54 @@ choice.
   `.problem-table`, `.filters`, `.topic-*` rules in `styles.css` are no
   longer used by these pages and were left for T34 to remove, to keep this
   ticket out of `styles.css` while T30 and T33 change it.
+
+**D-53 Onboarding, Settings, dialogs and dates** (2026-11-20, T33)
+
+How `design.md` → Onboarding, Settings, dialogs was built, where the plan
+left a choice.
+- **Onboarding.** `ProfileForm` has `layout="steps"` (onboarding: one
+  question per step, a five-bar indicator with "Question n of 5", Back,
+  Continue, and the last step's button keeps its name **Save and
+  continue**) and `layout="all"` (Settings → Profile, every question at
+  once). The answers are kept across steps and sent in one `profile:set`
+  call as before; Enter on an earlier step moves on instead of saving.
+  **Use defaults and start** is a ghost button on every step. Choice cards
+  keep a real radio (drawn as a ring with `appearance: none`) whose label is
+  the card's title only, so names stay "Intermediate" etc.; the line of
+  help is `aria-describedby`. The label's `::after` covers the card for
+  clicks, and the radio sits above it so it still takes its own clicks.
+  Comfort per area stays a select per group (the combobox names are kept).
+  The "Connect the tutor" step uses the same centred card.
+- **Settings: scroll-spy, not one section at a time.** A sticky list on the
+  left (Tutor, Code execution, Appearance, Library, Profile, Data, Updates,
+  About; Appearance is kept as its own section, which `design.md`'s list
+  omits) jumps to a section and follows the scroll position. Every section
+  stays rendered, so no test or the screenshot script needs a click to
+  reach a control, and leaving the page does not lose a half-typed field.
+  The list items are buttons (the router owns the URL hash) with
+  `aria-current`; a jump focuses the section's heading.
+- **Rows.** Label left (11.5rem), control right, help and actions under the
+  control: existing `<label class="field">` markup is laid out by CSS grid
+  (the label text is an anonymous grid item), inline forms use
+  `display: contents` on the label; `SettingRow` and `StatusText`
+  (`pages/SettingsRow.tsx`) are the label/value row and the dot + text
+  status (ok, off, warn, error, pending). The tutor line reads "On: Anthropic
+  API, model" (backend names from `app-frame.ts`), not "On · anthropic ·
+  model".
+- **Dialogs.** `components/Dialog.tsx`: header (title + **Close** icon
+  button), scrolling body, footer actions right; Escape and the close
+  button call `onClose`; focus moves in and back. Older `.modal` dialogs
+  get the same look from the dialog section of `styles.css`. New problem's
+  modes are `Segmented` with a new `tabs` option (a WAI-ARIA tablist of
+  `tab`s with `aria-selected`), not `aria-pressed` buttons: the mode names
+  "Generate" and "Import" are also the submit button's names, and tabs that
+  switch a panel are tabs. Difficulty options read Easy / Medium / Hard;
+  values unchanged.
+- **Toasts.** Bottom-right, surface + shadow, a lucide icon per kind (Info,
+  CircleCheck, CircleAlert), dismiss is an icon button named "Dismiss".
+- **Dates.** `relativeDate` in `lib/format.ts`: "just now" under a minute,
+  "N min ago", "N h ago" for earlier today, "yesterday" and "N days ago" by
+  calendar day, then "13 Nov" (with the year when it is not this year's);
+  `fullDate` for the tooltip; `components/RelativeTime.tsx` renders both as
+  a `<time>`. Used by Settings → Updates; `when()` is left for the pages
+  T31 and T32 own.

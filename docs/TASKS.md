@@ -87,7 +87,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T30 | Practice page refresh | design | 2d | T29 | done |
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | done |
 | T32 | Library refresh | design | 2d | T30 | in-progress |
-| T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | in-progress |
+| T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | done |
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | todo |
 
 ## Order
@@ -2325,14 +2325,79 @@ here are reused by the Library (T32).
 date formatter used by every page that shows dates.
 
 **Acceptance.**
-- [ ] Onboarding stepper with choice cards, step indicator, Back / Continue, **Use defaults and start** on every step; answers saved exactly as today.
-- [ ] Settings with a section list and aligned form rows; status lines as dot + text.
-- [ ] Dialog styling; New problem's segmented source tabs; capitalised difficulty labels.
-- [ ] Toasts restyled with icons.
-- [ ] Relative date formatter with tests; used where dates are shown (the Library chats pane may adopt it in T32).
-- [ ] Onboarding, settings and intake tests and e2e pass; screenshots looked at in both themes.
+- [x] Onboarding stepper with choice cards, step indicator, Back / Continue, **Use defaults and start** on every step; answers saved exactly as today.
+- [x] Settings with a section list and aligned form rows; status lines as dot + text.
+- [x] Dialog styling; New problem's segmented source tabs; capitalised difficulty labels.
+- [x] Toasts restyled with icons.
+- [x] Relative date formatter with tests; used where dates are shown (the Library chats pane may adopt it in T32).
+- [x] Onboarding, settings and intake tests and e2e pass; screenshots looked at in both themes.
 
-**Notes.**
+**Notes.** (2026-11-20)
+- **Built.** Onboarding (`OnboardingPage.tsx`, `ProfileForm.tsx`
+  `layout="steps"`, `pages/onboarding.css`): a centred card, one question
+  per step, a five-bar step indicator with "Question n of 5", Back,
+  Continue (the last step's button is still **Save and continue**), **Use
+  defaults and start** on every step; choice cards for goal, experience and
+  hints (real radios drawn as rings, label = card title, help line via
+  `aria-describedby`); the tutor step in the same card. The answers are
+  sent in one `profile:set` call as before (unit test checks the exact
+  payload and that nothing is saved before the last step). Settings →
+  Profile uses `layout="all"` with the same cards. Settings
+  (`SettingsPage.tsx`, `SettingsRow.tsx`, `pages/settings.css`): a sticky
+  section list (Tutor, Code execution, Appearance, Library, Profile, Data,
+  Updates, About) with scroll-spy and jump (focuses the heading); aligned
+  rows (label left, control right, help and actions under the control);
+  statuses as dot + text (tutor, API key, test result, Claude Code, Python,
+  runtimes, updates, folder errors); Library folders as a bordered list
+  with a folder icon, **Add folder…** primary. Dialogs:
+  `components/Dialog.tsx` (header with title and **Close** icon button,
+  scrolling body, footer right, Escape, focus in and back) and the dialog
+  section of `styles.css` (also restyles the older bare `.modal`s); New
+  problem uses it, its modes are a segmented tablist, Topic and Difficulty
+  side by side, Easy / Medium / Hard (values unchanged; also in the Import
+  list), growing text boxes, radios in the Import list drawn as rings.
+  Toasts: bottom-right, an icon per kind, an icon Dismiss button. Dates:
+  `relativeDate` and `fullDate` in `lib/format.ts` (7 tests) and
+  `components/RelativeTime.tsx`, used by Settings → Updates ("checked 2 min
+  ago", full date as tooltip). Tests: onboarding (stepper, Back keeps
+  answers, defaults on each step), Settings (section list, jump and
+  `aria-current`, status as dot + words), intake (tablist, capitalised
+  difficulties, close icon and Escape), `Segmented` `tabs` mode.
+- **Decisions.** D-53 (scroll-spy instead of one section at a time, so no
+  test or the screenshot script needs a click to reach a control;
+  Appearance kept as its own section; New problem's modes as tabs, since
+  "Generate" and "Import" are also the submit button's names; date rules).
+- **Wiring outside Owns.** `components/Dialog.tsx`,
+  `components/RelativeTime.tsx` (new, shared); `components/ui/Segmented.tsx`
+  gained a `tabs` option (and a test in `ui.test.tsx`), its selected style
+  covers `aria-selected`; `components/app-frame.ts` exports `backendName`;
+  `e2e/practice.e2e.ts` and `e2e/v1.e2e.ts` click **Continue** through the
+  steps; `SettingsPage.test.tsx` Claude Code status text (label and value
+  now separate elements). `e2e/screenshots.ts` needed no change (every
+  Settings section stays on the page). One rule in the dialog section of
+  `styles.css` removes the resize grip from growing text boxes inside
+  `.field`.
+- **Checked.** `npm run typecheck`, `npm run lint`, `npm run format:check`
+  (clean apart from the uncommitted scratch tour), `npm test` (82 files,
+  1150 passed, 12 skipped, after rebasing on T30 and T31), `npm run
+  validate:content` (50 problems), `xvfb-run -a npm run e2e` (all six
+  suites, `failures: []`). A scratch tour (not committed) took onboarding
+  (each step, the tutor step), a toast, New problem (Generate, Paste,
+  Import) and every Settings section in light and dark at 1440×880, and
+  Settings at 1000×760; fixed what they showed (inline forms' grid order,
+  the 24rem cap on Settings fields, card heights, help text alignment,
+  resize grips, native radios).
+- **Not done / not tested.** `check:security` not run (no `webPreferences`
+  change). Comfort per area is still a select per group, not a segmented
+  control (keeps the combobox names the tests use). The scroll-spy was
+  checked by screenshots and a unit test of jump/`aria-current`, not by an
+  e2e scroll assertion; under 900px the section list wraps above the
+  content (not looked at). `when()` remains for Progress (T31) and the
+  Library chats (T32); the explanation version list (T30) was not changed.
+  The Practice page's Give-up and Reference dialogs (T30's file) use the
+  restyled `.modal` look but not `Dialog`, so they have no close icon.
+  Not checked on macOS, Windows or in a packaged build; the user guide and
+  `docs/assets/screenshots/` are not updated (T34).
 
 ### T34 — Design pass, screenshots and user guide
 
