@@ -57,7 +57,7 @@ a.home-problem-title:hover {
   font-size: var(--text-sm);
   color: var(--muted);
 }
-.home-meta > * + *::before {
+.home-meta > * + :not(.diff-dot)::before {
   content: '·';
   margin-right: var(--space-2);
   color: var(--faint);
@@ -163,8 +163,8 @@ a.home-problem-title:hover {
   margin: 0;
   padding: 0;
   border: none;
-  height: 30rem;
-  min-height: 22rem;
+  /* Fills the window under the cards at 880px high; never smaller than 20rem. */
+  height: clamp(20rem, calc(100vh - 480px), 36rem);
 }
 
 @media (max-width: 760px) {

@@ -1,5 +1,5 @@
 /* Problems (T31, docs/design.md → Problems). */
-.problems-page {
+.page.problems-page {
   /* The page scrolls; the table header sticks to its top. */
   padding-top: 0;
 }
@@ -27,7 +27,7 @@
   color: var(--faint);
   pointer-events: none;
 }
-.problems-search input {
+.problems-search input[type='search'] {
   width: 100%;
   padding-left: 32px;
 }
