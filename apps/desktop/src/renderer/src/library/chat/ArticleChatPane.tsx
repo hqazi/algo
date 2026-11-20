@@ -13,10 +13,10 @@ import { Composer } from '../../chat/Composer';
 import { MessageList } from '../../chat/MessageList';
 import { useChatStore, useThread, useTutorStatus } from '../../chat/store';
 import { PaneHeader } from '../../components/PaneHeader';
+import { RelativeTime } from '../../components/RelativeTime';
 import { Badge, Button, IconButton } from '../../components/ui';
 import { invoke } from '../../ipc';
 import { errorText, useApp } from '../../lib/app-context';
-import { fullDate, relativeDate } from '../../lib/format';
 import { navigate } from '../../lib/router';
 import { snippet, type ArticleChats } from './useArticleChats';
 import '../../chat/chat.css';
@@ -31,15 +31,6 @@ export interface ArticleChatPaneProps {
   chats: ArticleChats;
   /** The article's file is gone (the reader shows a banner). */
   missing: boolean;
-}
-
-/** A thread's last activity: relative, with the full date in the tooltip. */
-function Ago({ iso }: { iso: string }) {
-  return (
-    <time dateTime={iso} title={fullDate(iso)}>
-      {relativeDate(iso)}
-    </time>
-  );
 }
 
 function ThreadLog({ thread, canRetry }: { thread: string; canRetry: boolean }) {
@@ -204,7 +195,7 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
                   <span className="thread-line">
                     <span className="thread-title">{t.title ?? 'New question'}</span>
                     <span className="thread-date">
-                      <Ago iso={t.last_at ?? t.created_at} />
+                      <RelativeTime value={t.last_at ?? t.created_at} />
                     </span>
                   </span>
                   <span className="thread-snippet">

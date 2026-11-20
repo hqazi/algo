@@ -11,8 +11,8 @@ import { Link } from '../components/Link';
 import { Button, buttonClass } from '../components/ui';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
-import { when } from '../lib/format';
-import { ago, levelCounts, reasonText } from './dashboard';
+import { RelativeTime } from '../components/RelativeTime';
+import { levelCounts, reasonText } from './dashboard';
 import { DifficultyDot } from './problem-bits';
 import './home.css';
 
@@ -154,7 +154,9 @@ function ContinueCard({
         <p className="home-meta">
           {current.topic && <span>{topicName(current.topic)}</span>}
           {item && <DifficultyDot difficulty={item.difficulty} />}
-          <span title={when(current.started_at)}>Started {ago(current.started_at)}</span>
+          <span>
+            Started <RelativeTime value={current.started_at} />
+          </span>
           {current.hints_used > 0 && (
             <span>
               {current.hints_used} hint{current.hints_used === 1 ? '' : 's'}

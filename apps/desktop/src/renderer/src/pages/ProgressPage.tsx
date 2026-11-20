@@ -4,13 +4,20 @@
  * help / tried), then the problems in progress and the recent attempts.
  */
 import { useEffect, useState } from 'react';
-import type { AttemptView, StatusResponse, TopicView } from '../../../shared/practice';
+import type {
+  AttemptView,
+  ProblemListItem,
+  StatusResponse,
+  TopicView,
+} from '../../../shared/practice';
 import { Link } from '../components/Link';
+import { RelativeTime } from '../components/RelativeTime';
 import { Badge, type BadgeTone } from '../components/ui';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
-import { OUTCOME_LABEL, titleCase, when } from '../lib/format';
+import { OUTCOME_LABEL, titleCase } from '../lib/format';
 import { levelCounts, topicParts } from './dashboard';
+import { DifficultyDot } from './problem-bits';
 import './progress.css';
 
 const COMFORTABLE_AFTER = 3;
@@ -73,6 +80,7 @@ export function ProgressPage() {
   const { topics, version, topicName, refresh } = useApp();
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [attempts, setAttempts] = useState<AttemptView[] | null>(null);
+  const [problems, setProblems] = useState<Map<string, ProblemListItem>>(new Map());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,7 +93,13 @@ export function ProgressPage() {
         setAttempts(a.attempts);
       })
       .catch((e: unknown) => setError(errorText(e)));
+    // Titles for the lists below (attempts carry only the slug); slugs stand in until they load.
+    invoke('problems:list', {}).then(
+      (r) => setProblems(new Map(r.problems.map((p) => [p.slug, p]))),
+      () => undefined,
+    );
   }, [version]);
+  const titleOf = (slug: string) => problems.get(slug)?.title ?? slug;
 
   const groups = [...new Set(topics.map((t) => t.group))];
   const counts = levelCounts(topics);
@@ -139,17 +153,35 @@ export function ProgressPage() {
       {status && status.active.length > 0 && (
         <section>
           <h2>Active problems</h2>
-          <ul className="active-list">
-            {status.active.map((a) => (
-              <li key={a.slug}>
-                <Link to={`/p/${a.slug}`}>{a.slug}</Link>
-                {a.topic && <span className="muted"> · {topicName(a.topic)}</span>}
-                {a.started_at && (
-                  <span className="muted small"> · started {when(a.started_at)}</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          <table className="attempts-table" data-testid="active-problems">
+            <thead>
+              <tr>
+                <th>Problem</th>
+                <th>Topic</th>
+                <th>Difficulty</th>
+                <th className="num">Hints</th>
+                <th>Started</th>
+              </tr>
+            </thead>
+            <tbody>
+              {status.active.map((a) => {
+                const item = problems.get(a.slug);
+                return (
+                  <tr key={a.slug}>
+                    <td>
+                      <Link to={`/p/${a.slug}`}>{titleOf(a.slug)}</Link>
+                    </td>
+                    <td className="muted">{a.topic ? topicName(a.topic) : ''}</td>
+                    <td>{item && <DifficultyDot difficulty={item.difficulty} />}</td>
+                    <td className="num">{a.hints_used}</td>
+                    <td className="small muted">
+                      <RelativeTime value={a.started_at} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </section>
       )}
 
@@ -175,7 +207,7 @@ export function ProgressPage() {
                 .map((a) => (
                   <tr key={a.id}>
                     <td>
-                      <Link to={`/p/${a.slug}`}>{a.slug}</Link>
+                      <Link to={`/p/${a.slug}`}>{titleOf(a.slug)}</Link>
                     </td>
                     <td className="muted">{a.topic ? topicName(a.topic) : ''}</td>
                     <td>
@@ -189,7 +221,9 @@ export function ProgressPage() {
                       {a.tests_total === null ? '—' : `${a.tests_passed ?? 0}/${a.tests_total}`}
                     </td>
                     <td className="num">{a.hints_used}</td>
-                    <td className="small muted">{when(a.ended_at)}</td>
+                    <td className="small muted">
+                      {a.ended_at ? <RelativeTime value={a.ended_at} /> : '—'}
+                    </td>
                   </tr>
                 ))}
             </tbody>

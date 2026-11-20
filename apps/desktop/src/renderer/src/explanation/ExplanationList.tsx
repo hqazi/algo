@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { ExplanationViewer } from './ExplanationViewer';
-import { versionLabel } from './version';
+import { versionLabel, versionTitle } from './version';
 import { useVersions } from './useVersions';
 
 export function ExplanationList({
@@ -33,7 +33,12 @@ export function ExplanationList({
       <ul>
         {versions.map((v) => (
           <li key={v.id}>
-            <button type="button" className="link-button" onClick={() => setOpen(v.id)}>
+            <button
+              type="button"
+              className="link-button"
+              title={versionTitle(v)}
+              onClick={() => setOpen(v.id)}
+            >
               {versionLabel(v)}
             </button>
           </li>

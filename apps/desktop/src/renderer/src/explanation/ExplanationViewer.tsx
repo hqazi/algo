@@ -12,7 +12,7 @@ import type { ExplanationVersionView } from '../../../shared/tutor';
 import { IconButton, Select } from '../components/ui';
 import { invoke } from '../ipc';
 import { ExplanationFrame } from './ExplanationFrame';
-import { versionLabel } from './version';
+import { versionLabel, versionTitle } from './version';
 import { useVersions } from './useVersions';
 import './explanation.css';
 
@@ -34,7 +34,7 @@ export function VersionPicker({
       aria-label="Explanation version"
     >
       {versions.map((v) => (
-        <option key={v.id} value={v.id}>
+        <option key={v.id} value={v.id} title={versionTitle(v)}>
           {versionLabel(v)}
         </option>
       ))}

@@ -121,11 +121,13 @@ try {
   const solved = await page
     .waitForFunction(
       (s) => {
-        const t = document.querySelector('main')?.textContent ?? '';
         const counts = [...document.querySelectorAll('[data-testid="topic-counts"]')].map(
           (e) => e.textContent ?? '',
         );
-        return counts.some((c) => c.startsWith('1 unaided')) && t.includes(s);
+        return (
+          counts.some((c) => c.startsWith('1 unaided')) &&
+          !!document.querySelector(`main a[href="#/p/${s}"]`)
+        );
       },
       slug,
       { timeout: 10_000 },
@@ -146,7 +148,8 @@ try {
     timeout: 5_000,
   });
   await page.getByRole('link', { name: 'Progress' }).click();
-  await page.getByRole('link', { name: slug }).first().click();
+  // Progress lists problems by title; find the link by where it goes.
+  await page.locator(`main a[href="#/p/${slug}"]`).first().click();
   await page.locator('.cm-editor').waitFor();
   check(
     'dark theme',

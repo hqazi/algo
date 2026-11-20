@@ -251,7 +251,7 @@ describe('chats on passages', () => {
     const time = pane()
       .getByRole('button', { name: /Gone passage/ })
       .querySelector('time')!;
-    expect(time.getAttribute('dateTime')).toBe('2026-11-20T09:00:00Z');
+    expect(time.getAttribute('dateTime')).toBe('2026-11-20T09:00:00.000Z');
     expect(time.getAttribute('title')).toBe(fullDate('2026-11-20T09:00:00Z'));
     expect(time.textContent).toBe(relativeDate('2026-11-20T09:00:00Z'));
 

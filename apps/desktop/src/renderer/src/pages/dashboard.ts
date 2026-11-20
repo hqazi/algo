@@ -11,24 +11,9 @@ import type {
 
 type Key = keyof ProblemFilters;
 
-/** "just now", "5 min ago", "3 h ago", "yesterday", "4 days ago", else the date. */
-export function ago(iso: string, now = Date.now()): string {
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return iso;
-  const min = Math.round((now - t) / 60_000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min} min ago`;
-  const h = Math.round(min / 60);
-  if (h < 24) return `${h} h ago`;
-  const d = Math.round(h / 24);
-  if (d === 1) return 'yesterday';
-  if (d < 7) return `${d} days ago`;
-  return new Date(t).toLocaleDateString();
-}
-
 /** The reason core gives, as a sentence for people (it is written for the tutor). */
-export function reasonText(next: NextResponse): string {
-  const base = next.reason.replace(/; no unattempted problem left here.*$/, '');
+export function reasonText(next: Pick<NextResponse, 'reason'>): string {
+  const base = next.reason.replace(/; no unattempted problem left here.*$/, '').replace(/\.$/, '');
   return `${base.charAt(0).toUpperCase()}${base.slice(1)}.`;
 }
 

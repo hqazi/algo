@@ -145,11 +145,12 @@ try {
   const counted = await page
     .waitForFunction(
       (s) => {
-        const t = document.querySelector('main')?.textContent ?? '';
         const counts = [...document.querySelectorAll('[data-testid="topic-counts"]')].map(
           (e) => e.textContent ?? '',
         );
-        return counts.includes('1 with help') && t.includes(s);
+        return (
+          counts.includes('1 with help') && !!document.querySelector(`main a[href="#/p/${s}"]`)
+        );
       },
       slug,
       { timeout: 10_000 },

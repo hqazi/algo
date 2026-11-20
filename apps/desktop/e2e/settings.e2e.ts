@@ -274,9 +274,13 @@ try {
   await page.getByText(/^Progress reset\./).waitFor({ timeout: 30_000 });
   await page.getByRole('link', { name: 'Progress' }).click();
   await page.getByRole('heading', { name: 'Recent attempts' }).waitFor();
+  await page
+    .getByText('No attempts yet.')
+    .waitFor({ timeout: 10_000 })
+    .catch(() => undefined);
   check(
     'reset progress clears the solve',
-    !(await page.locator('main').innerText()).includes(slug),
+    (await page.locator(`main a[href="#/p/${slug}"]`).count()) === 0,
   );
 
   await settings(page);
@@ -306,7 +310,7 @@ try {
   check(
     'after import, progress shows the solve again',
     await page
-      .waitForFunction((s) => document.querySelector('main')?.textContent?.includes(s), slug, {
+      .waitForFunction((s) => !!document.querySelector(`main a[href="#/p/${s}"]`), slug, {
         timeout: 10_000,
       })
       .then(() => true)

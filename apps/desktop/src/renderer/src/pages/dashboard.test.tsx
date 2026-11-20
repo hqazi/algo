@@ -10,7 +10,7 @@ import { ChatStore, ChatStoreContext } from '../chat/store';
 import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge } from '../test/fake-bridge';
 import { baseHandlers, TOPICS } from '../test/fixtures';
-import { ago, levelCounts, matching, reasonText, topicParts } from './dashboard';
+import { levelCounts, matching, reasonText, topicParts } from './dashboard';
 import { HomePage } from './HomePage';
 import { ProblemsPage } from './ProblemsPage';
 import { ProgressPage } from './ProgressPage';
@@ -70,18 +70,6 @@ function show(page: React.ReactNode): void {
 }
 
 describe('helpers', () => {
-  it('ago: relative for recent times, a date after a week', () => {
-    const now = Date.parse('2026-11-20T12:00:00Z');
-    expect(ago('2026-11-20T11:59:50Z', now)).toBe('just now');
-    expect(ago('2026-11-20T11:55:00Z', now)).toBe('5 min ago');
-    expect(ago('2026-11-20T09:00:00Z', now)).toBe('3 h ago');
-    expect(ago('2026-11-19T10:00:00Z', now)).toBe('yesterday');
-    expect(ago('2026-11-16T12:00:00Z', now)).toBe('4 days ago');
-    expect(ago('2026-10-01T12:00:00Z', now)).toBe(
-      new Date('2026-10-01T12:00:00Z').toLocaleDateString(),
-    );
-  });
-
   it("reasonText: a sentence, without the tutor's instruction to generate", () => {
     expect(reasonText(PICK)).toBe(
       'Hash maps & sets is your weakest topic; easy until 2 unaided solves here (0 so far).',
@@ -276,5 +264,47 @@ describe('ProgressPage', () => {
     expect(screen.getByRole('heading', { name: 'Basics' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Linear' })).toBeTruthy();
     expect(await screen.findByText('No attempts yet.')).toBeTruthy();
+  });
+
+  it('lists active problems and recent attempts by title, with relative times', async () => {
+    const started = new Date(Date.now() - 5 * 60_000).toISOString();
+    bridge
+      .on('status:get', () => ({
+        onboarded: true,
+        topics: [],
+        untouched_topics: 0,
+        active: [{ slug: 'dup-check', topic: 'hashing', hints_used: 1, started_at: started }],
+        recent: [],
+      }))
+      .on('attempts:list', () => ({
+        attempts: [
+          {
+            id: 1,
+            slug: 'pair-with-target',
+            topic: 'hashing',
+            difficulty: 'easy',
+            source: 'curated',
+            language: 'python',
+            started_at: started,
+            ended_at: started,
+            outcome: 'unaided',
+            hints_used: 0,
+            explanation_viewed: false,
+            tests_passed: 3,
+            tests_total: 3,
+            notes: '',
+          },
+        ],
+      }));
+    show(<ProgressPage />);
+    const active = await screen.findByRole('link', { name: 'Seen Before' });
+    expect(active.getAttribute('href')).toBe('#/p/dup-check');
+    const done = screen.getByRole('link', { name: 'Two Receipts' });
+    expect(done.getAttribute('href')).toBe('#/p/pair-with-target');
+    expect(screen.queryByText('dup-check')).toBeNull();
+    const times = screen.getAllByText('5 min ago');
+    expect(times).toHaveLength(2);
+    expect(times[0]!.tagName).toBe('TIME');
+    expect(times[0]!.getAttribute('title')).toBeTruthy();
   });
 });
