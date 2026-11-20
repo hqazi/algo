@@ -1162,6 +1162,24 @@ release (T14's release check) should tick them.
   confirmed. Boxes still open: no installer was installed on any OS (the
   smoke test runs the unpacked app), macOS and Windows never launched, and
   no update between releases was tried. Needs a new tag `v0.1.0-rc.2`.
+- (2026-11-20, T14) The user pushed `v0.1.0-rc.2` on `b4ffbeb`. Release
+  run 44721983049 **passed** on all three OSes: each ran the unit tests (61
+  files), packaged, uploaded to the draft and passed the smoke test (the
+  packaged unpacked app started as 0.1.0-rc.2 on Electron 45.3.4, loaded 50
+  problems from `<resources>/content`, ran `compress-runs` in Pyodide, had
+  the updater). macOS built x64 and arm64 and smoke-tested arm64 (the
+  runner's arch); Windows `Algorithm Tutor.exe`; Linux
+  `linux-unpacked/algorithm-tutor`. Uploaded (job logs):
+  `algorithm-tutor-0.1.0-rc.2-linux-x86_64.AppImage`, `-linux-amd64.deb`,
+  `-win-x64.exe`, `-mac-{x64,arm64}.{dmg,zip}`, each Windows/macOS file with
+  its `.blockmap`. The update metadata (`rc.yml`, `rc-mac.yml`,
+  `rc-linux.yml` for an rc, D-33) is again not in the logs and draft assets
+  cannot be listed from the session, so it is still unconfirmed; a new
+  `check` job in `release.yml` now lists the draft's assets and fails when
+  an installer or a metadata file is missing (D-36), so the next tag shows
+  it. Both boxes stay open: the smoke test runs the unpacked build, not an
+  installed one, so nothing was installed from an installer on any OS, and
+  no update from an older build to a newer release was tried.
 
 ### T14 — README, end-to-end test, v1 release check
 
@@ -1182,7 +1200,24 @@ release (T14's release check) should tick them.
 - [x] e2e passes in CI.
 - [ ] README followed from scratch on one OS by someone (or a clean VM) without help; done notes say which.
 
-**Notes.** (2026-11-20, later) **Still blocked: needs tag `v0.1.0-rc.2`
+**Notes.** (2026-11-20, rc.2) **Still blocked on box 2 (the README
+followed from scratch by a person or on a clean VM) and on T13's boxes.**
+Release run 44721983049 on `v0.1.0-rc.2` (`b4ffbeb`) passed on ubuntu,
+macOS and Windows: build, upload and the packaged-app smoke test (details
+and assets in T13's notes). Runner image run 44721983068 pushed
+`ghcr.io/hqazi/algorithm-tutor-runner:0.1.0-rc.2` and `:sha-b4ffbebe11b1`
+(amd64 + arm64); CI run 44721983085 on the tag passed. Draft (pre-release,
+not published): https://github.com/hqazi/algo/releases/tag/untagged-35c391e8f33d48646ac0.
+What remains: (1) confirm the update metadata on the draft, either in the
+release page's asset list or from the new `check` job on a `v0.1.0-rc.3`
+tag (D-36); (2) install each installer (`.dmg`, `.exe`, `.deb` /
+AppImage) by following the README on a clean machine or VM and launch it
+(T13 box 1, this ticket's box 2); (3) an update from an older build to a
+newer release on one OS (T13 box 2; an rc only updates from an rc build on
+the `rc` metadata, D-33, so this needs two rc releases or a stable and a
+later stable). The rc.1 draft can be deleted.
+
+(2026-11-20, later) **Still blocked: needs tag `v0.1.0-rc.2`
 from the user, and box 2 needs a person or a clean VM.** The user pushed
 `v0.1.0-rc.1` on `018b0c7`; Release run 44720024201 failed on macOS and
 Windows in the smoke step (wrong executable name, fixed on main, D-35);

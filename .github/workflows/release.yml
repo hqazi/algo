@@ -1,6 +1,6 @@
 # Release (T13, SPEC §11): on a version tag, build the installers on all three
-# OSes and upload them, with electron-updater's metadata (latest*.yml or
-# beta*.yml, blockmaps), to a draft GitHub Release. A maintainer checks the
+# OSes and upload them, with electron-updater's metadata (latest*.yml,
+# beta*.yml or rc*.yml, blockmaps), to a draft GitHub Release. A maintainer checks the
 # draft and publishes it; installed apps only see published releases.
 #
 # Tags: vX.Y.Z (stable), vX.Y.Z-beta.N (beta channel) or vX.Y.Z-rc.N (test
@@ -141,3 +141,36 @@ jobs:
         if: always() && runner.os == 'macOS'
         shell: bash
         run: rm -f "$RUNNER_TEMP/apple-api-key.p8"
+
+  # electron-builder uploads the update metadata without a log line, so list
+  # the draft's assets and fail if an installer or a metadata file is missing.
+  # The metadata name follows the version's pre-release part (D-33): latest*
+  # for vX.Y.Z, beta* for -beta.N, rc* for -rc.N.
+  check:
+    name: check the draft's assets
+    needs: [draft, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # a draft is visible only with write access
+    steps:
+      - name: installers and update metadata
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.draft.outputs.version }}
+        shell: bash
+        run: |
+          assets=$(gh release view "$GITHUB_REF_NAME" --json assets -q '.assets[].name' | sort)
+          echo "$assets"
+          ch=latest
+          if [[ "$VERSION" == *-* ]]; then ch=${VERSION#*-}; ch=${ch%%.*}; fi
+          a="algorithm-tutor-$VERSION"
+          missing=0
+          for f in "$ch.yml" "$ch-mac.yml" "$ch-linux.yml" \
+            "$a-win-x64.exe" "$a-win-x64.exe.blockmap" \
+            "$a-mac-x64.dmg" "$a-mac-arm64.dmg" "$a-mac-x64.zip" "$a-mac-arm64.zip" \
+            "$a-mac-x64.zip.blockmap" "$a-mac-arm64.zip.blockmap" \
+            "$a-linux-x86_64.AppImage" "$a-linux-amd64.deb"; do
+            grep -qxF "$f" <<<"$assets" || { echo "::error::missing on the draft: $f"; missing=1; }
+          done
+          exit "$missing"

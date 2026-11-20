@@ -1258,3 +1258,14 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   unchanged (`linux-unpacked/algorithm-tutor`, checked locally).
 - The release smoke step on macOS runs the build for the runner's own arch
   (`uname -m`), not whichever of `mac` / `mac-arm64` sorts first.
+
+**D-36 The release checks the draft's assets** (2026-11-20, T14)
+
+- electron-builder uploads `latest*.yml` / `beta*.yml` / `rc*.yml` without
+  a log line, and a draft's assets are not visible to the tools used to
+  check `v0.1.0-rc.1` and `v0.1.0-rc.2`. A last `check` job in
+  `release.yml` (after all three builds) lists the draft's assets and fails
+  unless the channel's `.yml`, `-mac.yml` and `-linux.yml` and every
+  installer (with its `.blockmap` on Windows and macOS) are there. The
+  channel is taken from the version as electron-builder does (`latest`, or
+  the pre-release part before the dot).
