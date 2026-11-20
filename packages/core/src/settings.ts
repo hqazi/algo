@@ -17,6 +17,15 @@ export const UI_THEMES = ['system', 'light', 'dark'] as const;
 export const UPDATE_CHANNELS = ['stable', 'beta'] as const;
 export const MIN_FONT_SIZE = 8;
 export const MAX_FONT_SIZE = 40;
+/** At most this many Library folders (SPEC §15.1). */
+export const MAX_LIBRARY_FOLDERS = 50;
+
+/** A folder chosen for the Library; read only, never written (SPEC §15.1). */
+export const libraryFolderSchema = z.strictObject({
+  id: z.string().min(1).max(100),
+  path: z.string().min(1).max(4096),
+});
+export type LibraryFolder = z.infer<typeof libraryFolderSchema>;
 
 /** One schema per setting, grouped as they are nested in the file. */
 const FIELDS = {
@@ -43,6 +52,13 @@ const FIELDS = {
     channel: z.enum(UPDATE_CHANNELS),
     auto: z.boolean(),
   },
+  library: {
+    /** Set only by main (Settings → Library uses the OS folder picker). */
+    folders: z
+      .array(libraryFolderSchema)
+      .max(MAX_LIBRARY_FOLDERS)
+      .refine((fs) => new Set(fs.map((f) => f.id)).size === fs.length, 'folder ids must differ'),
+  },
 } as const;
 
 type Fields = typeof FIELDS;
@@ -57,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editor: { fontSize: 14, keymap: 'default' },
   ui: { theme: 'system' },
   updates: { channel: 'stable', auto: true },
+  library: { folders: [] },
 };
 
 export interface SettingsIssue {

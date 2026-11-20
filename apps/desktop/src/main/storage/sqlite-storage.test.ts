@@ -39,7 +39,7 @@ afterEach(async () => {
 
 describe('records round-trip', () => {
   it('meta', async () => {
-    expect(s.read((db) => db.getMeta('schema_version'))).toBe('1');
+    expect(s.read((db) => db.getMeta('schema_version'))).toBe('2');
     expect(s.read((db) => db.getMeta('install_id'))).toMatch(/^[0-9a-f-]{36}$/);
     await s.write((db) => db.setMeta('k', 'v1'));
     await s.write((db) => db.setMeta('k', 'v2'));

@@ -137,6 +137,30 @@ describe('openDatabase', () => {
     expect(bak.prepare('SELECT slug FROM attempts').all()).toEqual([{ slug: 'two-sum' }]);
   });
 
+  it('applies 0002-library to a v1 database with data, after a backup (T21)', () => {
+    seedV1();
+    const r = openDatabase(dbPath);
+    track(r.db);
+    expect(r).toMatchObject({ from: 1, to: MIGRATIONS.length, backupPath: `${dbPath}.bak-1` });
+    expect(tables(r.db)).toContain('articles');
+    expect(r.db.prepare('SELECT slug FROM attempts').all()).toEqual([{ slug: 'two-sum' }]);
+    r.db
+      .prepare(
+        "INSERT INTO articles (id, folder_id, rel_path, title, content_hash, scanned_at) VALUES ('a', 'f', 'n.md', 'N', 'h', 't')",
+      )
+      .run();
+    expect(() =>
+      r.db
+        .prepare(
+          "INSERT INTO articles (id, folder_id, rel_path, title, content_hash, scanned_at) VALUES ('b', 'f', 'n.md', 'N', 'h', 't')",
+        )
+        .run(),
+    ).toThrow(/UNIQUE/);
+    const bak = track(new Database(`${dbPath}.bak-1`, { readOnly: true }));
+    expect(schemaVersion(bak)).toBe(1);
+    expect(tables(bak)).not.toContain('articles');
+  });
+
   it('does not overwrite an earlier backup of the same version', () => {
     seedV1();
     // A leftover from an earlier upgrade that was rolled back.

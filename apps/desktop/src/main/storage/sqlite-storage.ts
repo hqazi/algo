@@ -155,6 +155,24 @@ export class SqliteStorage implements Storage {
   }
 
   /**
+   * Raw SQL for a main-process module that owns its own tables (the Library
+   * index, T21). Reads run now; writes go through the same queue as every
+   * other write, in one transaction.
+   */
+  readSql<T>(fn: (db: Db) => T): T {
+    this.checkOpen();
+    return fn(this.db);
+  }
+
+  writeSql<T>(fn: (db: Db) => T): Promise<T> {
+    this.checkReentry('writeSql');
+    return this.enqueue(() => {
+      this.checkOpen();
+      return transaction(this.db, () => fn(this.db));
+    });
+  }
+
+  /**
    * A consistent copy of the database at `path` (`VACUUM INTO`, which works
    * in WAL mode), taken in turn with the queued writes. `path` must not exist.
    */

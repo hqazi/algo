@@ -7,6 +7,7 @@
  * test checks this list matches the folder.
  */
 import m0001 from './0001-initial.sql?raw';
+import m0002 from './0002-library.sql?raw';
 
 export interface Migration {
   version: number;
@@ -14,4 +15,7 @@ export interface Migration {
   sql: string;
 }
 
-export const MIGRATIONS: readonly Migration[] = [{ version: 1, name: '0001-initial', sql: m0001 }];
+export const MIGRATIONS: readonly Migration[] = [
+  { version: 1, name: '0001-initial', sql: m0001 },
+  { version: 2, name: '0002-library', sql: m0002 },
+];

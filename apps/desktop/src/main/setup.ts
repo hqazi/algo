@@ -2,6 +2,7 @@
  * App start-up shared by the real entry (`index.ts`) and the security check
  * (`security-check.ts`), so the check runs exactly what ships.
  */
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import {
   app,
@@ -24,6 +25,7 @@ import { registerTutorHandlers } from './ipc/handlers/tutor';
 import { registerIntakeHandlers } from './ipc/handlers/intake';
 import { chatCreateProblem, openIntake, openSets, problemFactory, type AppIntake } from './intake';
 import { IpcRouter } from './ipc/router';
+import { openLibrary, registerLibraryHandlers } from './library';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import { SecretStore } from './secrets';
 import { electronCrypto } from './secrets/electron-crypto';
@@ -202,6 +204,25 @@ export async function startPractice(
       ui: dataUi,
     }),
   });
+  // The Library (T21): scanned at start; folders are only ever read.
+  const library = openLibrary({
+    settings: storage.settings,
+    storage: storage.storage,
+    now: isoNow,
+    newId: randomUUID,
+    chooseFolder: async () => {
+      const w = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+      const opts = {
+        title: 'Add a folder to the library',
+        properties: ['openDirectory' as const],
+      };
+      const r = w ? await dialog.showOpenDialog(w, opts) : await dialog.showOpenDialog(opts);
+      return r.canceled ? null : (r.filePaths[0] ?? null);
+    },
+    openPath: async (path) => (await shell.openPath(path)) === '',
+    log: (m) => console.warn(m),
+  });
+  registerLibraryHandlers(router, library, { log: (m) => console.warn(m) });
   registerCodeExecutionHandlers(router, {
     codeExecution: practice.codeExecution,
     openExternal: async (url) => {

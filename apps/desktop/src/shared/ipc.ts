@@ -22,6 +22,7 @@ import * as S from './settings';
 import * as T from './tutor';
 import * as I from './intake';
 import * as U from './updates';
+import * as L from './library';
 
 export {
   INVOKE_CHANNELS,
@@ -156,6 +157,23 @@ export const invokeChannels = {
   /** A set's entries (no network), each with the slug it was imported as, if any. */
   'open-sets:entries': { request: I.entriesRequest, response: I.entriesResponse },
 
+  // ---- library (T21): folders and the article index; ids and names, never paths
+  /** The chosen folders with article counts. */
+  'library:folders': { request: z.undefined(), response: L.foldersResponse },
+  /** Asks for a folder with the OS picker, adds it and scans it. Refused: `duplicate`, `too_many`, `unavailable`. */
+  'library:add-folder': { request: z.undefined(), response: L.addFolderResponse },
+  /** Removes a folder from the library (its index rows; never its files). Confirmed in the UI. */
+  'library:remove-folder': { request: L.folderRequest, response: L.foldersResponse },
+  /** Opens the folder in the file manager. */
+  'library:open-folder': {
+    request: L.folderRequest,
+    response: z.strictObject({ opened: z.boolean() }),
+  },
+  /** The folder tree with articles, as last scanned. */
+  'library:tree': { request: z.undefined(), response: L.treeResponse },
+  /** Rescans now (Refresh), then the tree. */
+  'library:refresh': { request: z.undefined(), response: L.treeResponse },
+
   // ---- updates (T13)
   /** Where the updater is (`unsupported` in development builds). */
   'updates:status': { request: z.undefined(), response: U.updateState },
@@ -206,6 +224,15 @@ export const streamChannels = {
   'updates:watch': {
     request: z.undefined(),
     event: U.updateState,
+    result: z.strictObject({ closed: z.literal(true) }),
+  },
+  /**
+   * While the Library page is open: rescans now and on file changes
+   * (debounced), sending the tree after each scan, until cancelled.
+   */
+  'library:watch': {
+    request: z.undefined(),
+    event: L.treeResponse,
     result: z.strictObject({ closed: z.literal(true) }),
   },
   /** Pull / Update the runner image in a runtime (T18): its output lines, then the outcome. */

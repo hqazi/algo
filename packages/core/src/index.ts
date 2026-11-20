@@ -17,3 +17,4 @@ export * from './tools';
 export * from './tutor';
 export * from './intake';
 export * from './langs';
+export * from './library';

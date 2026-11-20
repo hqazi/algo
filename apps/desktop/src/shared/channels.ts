@@ -50,6 +50,12 @@ export const INVOKE_CHANNELS = [
   'intake:cancel',
   'open-sets:list',
   'open-sets:entries',
+  'library:folders',
+  'library:add-folder',
+  'library:remove-folder',
+  'library:open-folder',
+  'library:tree',
+  'library:refresh',
   'updates:status',
   'updates:check',
   'updates:download',
@@ -62,6 +68,7 @@ export const STREAM_CHANNELS = [
   'intake:events',
   'updates:watch',
   'exec:pull',
+  'library:watch',
 ] as const;
 
 /** Internal Electron channels used to carry streams. */
