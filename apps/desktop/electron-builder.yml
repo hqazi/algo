@@ -8,7 +8,6 @@ extraMetadata:
   # Linux: the .desktop file, Electron's app_id and WM_CLASS all match.
   desktopName: algorithm-tutor.desktop
 productName: Algorithm Tutor
-executableName: algorithm-tutor
 copyright: Copyright © 2026 the Algorithm Tutor authors
 artifactName: algorithm-tutor-${version}-${os}-${arch}.${ext}
 
@@ -67,6 +66,9 @@ nsis:
   deleteAppDataOnUninstall: false
 
 linux:
+  # Linux only: macOS and Windows keep the product name (`Algorithm Tutor.app`,
+  # `Algorithm Tutor.exe`); a top-level executableName renames those too.
+  executableName: algorithm-tutor
   category: Education
   synopsis: Practise data structures and algorithms with an AI tutor
   description: Practise data structures and algorithms with an AI tutor.

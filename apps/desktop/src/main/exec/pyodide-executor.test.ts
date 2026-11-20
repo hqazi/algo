@@ -162,7 +162,9 @@ describe('PyodideExecutor', { timeout: 60_000 }, () => {
 
   it('truncates large output, keeping the end', async () => {
     const code = 'def f(n):\n    for i in range(100000):\n        print("line", i)\n    return n\n';
-    const report = await executor.run(job(code, [test('a', { n: 1 }, 1)]));
+    // 100,000 prints take about a second on a loaded CI runner; this test is
+    // about truncation, so it gets a time limit the work cannot reach.
+    const report = await executor.run(job(code, [test('a', { n: 1 }, 1)], { timeLimitMs: 15_000 }));
     const r = report.results[0]!;
     expect(r.status).toBe('pass');
     expect(r.stdout!.length).toBeLessThan(2100);

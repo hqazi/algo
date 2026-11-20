@@ -1143,6 +1143,25 @@ release (T14's release check) should tick them.
 - (2026-11-20, T14) The README's install and unsigned-app steps are
   written. The boxes are still open: T14's `v0.1.0-rc.1` tag push was
   refused (HTTP 403 from the session's git proxy), so no release ran.
+- (2026-11-20, T14) The user pushed `v0.1.0-rc.1` on `018b0c7`. Release
+  run 44720024201 **failed**: the draft (pre-release) was made and all
+  three OSes ran the unit tests, packaged and uploaded, but the smoke step
+  failed on macOS and Windows with `spawn ... ENOENT`. The top-level
+  `executableName: algorithm-tutor` renamed the app on every OS
+  (`algorithm-tutor.app`, `algorithm-tutor.exe`) while the workflow looked
+  for `Algorithm Tutor`; it is now Linux-only, so macOS and Windows keep the
+  product name the README uses (D-35). The macOS smoke step also picked the
+  x64 app on the arm64 runner; it now picks the runner's arch. Ubuntu
+  passed: the packaged `linux-unpacked` app started as 0.1.0-rc.1, loaded
+  50 problems, ran Pyodide and had the updater. Uploaded to the draft
+  (from the job logs): `algorithm-tutor-0.1.0-rc.1-linux-x86_64.AppImage`,
+  `-linux-amd64.deb`, `-win-x64.exe` (+ `.blockmap`), `-mac-x64.dmg`,
+  `-mac-arm64.dmg`, `-mac-x64.zip`, `-mac-arm64.zip` (each + `.blockmap`).
+  The update metadata files are uploaded from memory without a log line
+  and the API here does not list draft assets, so their presence is not
+  confirmed. Boxes still open: no installer was installed on any OS (the
+  smoke test runs the unpacked app), macOS and Windows never launched, and
+  no update between releases was tried. Needs a new tag `v0.1.0-rc.2`.
 
 ### T14 — README, end-to-end test, v1 release check
 
@@ -1163,7 +1182,23 @@ release (T14's release check) should tick them.
 - [x] e2e passes in CI.
 - [ ] README followed from scratch on one OS by someone (or a clean VM) without help; done notes say which.
 
-**Notes.** (2026-11-20) **Blocked: the test release tag could not be
+**Notes.** (2026-11-20, later) **Still blocked: needs tag `v0.1.0-rc.2`
+from the user, and box 2 needs a person or a clean VM.** The user pushed
+`v0.1.0-rc.1` on `018b0c7`; Release run 44720024201 failed on macOS and
+Windows in the smoke step (wrong executable name, fixed on main, D-35);
+Ubuntu built, uploaded and passed its smoke test. Per-OS results and the
+asset list are in T13's notes. Draft release (pre-release, not published):
+https://github.com/hqazi/algorithm-tutor/releases (shown as
+`untagged-105b251df7aa3f650f32` while it is a draft). CI on main at
+`018b0c7` failed on ubuntu only: `pyodide-executor.test.ts` "truncates
+large output" printed 100,000 lines under the default 1 s limit and timed
+out on a loaded runner; that test now has a 15 s limit (it tests
+truncation, not speed). CI run 44720024309 on the tag itself passed. The
+GitHub repository now answers as `hqazi/algo` (runs and releases link
+there; uploads to `hqazi/algorithm-tutor` still worked through GitHub's
+redirect). The rc.1 draft can be deleted once rc.2 is out.
+
+(2026-11-20) **Blocked: the test release tag could not be
 pushed.** `git push origin v0.1.0-rc.1` (the one test release the user
 approved, on main `b990d77`) was refused by this session's git proxy with
 HTTP 403, a policy denial, so it was not retried or pushed another way. No
@@ -1350,6 +1385,7 @@ and Go, multi-arch, published on release tags.
 - Checked locally: image built with Docker 29.10.0 on amd64, `smoke.sh` passed, container executor, runtimes and code-execution suites passed against it (41 tests); typecheck, lint, format:check, `npm test` (825 passed, 12 skipped), validate:content (50 problems).
 - The first `workflow_dispatch` run (44711327127) failed on amd64 before any push: the two real-Docker test files ran in parallel on one daemon, so the executor suite's "no container left" check saw the other file's container. Fixed by running the files one after the other (run 44712009992 green). The dispatch was not re-run (one manual trigger was allowed). Its arm64 leg did log in and push `sha-47739ecb1b79-arm64` (single-arch, tested), which created the GHCR package; it is readable anonymously (public). No multi-arch tag (`edge`, a version) exists yet: the publish job (`imagetools create`) has not run. A second dispatch on main publishes `edge`.
 - Not done / not tested: no version tag pushed (tag pushes are refused from the session), so the release-tag path is untested; the published image was not pulled by the app (Settings → Pull / Test sandbox); Podman not tried with the image; arm64 checked only in CI, never locally. The README still says the image is not published (true until a release tag runs).
+- (2026-11-20, T14) The `v0.1.0-rc.1` tag push (by the user) ran Runner image run 44720024303: both arches built, passed `smoke.sh` and the real-Docker suites, pushed `sha-018b0c7a609d-amd64` / `-arm64`, and the publish job made the multi-arch index (linux/amd64 + linux/arm64, `sha256:3091f28b…`) as `0.1.0-rc.1` and `sha-018b0c7a609d` on `ghcr.io/hqazi/algorithm-tutor-runner` (no `latest`: rc). The release-tag path is now tested; the README's runner-image section says the image is published. Still not tried: pulling it from the app, Podman.
 
 ### T20 — README: optional container sandbox and toolchains
 

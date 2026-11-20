@@ -1243,3 +1243,18 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   The image is not part of `release.yml`: both run on the same tag.
 - **Checked with** Docker 29.10.0 on Linux amd64 (smoke script and the
   real-Docker suites against the local build). arm64 only in CI.
+
+**D-35 `executableName` is Linux-only** (2026-11-20, T14)
+
+- The first tagged release (`v0.1.0-rc.1`, run 44720024201) showed that a
+  top-level `executableName: algorithm-tutor` in `electron-builder.yml`
+  renames the app on every OS: electron-builder uses it as
+  `productFilename`, so macOS got `algorithm-tutor.app/Contents/MacOS/algorithm-tutor`
+  and Windows `algorithm-tutor.exe` (and its Start menu entry). It is now
+  set under `linux:` only, where the lower-case name matches the
+  `.desktop` file and WM_CLASS; macOS and Windows keep the product name
+  (`Algorithm Tutor.app`, `Algorithm Tutor.exe`), which the README's
+  `xattr` step and the release smoke step expect. Linux output is
+  unchanged (`linux-unpacked/algorithm-tutor`, checked locally).
+- The release smoke step on macOS runs the build for the runner's own arch
+  (`uname -m`), not whichever of `mac` / `mac-arm64` sorts first.

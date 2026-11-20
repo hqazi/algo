@@ -276,9 +276,10 @@ never downloads it on its own: press **Pull image** in
 **Settings → Code execution** (once per runtime; Podman and Docker keep
 separate image stores), and **Update image** after an app update.
 
-> **Not published yet.** The image is built and published by CI in a later
-> ticket (T19). Until then **Pull image** fails, and the container sandbox
-> cannot be used; Rust and Go run with your local toolchains.
+The image is published for `linux/amd64` and `linux/arm64` (Docker and
+Podman pick the right one, including on Apple silicon and Windows on Arm).
+The first published version is `0.1.0-rc.1`; each release tag publishes the
+matching version, and stable versions also move `latest`.
 
 ### Check that it works
 

@@ -131,7 +131,8 @@ jobs:
               sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
               xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algorithm-tutor ;;
             macOS)
-              dir=$(ls -d apps/desktop/dist/mac-arm64 apps/desktop/dist/mac 2>/dev/null | head -1)
+              # The build for this runner's arch: mac-arm64 on Apple silicon, mac on Intel.
+              if [ "$(uname -m)" = arm64 ]; then dir=apps/desktop/dist/mac-arm64; else dir=apps/desktop/dist/mac; fi
               npx tsx apps/desktop/packaging/smoke.ts "$dir/Algorithm Tutor.app/Contents/MacOS/Algorithm Tutor" ;;
             Windows)
               npx tsx apps/desktop/packaging/smoke.ts "apps/desktop/dist/win-unpacked/Algorithm Tutor.exe" ;;
