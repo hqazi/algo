@@ -14,9 +14,11 @@ import { ChatStore, ChatStoreContext } from '../../chat/store';
 import { MessageView } from '../../chat/MessageView';
 import { Toasts } from '../../components/Toasts';
 import { AppProvider } from '../../lib/app';
+import { when } from '../../lib/format';
 import { LibraryPage } from '../../pages/LibraryPage';
 import { FakeBridge, installBridge } from '../../test/fake-bridge';
 import { baseHandlers, TUTOR_OFF, TUTOR_ON } from '../../test/fixtures';
+import { relativeTime } from './relative-time';
 
 const ID = 'article:12345678-1234-4234-8234-123456789abc';
 const TREE: TreeView = {
@@ -199,7 +201,14 @@ describe('chats on passages', () => {
     seen = true;
     setup();
     await screen.findByRole('article', { name: 'Heaps' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Ask about the section “Uses”' }));
+    // T32: a heading's Ask shows while the pointer is over that heading.
+    const askUses = await screen.findByRole('button', { name: 'Ask about the section “Uses”' });
+    expect(askUses.classList.contains('shown')).toBe(false);
+    fireEvent.mouseOver(within(body()).getByRole('heading', { name: 'Uses' }));
+    expect(askUses.classList.contains('shown')).toBe(true);
+    fireEvent.mouseLeave(document.querySelector('.reader')!);
+    expect(askUses.classList.contains('shown')).toBe(false);
+    fireEvent.click(askUses);
     expect(pane().getByTestId('passage-quote').textContent).toBe('Section: Heaps › Uses');
   });
 
@@ -239,8 +248,21 @@ describe('chats on passages', () => {
     await screen.findByRole('article', { name: 'Heaps' });
     await waitFor(() => expect(screen.getAllByTestId('passage-marker')).toHaveLength(1));
     expect(pane().getByText('detached')).toBeTruthy();
+    // T32: the last activity as a relative time, the full date in its tooltip.
+    const time = pane()
+      .getByRole('button', { name: /Gone passage/ })
+      .querySelector('time')!;
+    expect(time.getAttribute('dateTime')).toBe('2026-11-20T09:00:00Z');
+    expect(time.getAttribute('title')).toBe(when('2026-11-20T09:00:00Z'));
+    expect(time.textContent).toBe(relativeTime('2026-11-20T09:00:00Z'));
 
     fireEvent.click(pane().getByText('Gone passage'));
+    // The open chat's actions are icon buttons with their names as tooltips.
+    for (const name of ['Rename', 'New chat', 'Close']) {
+      const b = pane().getByRole('button', { name });
+      expect(b.classList.contains('btn-icon')).toBe(true);
+      expect(b.getAttribute('title')).toBeTruthy();
+    }
     expect(await pane().findByTestId('thread-detached')).toBeTruthy();
 
     fireEvent.click(screen.getByTestId('passage-marker'));

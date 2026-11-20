@@ -3,9 +3,12 @@
  * on a selection in the article body, a button beside each heading, and a
  * marker beside each thread's passage. Anchors are resolved against the
  * rendered body with core's resolver; a thread whose passage is gone is
- * reported detached (the chat pane lists it without a position).
+ * reported detached (the chat pane lists it without a position). T32: a
+ * heading's **Ask** shows while the pointer is over that heading (or the
+ * button has keyboard focus); it stays in the Tab order.
  */
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { MessageCircle, MessageSquarePlus } from 'lucide-react';
 import {
   anchorFromHeading,
   anchorFromRange,
@@ -82,6 +85,8 @@ export function PassageLayer({ body, html, chats, onAsk }: PassageLayerProps) {
   const [measured, setMeasured] = useState<Measured>(EMPTY);
   const [selection, setSelection] = useState<{ anchor: AnchorView; top: number } | null>(null);
   const [layout, setLayout] = useState(0);
+  /** The heading under the pointer (its Ask button shows). */
+  const [hovered, setHovered] = useState(-1);
   const { threads, setStates } = chats;
   const origin = body?.closest('.reader') ?? null;
   const { doc, markers, headingTops } = measured;
@@ -136,13 +141,32 @@ export function PassageLayer({ body, html, chats, onAsk }: PassageLayerProps) {
     };
   }, [body, readSelection]);
 
+  // Which heading the pointer is over. Moving onto the Ask button itself
+  // (drawn over the body, not inside it) keeps the heading shown.
+  useEffect(() => {
+    if (!body || !origin || !doc) return;
+    const onOver = (e: Event) => {
+      const t = e.target as Element | null;
+      if (!t || !body.contains(t)) return;
+      const h = t.closest('h1,h2,h3,h4,h5,h6');
+      setHovered(h ? doc.headingEls.indexOf(h as HTMLElement) : -1);
+    };
+    const onLeave = () => setHovered(-1);
+    origin.addEventListener('mouseover', onOver);
+    origin.addEventListener('mouseleave', onLeave);
+    return () => {
+      origin.removeEventListener('mouseover', onOver);
+      origin.removeEventListener('mouseleave', onLeave);
+    };
+  }, [body, origin, doc]);
+
   if (!doc) return null;
   return (
     <div className="passage-layer" data-testid="passage-layer">
       {selection && (
         <button
           type="button"
-          className="ask-selection primary small-button"
+          className="ask-selection btn btn-primary btn-sm"
           style={{ top: selection.top }}
           // Keep the selection while clicking.
           onMouseDown={(e) => e.preventDefault()}
@@ -152,6 +176,7 @@ export function PassageLayer({ body, html, chats, onAsk }: PassageLayerProps) {
             body?.ownerDocument.getSelection()?.removeAllRanges();
           }}
         >
+          <MessageSquarePlus aria-hidden="true" />
           Ask about this
         </button>
       )}
@@ -159,12 +184,13 @@ export function PassageLayer({ body, html, chats, onAsk }: PassageLayerProps) {
         <button
           key={`h${i}`}
           type="button"
-          className="ask-heading"
+          className={i === hovered ? 'ask-heading shown' : 'ask-heading'}
           style={{ top: headingTops[i] ?? 0 }}
           aria-label={`Ask about the section “${h.title}”`}
           title="Ask the tutor about this section"
           onClick={() => onAsk(anchorFromHeading(doc, i))}
         >
+          <MessageCircle size={13} aria-hidden="true" />
           Ask
         </button>
       ))}

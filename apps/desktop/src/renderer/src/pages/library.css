@@ -1,0 +1,488 @@
+/* The Library page (T32, docs/design.md → Library): the tree, the reader's
+   typography, callouts and image placeholders. The margin layer and the chats
+   pane are in library/chat/article-chat.css. The older Library rules in
+   styles.css (T22) are overridden here; T34 can delete them. */
+
+/* Lucide's info, triangle-alert, circle-x, lightbulb, circle-check,
+   circle-help, quote and image-off icons, drawn as masks in the text colour. */
+.library-page {
+  --callout-info: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E");
+  --callout-warn: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+  --callout-danger: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m15 9-6 6'/%3E%3Cpath d='m9 9 6 6'/%3E%3C/svg%3E");
+  --callout-tip: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3C/svg%3E");
+  --callout-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E");
+  --callout-question: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E");
+  --callout-quote: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z'/%3E%3Cpath d='M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z'/%3E%3C/svg%3E");
+  --image-off: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2 2 20 20'/%3E%3Cpath d='M10.41 10.41a2 2 0 1 1-2.83-2.82'/%3E%3Cpath d='M13.5 13.5 6 21'/%3E%3Cpath d='M18 12l3 3'/%3E%3Cpath d='M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.052-.22 1.41-.59'/%3E%3Cpath d='M21 15V5a2 2 0 0 0-2-2H9'/%3E%3C/svg%3E");
+}
+
+/* ---- the Articles pane */
+.library-page .lib-left {
+  padding: 0 0 var(--space-4);
+}
+.library-page .lib-tools {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+}
+.lib-search-icon {
+  position: absolute;
+  left: calc(var(--space-3) + 10px);
+  color: var(--faint);
+  pointer-events: none;
+}
+.library-page .lib-tools input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h-sm);
+  padding-left: 30px;
+  font-size: var(--text-sm);
+}
+.library-page .btn-icon[aria-pressed='true'] {
+  background: var(--accent-subtle);
+  color: var(--accent-fg);
+}
+.lib-refresh.busy svg {
+  animation: lib-spin 0.9s linear infinite;
+}
+@keyframes lib-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.lib-none {
+  margin: var(--space-2) var(--space-4);
+}
+
+/* The tree: rows of one height; a nested list's left border is the indent
+   guide, under its folder's chevron. */
+.library-page .lib-tree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.library-page .lib-roots {
+  padding: 0 var(--space-2);
+}
+.library-page .lib-tree .lib-tree {
+  margin-left: 15px;
+  padding-left: 0;
+  border-left: 1px solid var(--border);
+}
+.library-page .lib-root + .lib-root {
+  margin-top: var(--space-2);
+}
+.lib-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.library-page .lib-tree .lib-tree .lib-row {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.lib-row:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.lib-row:focus-visible {
+  outline-offset: -2px;
+}
+.lib-chevron {
+  flex: none;
+  margin-right: -2px;
+  color: var(--faint);
+  transition: transform var(--duration) var(--ease);
+}
+.lib-folder-row[aria-expanded='true'] .lib-chevron {
+  transform: rotate(90deg);
+}
+.lib-icon {
+  flex: none;
+  color: var(--faint);
+}
+.lib-folder-row .lib-icon {
+  color: var(--muted);
+}
+.lib-root > .lib-folder-row {
+  font-weight: 600;
+}
+.lib-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* An article's icon lines up with its sibling folders' icons (after the
+   chevron). */
+.library-page .lib-article {
+  display: flex;
+  padding-left: calc(var(--space-2) + 16px);
+}
+.library-page .lib-article.active {
+  background: var(--accent-subtle);
+  color: var(--accent-fg);
+  font-weight: 500;
+}
+.lib-article.active .lib-icon {
+  color: var(--accent-fg);
+}
+.lib-missing {
+  flex: none;
+  color: var(--faint);
+  font-style: italic;
+}
+.library-page .ai-label {
+  margin-left: auto;
+  font-weight: 500;
+}
+.lib-error {
+  margin: var(--space-1) var(--space-2) var(--space-1) 30px;
+}
+
+/* "Write an article" (library/WriteArticle.tsx) */
+.library-page .lib-write-form {
+  gap: var(--space-2);
+  margin: var(--space-1) var(--space-3) var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.library-page .lib-write-form label {
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.library-page .lib-write-form .ui-select,
+.library-page .lib-write-form select {
+  width: 100%;
+}
+.library-page .lib-write-form p {
+  margin: 0;
+}
+.library-page .lib-write-actions {
+  gap: var(--space-2);
+}
+
+/* ---- empty panes */
+.lib-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 8rem;
+  padding: var(--space-6);
+  text-align: center;
+}
+
+/* ---- the reader: 16px text at about 70 characters a line. The left
+   padding holds the chat markers, the right one the headings' Ask. */
+.library-page .reader {
+  max-width: calc(70ch + 112px);
+  margin: 0 auto;
+  padding: var(--space-6) 64px 64px 48px;
+  font-size: 16px;
+}
+.library-page .reader-header {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.library-page .reader-header h1 {
+  margin: 0 0 var(--space-3);
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+.library-page .reader-header p {
+  margin: var(--space-2) 0;
+}
+.reader-ai {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.reader-source a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.reader-source a:hover span {
+  text-decoration: underline;
+}
+.reader-meta {
+  font-variant-numeric: tabular-nums;
+}
+.library-page .reader-description {
+  font-size: var(--text-lg);
+  line-height: 1.55;
+  color: var(--muted);
+}
+.library-page .reader-tags {
+  gap: 6px;
+  margin-top: var(--space-3);
+}
+.reader-props summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.reader-props summary::-webkit-details-marker {
+  display: none;
+}
+.reader-props summary::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  background: var(--chevron) center / 14px no-repeat;
+  transform: rotate(-90deg);
+  transition: transform var(--duration) var(--ease);
+}
+.reader-props[open] summary::before {
+  transform: none;
+}
+.library-page .reader-extra {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-2) 0 0;
+}
+
+/* Banners: the missing file, linked images to load. */
+.library-page .reader .notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+.library-page .reader-missing {
+  color: var(--text);
+}
+.library-page .reader-missing svg {
+  flex: none;
+  color: var(--warn);
+}
+.library-page .images-bar {
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+/* The body. */
+.library-page .article-body {
+  margin-top: 0;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text);
+  overflow-wrap: break-word;
+}
+.library-page .article-body > :first-child {
+  margin-top: 0;
+}
+.library-page .article-body p,
+.library-page .article-body ul,
+.library-page .article-body ol,
+.library-page .article-body table {
+  margin: 0 0 1em;
+}
+.library-page .article-body li + li {
+  margin-top: 0.25em;
+}
+.library-page .article-body h1,
+.library-page .article-body h2,
+.library-page .article-body h3,
+.library-page .article-body h4 {
+  margin: 1.8em 0 0.6em;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-transform: none;
+}
+.library-page .article-body h1 {
+  font-size: 24px;
+}
+.library-page .article-body h2 {
+  font-size: 20px;
+}
+.library-page .article-body h3 {
+  font-size: 17px;
+}
+.library-page .article-body h4 {
+  font-size: 16px;
+}
+.library-page .article-body pre {
+  margin: 0 0 1.2em;
+  padding: var(--space-3) var(--space-4);
+  font-size: 13.5px;
+  line-height: 1.6;
+  border-radius: var(--radius-sm);
+}
+.library-page .article-body :not(pre) > code {
+  padding: 0.1em 0.35em;
+  font-size: 0.875em;
+}
+.library-page .article-body blockquote:not(.callout) {
+  margin: 0 0 1em;
+  padding: 0 0 0 var(--space-4);
+  border-left: 3px solid var(--border-strong);
+  color: var(--muted);
+}
+.library-page .article-body table {
+  font-size: 14px;
+}
+.library-page .article-body th {
+  background: var(--surface-2);
+  font-weight: 600;
+  text-align: left;
+}
+.library-page .article-body th,
+.library-page .article-body td {
+  padding: 6px 10px;
+}
+.library-page .article-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.5em 0 1em;
+  border-radius: var(--radius-sm);
+}
+.library-page .article-body hr {
+  margin: 2em 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.library-page .article-body a {
+  text-underline-offset: 2px;
+}
+
+/* An image that is not shown: its alt text, host and the reason. */
+.library-page .img-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  margin: 0.25em 0;
+  padding: 6px 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.library-page .img-placeholder::before {
+  content: '';
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: var(--faint);
+  mask: var(--image-off) center / contain no-repeat;
+}
+.img-placeholder .img-alt {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Callouts (`> [!note]`): a tint of their colour, an icon in the title. */
+.library-page .callout {
+  --callout: var(--accent-fg);
+  --callout-icon: var(--callout-info);
+  margin: 1.25em 0;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-left: 3px solid var(--callout);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--callout) 8%, var(--surface));
+  color: var(--text);
+}
+.library-page .callout > :last-child {
+  margin-bottom: 0;
+}
+.library-page .article-body .callout-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-weight: 600;
+  color: var(--callout);
+}
+.library-page .callout-title::before {
+  content: '';
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  mask: var(--callout-icon) center / contain no-repeat;
+}
+.library-page .callout-warning,
+.library-page .callout-caution,
+.library-page .callout-attention {
+  --callout: var(--warn);
+  --callout-icon: var(--callout-warn);
+}
+.library-page .callout-danger,
+.library-page .callout-error,
+.library-page .callout-bug,
+.library-page .callout-failure,
+.library-page .callout-fail,
+.library-page .callout-missing {
+  --callout: var(--fail);
+  --callout-icon: var(--callout-danger);
+}
+.library-page .callout-tip,
+.library-page .callout-hint,
+.library-page .callout-important {
+  --callout: var(--pass);
+  --callout-icon: var(--callout-tip);
+}
+.library-page .callout-success,
+.library-page .callout-check,
+.library-page .callout-done {
+  --callout: var(--pass);
+  --callout-icon: var(--callout-check);
+}
+.library-page .callout-question,
+.library-page .callout-help,
+.library-page .callout-faq {
+  --callout: var(--warn);
+  --callout-icon: var(--callout-question);
+}
+.library-page .callout-quote,
+.library-page .callout-cite {
+  --callout: var(--muted);
+  --callout-icon: var(--callout-quote);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lib-refresh.busy svg {
+    animation: none;
+  }
+}

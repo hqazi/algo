@@ -1,4 +1,6 @@
-/* Chats on passages (T24): margin buttons and markers in the reader, the chat pane. */
+/* Chats on passages (T24; restyled in T32, docs/design.md → Library): margin
+   buttons and markers in the reader, the chat pane. The messages and the
+   composer are chat/chat.css's. */
 .reader {
   position: relative;
 }
@@ -12,104 +14,263 @@
   pointer-events: auto;
 }
 .ask-selection {
-  right: 0.5rem;
-  transform: translateY(-110%);
+  right: 64px;
   z-index: 2;
+  transform: translateY(-115%);
+  box-shadow: var(--shadow);
 }
+/* A heading's Ask: in the right margin, shown while the pointer is over the
+   heading or the button, or the button has keyboard focus. */
 .ask-heading {
-  right: 0;
-  padding: 0.05rem 0.4rem;
-  font-size: 0.75rem;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  margin-top: 2px;
+  padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-2);
+  border-radius: 99px;
+  background: var(--surface);
   color: var(--muted);
-  opacity: 0.35;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1;
+  box-shadow: var(--shadow-sm);
+  opacity: 0;
 }
-.reader:hover .ask-heading,
+.ask-heading.shown,
+.ask-heading:hover,
 .ask-heading:focus-visible {
   opacity: 1;
 }
+.ask-heading:hover {
+  color: var(--accent-fg);
+  border-color: var(--border-strong);
+}
+/* A thread's marker: an accent bar in the left margin beside its passage;
+   a wider hit area than the bar. */
 .passage-marker {
-  left: 0.25rem;
-  width: 0.6rem;
-  height: 1.3rem;
+  left: 22px;
+  width: 14px;
+  height: 1.4rem;
   padding: 0;
   border: none;
-  border-radius: 3px;
-  background: var(--accent);
-  opacity: 0.55;
+  background: none;
   cursor: pointer;
 }
-.passage-marker.at-heading {
-  opacity: 0.3;
+.passage-marker::before {
+  content: '';
+  position: absolute;
+  inset: 2px 5px;
+  border-radius: 99px;
+  background: var(--accent);
+  opacity: 0.6;
+  transition:
+    opacity var(--duration) var(--ease),
+    inset var(--duration) var(--ease);
 }
-.passage-marker.active,
-.passage-marker:hover {
+.passage-marker.at-heading::before {
+  opacity: 0.35;
+}
+.passage-marker:hover::before,
+.passage-marker.active::before {
+  inset: 0 4px;
   opacity: 1;
 }
+
+/* ---- the chats pane */
 .article-chats {
-  overflow: auto;
+  overflow: hidden;
+}
+.article-chats > .notice {
+  margin: var(--space-2) var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+.article-chats-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin: auto;
+  padding: var(--space-6) var(--space-5);
+  max-width: 18rem;
+  text-align: center;
+  color: var(--faint);
+}
+.article-chats-empty p {
+  margin: 0;
+  line-height: 1.5;
 }
 .article-threads {
   list-style: none;
+  flex: none;
+  max-height: 40%;
   margin: 0;
-  padding: 0 0.5rem;
+  padding: var(--space-2);
+  overflow: auto;
 }
-.article-threads li.active .thread-item {
-  background: var(--surface-2);
+/* With no chat open the list has the whole pane. */
+.article-threads:last-child {
+  flex: 1;
+  max-height: none;
+}
+.article-threads li + li {
+  margin-top: 2px;
 }
 .thread-item {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
+  gap: 2px;
   width: 100%;
-  gap: 0.1rem;
-  padding: 0.35rem 0.5rem;
+  padding: 7px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: none;
-  text-align: left;
   color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 .thread-item:hover {
   background: var(--surface-2);
 }
+.article-threads li.active .thread-item {
+  background: var(--accent-subtle);
+}
+.thread-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
 .thread-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
-.thread-snippet {
-  overflow-wrap: anywhere;
+.article-threads li.active .thread-title {
+  color: var(--accent-fg);
 }
+.thread-date {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.thread-snippet {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--muted);
+}
+.thread-detached-badge {
+  height: 16px;
+  margin-right: 6px;
+  font-size: 10.5px;
+  vertical-align: 1px;
+}
+.thread-rename {
+  padding: 2px;
+}
+.thread-rename input {
+  width: 100%;
+  height: var(--control-h-sm);
+  font-size: var(--text-sm);
+}
+
+/* The open chat: its title and actions, the passage, the messages. */
 .article-thread {
   display: flex;
   flex-direction: column;
-  min-height: 16rem;
   flex: 1;
+  min-height: 16rem;
   border-top: 1px solid var(--border);
 }
+.thread-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 40px;
+  padding: 4px var(--space-2) 4px var(--space-4);
+}
+.thread-open-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
 .passage-quote {
-  margin: 0.4rem 0.75rem;
-  padding-left: 0.6rem;
-  border-left: 3px solid var(--accent);
-  color: var(--muted);
+  flex: none;
   max-height: 6rem;
+  margin: 0 var(--space-3) var(--space-1);
+  padding: var(--space-2) var(--space-3);
   overflow: auto;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.thread-note {
+  margin: var(--space-1) var(--space-4);
+}
+.article-thread .chat-log {
+  padding-top: var(--space-3);
+}
+.passage-problem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--pass-bg);
+  color: var(--text);
+}
+.article-thread .chat-unavailable {
+  margin-bottom: var(--space-2);
 }
 .provider-notice {
-  margin: 0.4rem 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface-2);
+  margin: 0 var(--space-3) var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--accent-subtle);
 }
-/* The article composer has an extra button: the text box gets its own row so
-   a narrow pane does not squeeze it to a few characters. */
-.article-chats .chat-compose {
-  flex-wrap: wrap;
+.provider-notice p {
+  margin: 0 0 var(--space-2);
+  line-height: 1.5;
+}
+.provider-notice-actions {
+  display: flex;
   justify-content: flex-end;
+  gap: var(--space-2);
 }
-.article-chats .chat-compose textarea {
-  flex: 1 1 100%;
+/* The tutor pane hides its title in a narrow pane to make room for the
+   thread switch; this pane has no switch, so "Chats" stays. */
+@container chat (max-width: 340px) {
+  .article-chats > .pane-header .pane-title {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
 }

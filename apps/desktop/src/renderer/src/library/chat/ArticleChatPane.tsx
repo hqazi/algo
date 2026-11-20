@@ -7,14 +7,18 @@
  * outline go to the tutor's provider. Messages render through the chat's
  * `MessageView` (the chat allowlist: never an image).
  */
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useState } from 'react';
+import { MessageSquare, Pencil, Sparkles, SquarePen, X } from 'lucide-react';
+import { Composer } from '../../chat/Composer';
+import { MessageList } from '../../chat/MessageList';
 import { useChatStore, useThread, useTutorStatus } from '../../chat/store';
 import { PaneHeader } from '../../components/PaneHeader';
-import { MessageView } from '../../chat/MessageView';
+import { Badge, Button, IconButton } from '../../components/ui';
 import { invoke } from '../../ipc';
 import { errorText, useApp } from '../../lib/app-context';
 import { when } from '../../lib/format';
 import { navigate } from '../../lib/router';
+import { relativeTime } from './relative-time';
 import { snippet, type ArticleChats } from './useArticleChats';
 import '../../chat/chat.css';
 import './article-chat.css';
@@ -30,43 +34,29 @@ export interface ArticleChatPaneProps {
   missing: boolean;
 }
 
-function ThreadLog({ thread }: { thread: string }) {
+/** A thread's last activity: relative, with the full date in the tooltip. */
+function Ago({ iso }: { iso: string }) {
+  return (
+    <time dateTime={iso} title={when(iso)}>
+      {relativeTime(iso)}
+    </time>
+  );
+}
+
+function ThreadLog({ thread, canRetry }: { thread: string; canRetry: boolean }) {
   const store = useChatStore();
   const view = useThread(store, thread);
-  const log = useRef<HTMLDivElement>(null);
   useEffect(() => {
     void store.load(thread);
   }, [store, thread]);
-  useLayoutEffect(() => {
-    const el = log.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [view.messages]);
-  const last = view.messages[view.messages.length - 1];
   return (
-    <div className="chat-log" ref={log} aria-live="polite" data-testid="chat-log">
-      {view.status === 'loading' && view.messages.length === 0 && (
-        <p className="muted">Loading the conversation…</p>
-      )}
-      {view.status === 'error' && (
-        <p className="error-text small" role="alert">
-          Could not load the conversation: {view.loadError}
-        </p>
-      )}
-      {view.status === 'ready' && view.messages.length === 0 && (
-        <p className="muted chat-empty">
-          Ask about this passage. The tutor sees it and the article’s outline.
-        </p>
-      )}
-      {view.messages.map((m) => (
-        <MessageView
-          key={m.id}
-          message={m}
-          {...(m === last && m.error && m.error.kind !== 'cancelled' && store.canRetry(thread)
-            ? { onRetry: () => void store.retry(thread) }
-            : {})}
-        />
-      ))}
-    </div>
+    <MessageList
+      view={view}
+      scrollKey={thread}
+      onReload={() => void store.load(thread, true)}
+      {...(canRetry && store.canRetry(thread) ? { onRetry: () => void store.retry(thread) } : {})}
+      empty="Ask about this passage. The tutor sees it and the article’s outline."
+    />
   );
 }
 
@@ -135,20 +125,6 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
     }
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
-    if (
-      e.key === 'Enter' &&
-      !e.shiftKey &&
-      !e.ctrlKey &&
-      !e.metaKey &&
-      !e.altKey &&
-      !e.nativeEvent.isComposing
-    ) {
-      e.preventDefault();
-      void send();
-    }
-  }
-
   async function reset(): Promise<void> {
     if (!open) return;
     if (
@@ -188,10 +164,13 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
         </p>
       )}
       {chats.loaded && threads.length === 0 && !draft && (
-        <p className="muted small reader-pad" data-testid="no-chats">
-          Select text in the article and choose <strong>Ask about this</strong>, or use the{' '}
-          <strong>Ask</strong> button beside a heading.
-        </p>
+        <div className="article-chats-empty" data-testid="no-chats">
+          <MessageSquare size={20} aria-hidden="true" />
+          <p className="muted small">
+            Select text in the article and choose <strong>Ask about this</strong>, or use the{' '}
+            <strong>Ask</strong> button beside a heading.
+          </p>
+        </div>
       )}
       {threads.length > 0 && (
         <ul className="article-threads" aria-label="Chats on this article">
@@ -199,6 +178,7 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
             <li key={t.id} className={t.id === open ? 'active' : undefined}>
               {renaming === t.id ? (
                 <form
+                  className="thread-rename"
                   onSubmit={(e) => {
                     e.preventDefault();
                     const input = e.currentTarget.elements.namedItem('title') as HTMLInputElement;
@@ -219,13 +199,22 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
                 <button
                   type="button"
                   className="thread-item"
+                  aria-current={t.id === open ? 'true' : undefined}
                   onClick={() => chats.openThread(t.id)}
                 >
-                  <span className="thread-title">{t.title ?? 'New question'}</span>
-                  <span className="thread-snippet muted small">{snippet(t.anchor)}</span>
-                  <span className="thread-date muted small">
-                    {states[t.id] === 'detached' && <span className="pill">detached</span>}{' '}
-                    {when(t.last_at ?? t.created_at)}
+                  <span className="thread-line">
+                    <span className="thread-title">{t.title ?? 'New question'}</span>
+                    <span className="thread-date">
+                      <Ago iso={t.last_at ?? t.created_at} />
+                    </span>
+                  </span>
+                  <span className="thread-snippet">
+                    {states[t.id] === 'detached' && (
+                      <Badge tone="warn" className="thread-detached-badge">
+                        detached
+                      </Badge>
+                    )}
+                    {snippet(t.anchor)}
                   </span>
                 </button>
               )}
@@ -236,61 +225,72 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
 
       {(open || draft) && (
         <section className="article-thread" aria-label="Open chat">
-          <div className="chat-head">
+          <div className="thread-head">
             <strong className="thread-open-title">
               {draft ? 'New question' : (current?.title ?? 'New question')}
             </strong>
-            <span className="spacer" />
             {open && (
               <>
-                <button type="button" className="small-button" onClick={() => setRenaming(open)}>
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  className="small-button"
+                <IconButton
+                  aria-label="Rename"
+                  title="Rename this chat"
+                  size="sm"
+                  icon={<Pencil aria-hidden="true" />}
+                  onClick={() => setRenaming(open)}
+                />
+                <IconButton
+                  aria-label="New chat"
+                  title="New chat: archive this conversation and start afresh"
+                  size="sm"
+                  icon={<SquarePen aria-hidden="true" />}
                   onClick={() => void reset()}
                   disabled={busy || view.messages.length === 0}
-                  title="Archive this conversation and start afresh"
-                >
-                  New chat
-                </button>
+                />
               </>
             )}
-            <button type="button" className="small-button" onClick={() => chats.openThread(null)}>
-              Close
-            </button>
+            <IconButton
+              aria-label="Close"
+              title="Close this chat"
+              size="sm"
+              icon={<X aria-hidden="true" />}
+              onClick={() => chats.openThread(null)}
+            />
           </div>
           {passage && (
-            <blockquote className="passage-quote small" data-testid="passage-quote">
+            <blockquote className="passage-quote" data-testid="passage-quote">
               {passage.quote || `Section: ${passage.heading.join(' › ') || 'the opening'}`}
             </blockquote>
           )}
           {detached && (
-            <p className="muted small" data-testid="thread-detached">
+            <p className="muted small thread-note" data-testid="thread-detached">
               This passage is no longer in the article. The chat is kept; the tutor sees the passage
               as it was.
             </p>
           )}
-          {open && <ThreadLog thread={open} />}
+          {open ? (
+            <ThreadLog thread={open} canRetry={!unavailable} />
+          ) : (
+            <div className="chat-log" aria-hidden="true" />
+          )}
           {open && made[open] && (
-            <p className="notice small" role="status" data-testid="passage-problem">
-              The problem <code>{made[open]}</code> passed the self-check.{' '}
-              <button
-                type="button"
-                className="small-button primary"
-                onClick={() => navigate(`/p/${made[open]}`)}
-              >
+            <p className="notice small passage-problem" role="status" data-testid="passage-problem">
+              <span>
+                The problem <code>{made[open]}</code> passed the self-check.
+              </span>
+              <Button variant="primary" size="sm" onClick={() => navigate(`/p/${made[open]}`)}>
                 Open in Practice
-              </button>
+              </Button>
             </p>
           )}
           {open && view.notice && (
             <div className="chat-notice" role="alert" data-testid="chat-notice">
               <span>{view.notice.message}</span>
-              <button type="button" aria-label="Dismiss" onClick={() => store.dismissNotice(open)}>
-                ×
-              </button>
+              <IconButton
+                aria-label="Dismiss"
+                size="sm"
+                icon={<X aria-hidden="true" />}
+                onClick={() => store.dismissNotice(open)}
+              />
             </div>
           )}
           {unavailable && (
@@ -314,63 +314,50 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
                 article, the article’s title, source and outline, and your message. Nothing is sent
                 while you only read.
               </p>
-              <button type="button" className="primary small-button" onClick={() => void send()}>
-                Send
-              </button>{' '}
-              <button
-                type="button"
-                className="small-button"
-                onClick={() => {
-                  setConfirming(false);
-                  setPending(null);
-                }}
-              >
-                Cancel
-              </button>
+              <div className="provider-notice-actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setConfirming(false);
+                    setPending(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" size="sm" onClick={() => void send()}>
+                  Send
+                </Button>
+              </div>
             </div>
           )}
-          <form
-            className="chat-compose"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void send();
-            }}
-          >
-            <textarea
-              value={text}
-              rows={2}
-              maxLength={MAX_TEXT}
-              placeholder={unavailable ? 'The tutor is not set up' : 'Ask about this passage…'}
-              aria-label="Message the tutor"
-              disabled={unavailable}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={onKeyDown}
-            />
-            <button
-              type="button"
-              className="small-button"
-              onClick={() => void send(PASSAGE_PROBLEM_REQUEST)}
-              disabled={!canSend}
-              title="The tutor writes a practice problem from this passage; it appears only if it passes the self-check"
-              data-testid="make-problem"
-            >
-              Make a problem from this
-            </button>
-            {busy && open ? (
+          <div className="chat-bottom">
+            <div className="chat-quick" role="group" aria-label="Ask the tutor">
               <button
                 type="button"
-                className="danger"
-                onClick={() => store.stop(open)}
-                disabled={view.stopping}
+                className="chat-chip"
+                onClick={() => void send(PASSAGE_PROBLEM_REQUEST)}
+                disabled={!canSend}
+                title="The tutor writes a practice problem from this passage; it appears only if it passes the self-check"
+                data-testid="make-problem"
               >
-                {view.stopping ? 'Stopping…' : 'Stop'}
+                <Sparkles size={14} aria-hidden="true" />
+                Make a problem from this
               </button>
-            ) : (
-              <button type="submit" className="primary" disabled={!canSend || !text.trim()}>
-                Send
-              </button>
-            )}
-          </form>
+            </div>
+            <Composer
+              value={text}
+              onChange={setText}
+              onSend={() => void send()}
+              busy={busy && !!open}
+              onStop={open ? () => store.stop(open) : undefined}
+              stopping={view.stopping}
+              canSend={canSend}
+              disabled={unavailable}
+              maxLength={MAX_TEXT}
+              placeholder={unavailable ? 'The tutor is not set up' : 'Ask about this passage…'}
+            />
+          </div>
         </section>
       )}
     </div>

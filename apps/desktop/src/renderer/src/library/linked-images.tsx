@@ -87,7 +87,11 @@ export function useLinkedImages(article: ArticleView | null) {
             {pending > 0 && (
               <>
                 {plural(pending)} not loaded.{' '}
-                <button type="button" onClick={() => void load(true, false)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => void load(true, false)}
+                >
                   Load images
                 </button>{' '}
               </>
@@ -95,7 +99,11 @@ export function useLinkedImages(article: ArticleView | null) {
             {failed > 0 && (
               <>
                 {plural(failed)} could not be loaded.{' '}
-                <button type="button" onClick={() => void load(true, true)}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => void load(true, true)}
+                >
                   Retry
                 </button>
               </>

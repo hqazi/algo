@@ -1,19 +1,30 @@
 /**
  * "Write an article" (T25, SPEC §15.1): the tutor writes an article on a
  * topic at a level and length; it is saved in the app's own folder, shown
- * under **Written by the tutor** and opened in the reader.
+ * under **Written by the tutor** and opened in the reader. Since T32 the
+ * Articles pane's header has the **Write an article** icon button that opens
+ * this form (`open`).
  */
 import { useState } from 'react';
+import { Button, Select } from '../components/ui';
 import type { WriteArticleRequest } from '../../../shared/library';
 import { invoke } from '../ipc';
 import { errorText } from '../lib/app-context';
+import { titleCase } from '../lib/format';
 import { navigate } from '../lib/router';
 
 const LEVELS: WriteArticleRequest['level'][] = ['beginner', 'intermediate', 'advanced'];
 const LENGTHS: WriteArticleRequest['length'][] = ['short', 'medium', 'long'];
 
-export function WriteArticle({ onWritten }: { onWritten?: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
+export function WriteArticle({
+  open,
+  onClose,
+  onWritten,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onWritten?: (id: string) => void;
+}) {
   const [topic, setTopic] = useState('');
   const [level, setLevel] = useState<WriteArticleRequest['level']>('intermediate');
   const [length, setLength] = useState<WriteArticleRequest['length']>('medium');
@@ -27,7 +38,7 @@ export function WriteArticle({ onWritten }: { onWritten?: (id: string) => void }
     setError(null);
     try {
       const r = await invoke('library:write-article', { topic: t, level, length });
-      setOpen(false);
+      onClose();
       setTopic('');
       onWritten?.(r.id);
       navigate(`/library/${r.id}`);
@@ -38,12 +49,7 @@ export function WriteArticle({ onWritten }: { onWritten?: (id: string) => void }
     }
   }
 
-  if (!open)
-    return (
-      <button type="button" className="small-button lib-write" onClick={() => setOpen(true)}>
-        Write an article
-      </button>
-    );
+  if (!open) return null;
   return (
     <form
       className="lib-write-form"
@@ -66,31 +72,31 @@ export function WriteArticle({ onWritten }: { onWritten?: (id: string) => void }
       </label>
       <label>
         Level
-        <select
+        <Select
           value={level}
           onChange={(e) => setLevel(e.target.value as WriteArticleRequest['level'])}
           disabled={busy}
         >
           {LEVELS.map((l) => (
             <option key={l} value={l}>
-              {l}
+              {titleCase(l)}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label>
         Length
-        <select
+        <Select
           value={length}
           onChange={(e) => setLength(e.target.value as WriteArticleRequest['length'])}
           disabled={busy}
         >
           {LENGTHS.map((l) => (
             <option key={l} value={l}>
-              {l}
+              {titleCase(l)}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <p className="muted small">
         The tutor’s AI provider receives the topic. The article is saved in the app’s own folder and
@@ -102,17 +108,12 @@ export function WriteArticle({ onWritten }: { onWritten?: (id: string) => void }
         </p>
       )}
       <div className="lib-write-actions">
-        <button type="submit" className="primary small-button" disabled={busy || !topic.trim()}>
+        <Button type="submit" variant="primary" size="sm" disabled={busy || !topic.trim()}>
           {busy ? 'Writing…' : 'Write'}
-        </button>
-        <button
-          type="button"
-          className="small-button"
-          onClick={() => setOpen(false)}
-          disabled={busy}
-        >
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onClose} disabled={busy}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

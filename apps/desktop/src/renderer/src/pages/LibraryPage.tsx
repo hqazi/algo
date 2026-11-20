@@ -2,13 +2,16 @@
  * The Library page (T22, SPEC §15.6): folder tree with filter and Refresh,
  * the reader with its margin chats, and the chat pane (T24), in the practice
  * view's resizable panes. While the page is open, main rescans on file
- * changes (`library:watch`) and sends the tree after each scan.
+ * changes (`library:watch`) and sends the tree after each scan. Restyled in
+ * T32 (docs/design.md → Library; the look is in `library.css`).
  */
 import { useCallback, useEffect, useState } from 'react';
+import { PenLine, RefreshCw, Search } from 'lucide-react';
 import type { AnchorView } from '../../../shared/article-chat';
 import type { ArticleView, TreeView } from '../../../shared/library';
 import { Link } from '../components/Link';
 import { Panes } from '../components/Panes';
+import { IconButton } from '../components/ui';
 import { invoke, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { LibraryTree } from '../library/LibraryTree';
@@ -17,6 +20,7 @@ import { ArticleChatPane } from '../library/chat/ArticleChatPane';
 import { PassageLayer } from '../library/chat/PassageLayer';
 import { useArticleChats } from '../library/chat/useArticleChats';
 import { Reader } from '../library/Reader';
+import './library.css';
 
 export function LibraryPage({ article }: { article: string | null }) {
   const app = useApp();
@@ -24,6 +28,7 @@ export function LibraryPage({ article }: { article: string | null }) {
   const [version, setVersion] = useState(0);
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
+  const [writing, setWriting] = useState(false);
   const [tab, setTab] = useState(article ? 'reader' : 'articles');
   const chats = useArticleChats(article);
   const [missing, setMissing] = useState(false);
@@ -80,6 +85,7 @@ export function LibraryPage({ article }: { article: string | null }) {
   const left = (
     <div className="lib-left">
       <div className="lib-tools">
+        <Search className="lib-search-icon" size={14} aria-hidden="true" />
         <input
           type="search"
           placeholder="Filter by title or tag"
@@ -89,14 +95,16 @@ export function LibraryPage({ article }: { article: string | null }) {
         />
       </div>
       <WriteArticle
+        open={writing}
+        onClose={() => setWriting(false)}
         onWritten={() => {
           void invoke('library:tree').then(setTree, () => undefined);
         }}
       />
       {tree === null ? (
-        <p className="muted small">Loading…</p>
+        <p className="muted small lib-none">Loading…</p>
       ) : empty ? (
-        <p className="muted small" data-testid="library-page-empty">
+        <p className="muted small lib-none" data-testid="library-page-empty">
           No folders yet. Add one in <Link to="/settings">Settings → Library</Link>.
         </p>
       ) : (
@@ -108,14 +116,23 @@ export function LibraryPage({ article }: { article: string | null }) {
   const leftActions = (
     <>
       <span className="spacer" />
-      <button
-        type="button"
-        className="small-button"
+      <IconButton
+        aria-label="Write an article"
+        title="Write an article: the tutor writes one on a topic you choose"
+        size="sm"
+        icon={<PenLine aria-hidden="true" />}
+        aria-pressed={writing}
+        onClick={() => setWriting((w) => !w)}
+      />
+      <IconButton
+        aria-label="Refresh"
+        title={busy ? 'Refreshing…' : 'Refresh: scan the folders again'}
+        size="sm"
+        className={busy ? 'lib-refresh busy' : 'lib-refresh'}
+        icon={<RefreshCw aria-hidden="true" />}
         onClick={() => void refresh()}
         disabled={busy || empty}
-      >
-        {busy ? 'Refreshing…' : 'Refresh'}
-      </button>
+      />
     </>
   );
 
@@ -127,13 +144,17 @@ export function LibraryPage({ article }: { article: string | null }) {
       layer={(body, html) => <PassageLayer body={body} html={html} chats={chats} onAsk={onAsk} />}
     />
   ) : (
-    <p className="muted reader-pad">Choose an article to read.</p>
+    <div className="lib-placeholder">
+      <p className="muted">Choose an article to read.</p>
+    </div>
   );
 
   const right = article ? (
     <ArticleChatPane chats={chats} missing={missing} />
   ) : (
-    <p className="muted reader-pad">Open an article to see its chats.</p>
+    <div className="lib-placeholder">
+      <p className="muted small">Open an article to see its chats.</p>
+    </div>
   );
 
   return (

@@ -12,6 +12,7 @@ import { Toasts } from '../components/Toasts';
 import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
 import { baseHandlers } from '../test/fixtures';
+import { sourceLabel } from '../library/source-label';
 import { LibraryPage } from './LibraryPage';
 
 const ASSET = 'tutor-app://app/library-asset/abcdefghijklmnop0123';
@@ -159,6 +160,52 @@ describe('LibraryPage', () => {
     expect(await screen.findByTestId('no-chats')).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(bridge.channels()).not.toContain('chat:send');
+  });
+
+  it('folds folders with chevron buttons and marks the open article (T32)', async () => {
+    setup('a1');
+    const tree = await screen.findByRole('list', { name: 'Library folders' });
+    const clippings = within(tree).getByRole('button', { name: 'Clippings' });
+    expect(clippings.getAttribute('aria-expanded')).toBe('true');
+    const open = within(tree).getByRole('link', { name: 'Binary search' });
+    expect(open.getAttribute('aria-current')).toBe('page');
+    expect(open.classList.contains('active')).toBe(true);
+
+    fireEvent.click(clippings);
+    expect(clippings.getAttribute('aria-expanded')).toBe('false');
+    expect(within(tree).queryByText('Binary search')).toBeNull();
+    expect(within(tree).getByText('Reading list')).toBeTruthy();
+    // A filter shows every matching folder open; clearing it keeps the fold.
+    const filter = screen.getByRole('searchbox', { name: 'Filter articles' });
+    fireEvent.change(filter, { target: { value: 'binary' } });
+    expect(within(tree).getByText('Binary search')).toBeTruthy();
+    fireEvent.change(filter, { target: { value: '' } });
+    expect(within(tree).queryByText('Binary search')).toBeNull();
+    fireEvent.click(clippings);
+    expect(within(tree).getByText('Binary search')).toBeTruthy();
+  });
+
+  it('shows the source as its domain, the full URL in the tooltip (T32)', async () => {
+    setup('a1');
+    await screen.findByRole('article', { name: 'Binary search' });
+    const source = screen.getByTestId('source-link');
+    expect(source.textContent).toBe('example.com');
+    expect(source.getAttribute('title')).toBe('https://example.com/binary-search');
+    expect(source.getAttribute('href')).toBe('https://example.com/binary-search');
+    expect(sourceLabel('https://www.Example.org/a?b')).toBe('example.org');
+    expect(sourceLabel('mailto:ada@example.com')).toBe('ada@example.com');
+    expect(sourceLabel('not a url')).toBe('not a url');
+  });
+
+  it('opens Write an article from the pane header (T32)', async () => {
+    setup(null);
+    await screen.findByRole('list', { name: 'Library folders' });
+    expect(screen.queryByRole('form', { name: 'Write an article' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Write an article' }));
+    const form = screen.getByRole('form', { name: 'Write an article' });
+    expect(within(form).getByRole('option', { name: 'Intermediate' })).toBeTruthy();
+    fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('form', { name: 'Write an article' })).toBeNull();
   });
 
   it('opens web links through main and library links in the app', async () => {
