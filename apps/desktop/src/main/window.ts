@@ -232,6 +232,13 @@ export function guardAllWebContents(onBlocked?: (what: string, url: string) => v
   });
 }
 
+/**
+ * The smallest window (D-55). Below 900px wide the multi-pane pages switch
+ * to stacked tabs, so the minimum is laid out that way; every page was
+ * checked at this size (T34).
+ */
+export const MIN_WINDOW_SIZE = { width: 800, height: 600 } as const;
+
 /** Height of the app's title bar in px; `--titlebar-h` in styles.css matches. */
 export const TITLE_BAR_HEIGHT = 44;
 
@@ -308,6 +315,8 @@ export function createMainWindow(title: string, opts: UiOptions): BrowserWindow 
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    minWidth: MIN_WINDOW_SIZE.width,
+    minHeight: MIN_WINDOW_SIZE.height,
     title,
     show: false,
     ...titleBarOptions(process.platform, nativeTheme.shouldUseDarkColors),

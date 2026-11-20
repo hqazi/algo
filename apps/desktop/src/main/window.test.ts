@@ -7,6 +7,7 @@ import {
   followThemeInTitleBar,
   isAllowedRequest,
   isTrustedUrl,
+  MIN_WINDOW_SIZE,
   pageUrl,
   serveUi,
   TITLE_BAR_COLORS,
@@ -191,5 +192,14 @@ describe('title bar (T29)', () => {
     expect(token(dark, 'bg')).toBe(TITLE_BAR_COLORS.dark.color);
     expect(token(dark, 'muted')).toBe(TITLE_BAR_COLORS.dark.symbolColor);
     expect(token(css, 'titlebar-h')).toBe(`${TITLE_BAR_HEIGHT}px`);
+  });
+});
+
+describe('minimum window size (T34)', () => {
+  it('is below the 900px breakpoint, so the smallest window uses the stacked tabs', async () => {
+    const css = await readFile(new URL('../renderer/src/styles.css', import.meta.url), 'utf8');
+    expect(css).toContain('@media (max-width: 899px)');
+    expect(MIN_WINDOW_SIZE.width).toBeLessThan(900);
+    expect(MIN_WINDOW_SIZE.height).toBeGreaterThanOrEqual(600);
   });
 });
