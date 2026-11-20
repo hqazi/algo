@@ -86,7 +86,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | done |
 | T30 | Practice page refresh | design | 2d | T29 | done |
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | done |
-| T32 | Library refresh | design | 2d | T30 | in-progress |
+| T32 | Library refresh | design | 2d | T30 | done |
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | done |
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | todo |
 
@@ -2306,12 +2306,67 @@ here are reused by the Library (T32).
 **Goal.** `design.md` → Library, reusing T30's chat components.
 
 **Acceptance.**
-- [ ] Tree with chevrons, icons, guides, selected row style; header with filter and icon buttons.
-- [ ] Reader typography (16–17px, ~70ch), source domain with external icon, callouts with icons, **Ask** on hover/focus only (still reachable by keyboard).
-- [ ] Chats pane: relative times with full date tooltip; icon buttons for Rename / New chat / Close; Practice's message and composer styles.
-- [ ] Library e2e passes; screenshots looked at in both themes.
+- [x] Tree with chevrons, icons, guides, selected row style; header with filter and icon buttons.
+- [x] Reader typography (16–17px, ~70ch), source domain with external icon, callouts with icons, **Ask** on hover/focus only (still reachable by keyboard).
+- [x] Chats pane: relative times with full date tooltip; icon buttons for Rename / New chat / Close; Practice's message and composer styles.
+- [x] Library e2e passes; screenshots looked at in both themes.
 
-**Notes.**
+**Notes.** (2026-11-20)
+- **Built.** `library/LibraryTree.tsx`: folders as buttons with
+  `aria-expanded`, a turning chevron and open/closed folder icons (no
+  `<details>`), articles as links with a file icon, indent guides, the open
+  article as an accent-subtle row; a typed filter shows matching folders
+  open. `pages/LibraryPage.tsx`: **Write an article** and **Refresh** as icon
+  buttons in the Articles header (Refresh spins while it runs), the filter
+  with a search icon in a sticky row, quieter empty panes;
+  `library/WriteArticle.tsx` is opened from the header, with `Select`s,
+  `Button`s and capitalised option labels. `library/Reader.tsx`: source as
+  its domain with an external-link icon (`library/source-label.ts`; full URL
+  in `title`/`href`, opening still through `library:open-link`), AI-written
+  and tags as `Badge`s, the "file missing" banner with an icon.
+  `pages/library.css` (new): 16px body, line height 1.7, 70ch measure,
+  heading scale, code blocks, tables, tinted callouts with lucide icons as
+  CSS masks (note/info, warning, danger, tip, success, question, quote),
+  image placeholders with an icon, banners. `library/chat/PassageLayer.tsx`:
+  a heading's **Ask** (icon + text) shows only while the pointer is over that
+  heading or the button, or on keyboard focus; **Ask about this** with an
+  icon; accent margin markers with a wider hit area.
+  `library/chat/ArticleChatPane.tsx`: on `MessageList` and `Composer`;
+  thread rows with title, relative time (`relativeDate`, `fullDate` tooltip,
+  from T33's `lib/format.ts`) and a two-line passage snippet; **Rename**,
+  **New chat**, **Close** as icon buttons; **Make a problem from this** as a
+  chip above the composer; provider notice, passage quote, "passed the
+  self-check" note restyled; test ids unchanged. `linked-images.tsx`: Load
+  images / Retry as small secondary buttons. `chat.css`: `.chat-head`,
+  `.small-button`, `.chat-compose` removed. Tests: tree folding and the
+  open article, source label, Write an article from the header
+  (`LibraryPage.test.tsx`); heading Ask on hover, thread times and icon
+  buttons (`ArticleChat.test.tsx`).
+- **Decisions.** D-54.
+- **Wiring outside Owns.** `chat/chat.css` (the three old rules removed);
+  `docs/guide/library.md` (where Refresh and Write an article are, folding
+  folders, Ask on hover, the chat list's times and buttons).
+  `e2e/library.e2e.ts` and `e2e/screenshots.ts` needed no change (names and
+  test ids kept). `styles.css` untouched.
+- **Checked.** After rebasing on T31 and T33: `npm run typecheck`, `npm run
+  lint`, `npm run format:check`, `npm test` (84 files, 1153 passed, 12
+  skipped), `npm run validate:content` (50 problems), `xvfb-run -a npm run
+  e2e` (all six suites `failures: []`, including the Library's "every
+  request the page made was tutor-app://"). The Library looked at in light
+  and dark at 1440×880 and 1000×760 with a scratch script (not committed):
+  tree, reader with callouts, code and a table, heading Ask on hover, a
+  selection, the provider notice, a chat thread, the thread list, the empty
+  chats state, an article with a local image and two placeholders, the
+  Write form, the file-missing banners; fixed the callout title spacing, the
+  Write button's pressed state, the "Chats" title hidden in a narrow pane
+  and the cut-off **Make a problem from this**.
+- **Not done / not tested.** The T22 Library rules in `styles.css` are
+  overridden by `pages/library.css`, not deleted (T34 can remove them). Which
+  folders are closed is not remembered across visits. The narrow layout
+  (under 900px, stacked tabs) and the minimum window size were not looked
+  at; macOS and Windows not seen; not checked in a packaged build; `npm run
+  check:security` not run (no main-process change).
+  `docs/assets/screenshots/` not retaken (T34).
 
 ### T33 — Onboarding, Settings and dialogs refresh
 
