@@ -106,8 +106,12 @@ jobs:
             -t algorithm-tutor-runner:ci runner-image
       - name: hello world in Python, Rust and Go
         run: runner-image/smoke.sh algorithm-tutor-runner:ci
+      # One file at a time: the executor suite checks that no job container
+      # is left, which a parallel file's container would break.
       - name: container executor suites in the image
-        run: npx vitest run apps/desktop/src/main/exec/container apps/desktop/src/main/exec/code-execution.test.ts
+        run: |
+          npx vitest run apps/desktop/src/main/exec/container
+          npx vitest run apps/desktop/src/main/exec/code-execution.test.ts
         env:
           ALGOTUTOR_TEST_RUNNER_IMAGE: algorithm-tutor-runner:ci
       - name: push the tested image
