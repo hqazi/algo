@@ -86,7 +86,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | done |
 | T30 | Practice page refresh | design | 2d | T29 | done |
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | in-progress |
-| T32 | Library refresh | design | 2d | T30 | todo |
+| T32 | Library refresh | design | 2d | T30 | in-progress |
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | in-progress |
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | todo |
 
