@@ -75,7 +75,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T22 | Reader with local images | v3 | 3d | T21 | done |
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | done |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
-| T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
+| T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | in-progress |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
 
 ## Order
