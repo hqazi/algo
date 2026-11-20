@@ -301,9 +301,15 @@ try {
   await page.getByRole('heading', { name: 'Practice' }).waitFor({ timeout: 20_000 });
   await page.getByRole('link', { name: 'Progress' }).click();
   await page.getByRole('heading', { name: 'Recent attempts' }).waitFor();
+  // The lists refresh after the page opens; wait for them, not the first paint.
   check(
     'after import, progress shows the solve again',
-    (await page.locator('main').innerText()).includes(slug),
+    await page
+      .waitForFunction((s) => document.querySelector('main')?.textContent?.includes(s), slug, {
+        timeout: 10_000,
+      })
+      .then(() => true)
+      .catch(() => false),
   );
   check(
     'after import, the solution file is back',

@@ -9,7 +9,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { stringifyJson } from '@algorithm-tutor/core';
 import { PyodidePool } from '../../exec-host/pool';
 import { poolTransport } from '../../exec-host/pool-transport';
@@ -186,8 +186,11 @@ describe('Practice', () => {
     await practice.teaching.profileDefaults();
     await practice.teaching.start('pair-with-target');
     const first = practice.run('pair-with-target');
-    await Promise.resolve();
-    await new Promise((r) => setTimeout(r, 0));
+    // Wait until the first run holds the problem (slow runners need more than a tick).
+    await vi.waitFor(() => expect(practice.guard.isBusy('pair-with-target')).toBe(true), {
+      timeout: 10_000,
+      interval: 5,
+    });
     expect(await refusal(practice.run('pair-with-target'))).toBe('busy');
     expect(await refusal(practice.save('pair-with-target', 'x = 1\n'))).toBe('busy');
     await first;
