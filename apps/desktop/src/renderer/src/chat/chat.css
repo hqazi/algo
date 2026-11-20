@@ -2,16 +2,33 @@
    message list, chips and composer the Library's chats share. Uses the tokens
    from styles.css. */
 .chat {
+  container: chat / inline-size;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   background: var(--surface);
 }
+.chat > .pane-header {
+  flex-wrap: nowrap;
+}
+/* In a narrow pane the thread switch needs the room more than the title,
+   which stays for screen readers. */
+@container chat (max-width: 340px) {
+  .chat > .pane-header .pane-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
 .chat-threads {
   min-width: 0;
 }
 .chat-threads > button {
+  min-width: 0;
   max-width: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;

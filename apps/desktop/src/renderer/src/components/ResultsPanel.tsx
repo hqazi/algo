@@ -178,7 +178,12 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
       </section>
     );
   }
-  const cases = withExamples(report.cases, examples);
+  // Failing tests first (each group keeps its order): they are what to look at.
+  const all = withExamples(report.cases, examples);
+  const cases = [
+    ...all.filter((c) => c.status !== 'pass'),
+    ...all.filter((c) => c.status === 'pass'),
+  ];
   const hiddenFailed = cases.filter((c) => c.visibility === 'hidden' && c.status !== 'pass');
   const categories = [...new Set(hiddenFailed.map((c) => words(c.category || 'test')))];
   const Icon = report.all_passed ? CircleCheck : CircleX;

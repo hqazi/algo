@@ -6,7 +6,7 @@
  * `show_results` events show in the results panel.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Play } from 'lucide-react';
+import { FileCode, Flag, Play, RotateCcw } from 'lucide-react';
 import type {
   LanguageOption,
   ProblemDetail,
@@ -467,11 +467,13 @@ export function PracticePage({ slug }: { slug: string }) {
     detail.attempt_recorded
       ? {
           label: 'Reference',
+          icon: <FileCode aria-hidden="true" />,
           title: 'Show the reference solution',
           onSelect: () => void showReference(),
         }
       : {
           label: 'Give up',
+          icon: <Flag aria-hidden="true" />,
           title: 'Record the attempt as gave up and show the reference solution',
           onSelect: () => setGiveUpOpen(true),
           disabled: !!busy,
@@ -479,6 +481,7 @@ export function PracticePage({ slug }: { slug: string }) {
         },
     {
       label: 'Reset',
+      icon: <RotateCcw aria-hidden="true" />,
       title: 'Replace your code with the starter',
       onSelect: resetToStarter,
       disabled: !!busy,

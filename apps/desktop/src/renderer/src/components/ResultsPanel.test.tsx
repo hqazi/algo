@@ -42,7 +42,14 @@ describe('ResultsPanel', () => {
   it('shows the summary and one row per test', () => {
     render(<ResultsPanel report={report} kind="submit" examples={examples} />);
     expect(screen.getByTestId('summary').textContent).toBe('2/5 passed');
-    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    // Failing tests first, each group in its order.
+    expect(screen.getAllByRole('listitem').map((li) => li.getAttribute('data-testid'))).toEqual([
+      'case-example-2',
+      'case-hidden-2',
+      'case-hidden-3',
+      'case-example-1',
+      'case-hidden-1',
+    ]);
     expect(screen.getByText(/2 hidden tests failed/).textContent).toContain(
       '(negative numbers and large input)',
     );

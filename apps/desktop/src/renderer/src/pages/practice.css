@@ -65,7 +65,7 @@
 .statement-details .section-label {
   margin: 0 0 var(--space-2);
 }
-.details-constraints {
+.statement-details .details-constraints {
   font-size: var(--text-sm);
 }
 .details-constraints ul {
@@ -93,6 +93,13 @@
 }
 .statement .explanation-list ul {
   gap: var(--space-1);
+}
+.statement .link-button {
+  color: var(--accent-fg);
+  text-decoration: none;
+}
+.statement .link-button:hover {
+  text-decoration: underline;
 }
 
 /* ---- editor toolbar (the Code pane's header) */
