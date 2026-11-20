@@ -58,6 +58,7 @@ export const INVOKE_CHANNELS = [
   'library:refresh',
   'library:article',
   'library:open-link',
+  'library:write-article',
   'library:threads',
   'library:thread-create',
   'library:thread-rename',

@@ -44,6 +44,7 @@ const ARTICLE: ArticleView = {
   tags: [],
   extra: [],
   missing: false,
+  generated: false,
   body: '# Heaps\n\nA heap keeps the smallest item on top.\n\n## Uses\n\nPriority queues use heaps.\n',
   images: {},
   links: {},
@@ -292,5 +293,49 @@ describe('chat messages never render images', () => {
       unmount();
     }
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('T25: problems from a passage and articles the tutor writes', () => {
+  it('Make a problem from this sends the request; a passing problem offers Open in Practice', async () => {
+    seen = true;
+    const { bridge } = setup();
+    await screen.findByRole('article', { name: 'Heaps' });
+    select('smallest item on top');
+    fireEvent.click(await screen.findByRole('button', { name: 'Ask about this' }));
+    fireEvent.click(pane().getByTestId('make-problem'));
+    await waitFor(() => expect(bridge.streams.some((s) => s.channel === 'chat:send')).toBe(true));
+    const s = bridge.streams.find((x) => x.channel === 'chat:send')!;
+    expect(s.request).toEqual({ thread: ID, text: 'Make a practice problem from this passage.' });
+    s.emit({ type: 'ui_event', event: { type: 'ui', action: 'open_problem', slug: 'even-count' } });
+    s.emit({ type: 'done', stop: 'end_turn' });
+    s.finish({
+      message: { seq: 2, role: 'assistant', text: 'Ready.', stop: 'end_turn', created_at: 't' },
+    });
+    const note = await screen.findByTestId('passage-problem');
+    expect(note.textContent).toContain('even-count');
+    // Not opened by itself: the user stays on the article.
+    expect(window.location.hash).toBe('#/library/a1');
+    fireEvent.click(within(note).getByRole('button', { name: 'Open in Practice' }));
+    expect(window.location.hash).toBe('#/p/even-count');
+  });
+
+  it('a generated article is labelled AI-written; Write an article opens the new one', async () => {
+    const { bridge } = setup({ article: { ...ARTICLE, generated: true } });
+    bridge.on('library:write-article', () => ({ id: 'g1', title: 'Tries' }));
+    expect(await screen.findByTestId('ai-written')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Write an article' }));
+    const form = within(screen.getByRole('form', { name: 'Write an article' }));
+    fireEvent.change(form.getByRole('textbox', { name: 'Topic' }), { target: { value: 'Tries' } });
+    fireEvent.change(form.getByRole('combobox', { name: 'Level' }), {
+      target: { value: 'beginner' },
+    });
+    fireEvent.click(form.getByRole('button', { name: 'Write' }));
+    await waitFor(() => expect(window.location.hash).toBe('#/library/g1'));
+    expect(bridge.calls.find((c) => c.channel === 'library:write-article')!.request).toEqual({
+      topic: 'Tries',
+      level: 'beginner',
+      length: 'medium',
+    });
   });
 });

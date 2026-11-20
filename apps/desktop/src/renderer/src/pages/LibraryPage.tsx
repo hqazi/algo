@@ -12,6 +12,7 @@ import { Panes } from '../components/Panes';
 import { invoke, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { LibraryTree } from '../library/LibraryTree';
+import { WriteArticle } from '../library/WriteArticle';
 import { ArticleChatPane } from '../library/chat/ArticleChatPane';
 import { PassageLayer } from '../library/chat/PassageLayer';
 import { useArticleChats } from '../library/chat/useArticleChats';
@@ -90,6 +91,11 @@ export function LibraryPage({ article }: { article: string | null }) {
           {busy ? 'Refreshing…' : 'Refresh'}
         </button>
       </div>
+      <WriteArticle
+        onWritten={() => {
+          void invoke('library:tree').then(setTree, () => undefined);
+        }}
+      />
       {tree === null ? (
         <p className="muted small">Loading…</p>
       ) : empty ? (

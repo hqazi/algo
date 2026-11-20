@@ -34,6 +34,8 @@ import {
   renderExplanationPage,
   UnavailableBackend,
   type ArticleThread,
+  type ArticleToolContext,
+  type JsonSchema,
   type ArticleTurn,
   type BackendStatus,
   type OpenArticle,
@@ -249,9 +251,22 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
   };
 
   // Article mode (T24): three tools bound to the open article, its own prompt.
+  // T25: plus `create_problem` from a passage, through the tutor's own tool
+  // (same guard, same factory: self-check in Pyodide before anything is saved).
   const getProfile = () => teaching.getProfile();
+  const problemTool = tools.get('create_problem');
+  const specSchema = (problemTool?.inputSchema.properties as Record<string, JsonSchema> | undefined)
+    ?.spec;
+  const problemCtx: Pick<ArticleToolContext, 'createProblem' | 'problemSpecSchema'> =
+    problemTool && specSchema
+      ? {
+          problemSpecSchema: specSchema,
+          createProblem: async (args) => (await tools.call('create_problem', args)).output,
+        }
+      : {};
   const articlePrompt = buildArticleSystemPrompt(
-    buildArticleRegistry({ body: null, getProfile }).anthropicTools(),
+    buildArticleRegistry({ body: null, getProfile, ...problemCtx }).anthropicTools(),
+    references,
   );
   const readArticle = deps.readArticle;
   const article = readArticle
@@ -272,7 +287,9 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
         }
         return {
           context: { article: articleTurnContext(open, anchor) },
-          tools: buildArticleRegistry({ body: open.body, getProfile }, (m, e) => log(m, e)),
+          tools: buildArticleRegistry({ body: open.body, getProfile, ...problemCtx }, (m, e) =>
+            log(m, e),
+          ),
           systemPrompt: articlePrompt,
         };
       }

@@ -35,6 +35,7 @@ import {
 } from './library/assets';
 import { registerImageHandlers } from './library/images/handlers';
 import { LinkedImages } from './library/images/linked';
+import { articleWriter, GeneratedArticles, registerGeneratedHandlers } from './library/generated';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import { SecretStore } from './secrets';
 import { electronCrypto } from './secrets/electron-crypto';
@@ -228,6 +229,8 @@ export async function startPractice(
       ui: dataUi,
     }),
   });
+  const generatedArticles = new GeneratedArticles(storage.paths.generatedArticles);
+  await generatedArticles.ensure();
   // The Library (T21): scanned at start; folders are only ever read.
   const library = openLibrary({
     settings: storage.settings,
@@ -244,9 +247,23 @@ export async function startPractice(
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
     openPath: async (path) => (await shell.openPath(path)) === '',
+    generatedDir: generatedArticles.dir,
     log: (m) => console.warn(m),
   });
   registerLibraryHandlers(router, library, { log: (m) => console.warn(m) });
+  // Articles the tutor writes (T25): the app's own folder, never a library folder.
+  registerGeneratedHandlers(
+    router,
+    articleWriter({
+      files: generatedArticles,
+      library,
+      backend: () => tutor.backend(),
+      now: isoNow,
+      newId: randomUUID,
+      log: (m, e) => console.warn(m, e ?? ''),
+    }),
+    { log: (m, e) => console.warn(m, e ?? '') },
+  );
   libraryFolders = () => library.paths().map((f) => f.id);
   registerArticleChatHandlers(router, {
     tutor,

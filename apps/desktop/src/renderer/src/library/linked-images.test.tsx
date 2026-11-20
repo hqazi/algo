@@ -31,6 +31,7 @@ const article = (): ArticleView => ({
   tags: [],
   extra: [],
   missing: false,
+  generated: false,
   body: `![chart](${URL1})`,
   images: { [URL1]: PENDING },
   links: {},

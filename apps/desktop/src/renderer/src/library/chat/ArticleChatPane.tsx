@@ -13,11 +13,15 @@ import { MessageView } from '../../chat/MessageView';
 import { invoke } from '../../ipc';
 import { errorText, useApp } from '../../lib/app-context';
 import { when } from '../../lib/format';
+import { navigate } from '../../lib/router';
 import { snippet, type ArticleChats } from './useArticleChats';
 import '../../chat/chat.css';
 import './article-chat.css';
 
 const MAX_TEXT = 20_000;
+/** What **Make a problem from this** sends (core's `PASSAGE_PROBLEM_REQUEST`). */
+export const PASSAGE_PROBLEM_REQUEST = 'Make a practice problem from this passage.';
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export interface ArticleChatPaneProps {
   chats: ArticleChats;
@@ -75,6 +79,18 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
   const [notice, setNotice] = useState<'unknown' | 'seen' | 'unseen'>('unknown');
   const [confirming, setConfirming] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
+  /** T25: problems made from a passage in this pane, by thread. */
+  const [made, setMade] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState<string | null>(null);
+
+  useEffect(
+    () =>
+      store.onUi((ev, thread) => {
+        if (ev.action !== 'open_problem' || !thread.startsWith('article:')) return;
+        if (SLUG_RE.test(ev.slug)) setMade((m) => ({ ...m, [thread]: ev.slug }));
+      }),
+    [store],
+  );
 
   useEffect(() => {
     if (!store.status) void store.refreshStatus();
@@ -91,13 +107,16 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
   const busy = open ? view.streaming : false;
   const canSend = !!status && !unavailable && !busy && (!!open || !!draft);
 
-  async function send(): Promise<void> {
-    const body = text.trim();
+  async function send(given?: string): Promise<void> {
+    const body = (given ?? pending ?? text).trim();
     if (!canSend || !body) return;
     if (notice !== 'seen' && !confirming) {
+      // A button's message waits for the notice like typed text.
+      if (given) setPending(given);
       setConfirming(true);
       return;
     }
+    setPending(null);
     try {
       if (confirming) {
         await invoke('library:chat-notice', { ack: true });
@@ -105,9 +124,10 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
         setConfirming(false);
       }
       const thread = open ?? (await chats.createFromDraft());
-      setText('');
+      const typed = body === text.trim();
+      if (typed) setText('');
       const ok = await store.send(thread, { text: body });
-      if (!ok) setText((d) => d || body);
+      if (!ok && typed) setText((d) => d || body);
       await chats.reload();
     } catch (e) {
       app.notify(errorText(e), 'error');
@@ -254,6 +274,18 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
             </p>
           )}
           {open && <ThreadLog thread={open} />}
+          {open && made[open] && (
+            <p className="notice small" role="status" data-testid="passage-problem">
+              The problem <code>{made[open]}</code> passed the self-check.{' '}
+              <button
+                type="button"
+                className="small-button primary"
+                onClick={() => navigate(`/p/${made[open]}`)}
+              >
+                Open in Practice
+              </button>
+            </p>
+          )}
           {open && view.notice && (
             <div className="chat-notice" role="alert" data-testid="chat-notice">
               <span>{view.notice.message}</span>
@@ -286,7 +318,14 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
               <button type="button" className="primary small-button" onClick={() => void send()}>
                 Send
               </button>{' '}
-              <button type="button" className="small-button" onClick={() => setConfirming(false)}>
+              <button
+                type="button"
+                className="small-button"
+                onClick={() => {
+                  setConfirming(false);
+                  setPending(null);
+                }}
+              >
                 Cancel
               </button>
             </div>
@@ -308,6 +347,16 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
               onChange={(e) => setText(e.target.value)}
               onKeyDown={onKeyDown}
             />
+            <button
+              type="button"
+              className="small-button"
+              onClick={() => void send(PASSAGE_PROBLEM_REQUEST)}
+              disabled={!canSend}
+              title="The tutor writes a practice problem from this passage; it appears only if it passes the self-check"
+              data-testid="make-problem"
+            >
+              Make a problem from this
+            </button>
             {busy && open ? (
               <button
                 type="button"

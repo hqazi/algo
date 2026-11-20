@@ -23,7 +23,8 @@ export function ChatEffects({ onRefresh }: { onRefresh: () => void | Promise<voi
       store.onUi((ev, thread) => {
         switch (ev.action) {
           case 'open_problem':
-            if (!SLUG_RE.test(ev.slug)) return;
+            // T25: a problem made from a passage is offered in the article's pane, not opened.
+            if (!SLUG_RE.test(ev.slug) || thread.startsWith('article:')) return;
             store.follow = thread === ev.slug ? null : { from: thread, to: ev.slug };
             navigate(`/p/${ev.slug}`);
             break;

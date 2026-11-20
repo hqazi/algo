@@ -12,6 +12,8 @@ import { basename, isAbsolute, relative } from 'node:path';
 import {
   articleMeta,
   buildTree,
+  GENERATED_FOLDER_ID,
+  GENERATED_GROUP_NAME,
   MAX_LIBRARY_FOLDERS,
   parseNote,
   planScan,
@@ -41,6 +43,8 @@ export interface FolderInfo {
 export interface FolderTree {
   id: string;
   name: string;
+  /** T25: the app's own folder of articles the tutor wrote. */
+  generated?: true;
   error: string | null;
   root: TreeFolder;
 }
@@ -64,6 +68,12 @@ export interface LibraryDeps {
   chooseFolder: () => Promise<string | null>;
   /** Opens a folder in the file manager. */
   openPath: (path: string) => Promise<boolean>;
+  /**
+   * T25: `<data>/articles/generated`, indexed as folder `generated` (shown
+   * as "Written by the tutor" once it holds an article). Not a setting: it
+   * cannot be removed or opened from Settings.
+   */
+  generatedDir?: string;
   log?: (message: string) => void;
 }
 
@@ -81,6 +91,12 @@ export class LibraryService {
 
   private list(): LibraryFolder[] {
     return this.deps.settings.get().library.folders;
+  }
+
+  /** The user's folders plus the generated one (scanned, read and watched alike). */
+  private all(): LibraryFolder[] {
+    const dir = this.deps.generatedDir;
+    return dir ? [...this.list(), { id: GENERATED_FOLDER_ID, path: dir }] : this.list();
   }
 
   private folder(id: string): LibraryFolder {
@@ -102,7 +118,10 @@ export class LibraryService {
 
   tree(): FolderTree[] {
     const rows = this.deps.storage.readSql((db) => listArticles(db));
-    return this.list().map((f) => {
+    const folders = this.all().filter(
+      (f) => f.id !== GENERATED_FOLDER_ID || rows.some((r) => r.folderId === f.id),
+    );
+    return folders.map((f) => {
       const mine = rows
         .filter((r) => r.folderId === f.id)
         .map((r) => ({
@@ -112,6 +131,14 @@ export class LibraryService {
           tags: articleMeta(r.frontmatter, r.relPath).tags,
           missing: r.missingSince !== null,
         }));
+      if (f.id === GENERATED_FOLDER_ID)
+        return {
+          id: f.id,
+          name: GENERATED_GROUP_NAME,
+          generated: true as const,
+          error: this.errors.get(f.id) ?? null,
+          root: buildTree(mine),
+        };
       return {
         id: f.id,
         name: basename(f.path) || f.path,
@@ -133,7 +160,7 @@ export class LibraryService {
     const run = async (): Promise<void> => {
       do {
         this.again = false;
-        for (const f of this.list()) await this.scanOne(f);
+        for (const f of this.all()) await this.scanOne(f);
       } while (this.again);
     };
     this.running = run().finally(() => {
@@ -168,7 +195,7 @@ export class LibraryService {
     const now = this.deps.now();
     await this.deps.storage.writeSql((db) => {
       // Removed while scanning: nothing to write.
-      if (!this.list().some((x) => x.id === f.id)) return;
+      if (!this.all().some((x) => x.id === f.id)) return;
       const plan = planScan(listArticles(db, f.id), notes);
       applyScan(db, f.id, plan, now, this.deps.newId);
     });
@@ -233,7 +260,7 @@ export class LibraryService {
   article(id: string): { folderPath: string; row: ArticleRow; siblings: ArticleRow[] } {
     const rows = this.deps.storage.readSql((db) => listArticles(db));
     const row = rows.find((r) => r.id === id);
-    const folder = row && this.list().find((f) => f.id === row.folderId);
+    const folder = row && this.all().find((f) => f.id === row.folderId);
     if (!row || !folder) throw new LibraryError('not_found', 'That article is not in the library.');
     return {
       folderPath: folder.path,
@@ -242,8 +269,14 @@ export class LibraryService {
     };
   }
 
+  /** The id of the indexed article at `relPath` in a folder, or `null`. */
+  articleAt(folderId: string, relPath: string): string | null {
+    const rows = this.deps.storage.readSql((db) => listArticles(db, folderId));
+    return rows.find((r) => r.relPath === relPath && r.missingSince === null)?.id ?? null;
+  }
+
   /** Absolute paths of the folders, for watching (main only). */
   paths(): { id: string; path: string }[] {
-    return this.list().map((f) => ({ ...f }));
+    return this.all().map((f) => ({ ...f }));
   }
 }

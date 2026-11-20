@@ -1468,3 +1468,35 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
 - The Claude Code article test replays `article-turn.jsonl`: the recorded
   `turn.jsonl` with its tool call rewritten to `read_article_section` by
   hand, not a new recording.
+
+**D-43 Tutor-written articles and problems from passages (T25)**
+
+- Generated articles live in `<data>/articles/generated/<slug>.md` and are
+  indexed like a library folder under the fixed folder id `generated`
+  (settings folder ids are UUIDs), so scanning, reading, chats and images
+  work unchanged. The group appears in the tree once it holds an article;
+  it is not in Settings → Library and cannot be removed or opened there.
+  The reader's `generated` flag comes from the folder, never from a
+  frontmatter key, so a clipped note cannot claim or hide the label.
+- Writing is one request/response IPC call (`library:write-article`) that
+  resolves when the file is indexed: one article at a time, at most 2
+  turns (the second reminds the model to save) and 3 `save_article` calls,
+  5 minutes. The file is staged under a dot name (skipped by scans) and
+  renamed; the slug comes from the title (`-2`, `-3` when taken). No
+  progress events and no Stop button: a later ticket can add them.
+- The model writes title, tags and body only. The app drops any
+  frontmatter it wrote, a leading `# Title`, and every image form
+  (`![a](u)`, `![a][r]`, `![[x.png]]`) to its alt text: model text never
+  reaches the linked-image downloader (SPEC §15.4).
+- `create_problem` in article mode calls the tutor registry's own
+  `create_problem` (same slug guard, `chatCreateProblem` factory and
+  self-check in Pyodide), so T12's pipeline is reused, not copied. It is
+  offered only when the tutor has `createProblem`; the spec schema is taken
+  from the tutor tool. The 4-call limit (SPEC §6.3) is per article turn,
+  counted in the per-turn tool context; the model gets the failures back
+  and repairs. Origin is never passed: a problem from a passage is a
+  generated problem in the tutor's own words.
+- Success emits `open_problem`, but the global chat effects ignore it for
+  `article:` threads; the article pane shows **Open in Practice** instead,
+  so a chat on a passage never moves the user (or the thread) to the
+  problem page by itself.

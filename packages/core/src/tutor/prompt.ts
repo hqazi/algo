@@ -45,7 +45,7 @@ export function toolList(tools: readonly PromptTool[]): string {
 }
 
 /** Small rewrites the reference guides need inside the prompt. */
-function rewriteGuide(text: string): string {
+export function rewriteGuide(text: string): string {
   return text
     .replace(/`(\w+)\.md`/g, 'the $1 guide')
     .replace(/\b(\w+)\.md\b/g, 'the $1 guide')

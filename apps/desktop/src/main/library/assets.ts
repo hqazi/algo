@@ -14,7 +14,13 @@ import { randomBytes } from 'node:crypto';
 import { constants, type Dirent } from 'node:fs';
 import { open, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, posix, relative, sep } from 'node:path';
-import { articleMeta, isSkippedName, MAX_NOTE_BYTES, parseNote } from '@algorithm-tutor/core';
+import {
+  articleMeta,
+  GENERATED_FOLDER_ID,
+  isSkippedName,
+  MAX_NOTE_BYTES,
+  parseNote,
+} from '@algorithm-tutor/core';
 import {
   IMAGE_FILE,
   LIBRARY_ASSET_PREFIX,
@@ -401,6 +407,8 @@ export async function readArticle(
   const content = root && row.missingSince === null ? await readNote(root, row.relPath) : null;
   const parsed = content === null ? null : parseNote(content, row.relPath);
   const meta = parsed?.meta ?? articleMeta(row.frontmatter, row.relPath);
+  // T25: only the app's own folder makes an article AI-written, not a key in a note.
+  const generated = row.folderId === GENERATED_FOLDER_ID;
   const images: Record<string, ImageView> = {};
   const links: Record<string, string | null> = {};
   if (parsed && root) {
@@ -429,12 +437,14 @@ export async function readArticle(
     description: clip(meta.description, 5000),
     tags: meta.tags.slice(0, 500).map((t) => t.slice(0, 500)),
     extra: Object.entries(meta.extra)
+      .filter(([k]) => !(generated && k === 'generated'))
       .slice(0, 100)
       .map(([k, v]) => [
         k.slice(0, 200),
         (typeof v === 'string' ? v : JSON.stringify(v)).slice(0, 1000),
       ]),
     missing: parsed === null,
+    generated,
     body: parsed?.body ?? '',
     images,
     links,

@@ -190,6 +190,12 @@ export const invokeChannels = {
   'library:image-cache': { request: z.undefined(), response: L.imageCacheResponse },
   /** Clears the linked-image cache; then its size. */
   'library:clear-image-cache': { request: z.undefined(), response: L.imageCacheResponse },
+  /**
+   * T25: the tutor writes an article on a topic (level, length) and saves it
+   * in the app's own `articles/generated/`; resolves when it is indexed.
+   * Refused: `invalid`, `unavailable`, `busy`, `not_written`, `cancelled`, `backend`.
+   */
+  'library:write-article': { request: L.writeArticleRequest, response: L.writeArticleResponse },
   /** Opens an article's link in the system browser: `https:`, `http:`, `mailto:` only. Refused: `scheme`. */
   'library:open-link': {
     request: L.openLinkRequest,

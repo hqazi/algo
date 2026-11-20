@@ -212,8 +212,8 @@ execution host, logs, the database or code under test; Settings shows only
 ### 4.5 Export, import, reset
 
 - **Export** writes a zip: `tutor.db` (via SQLite backup API), `settings.json`,
-  `workspace/`, `problems/generated/`, `problems/imported/`, `explanations/`.
-  Never secrets.
+  `workspace/`, `problems/generated/`, `problems/imported/`, `explanations/`,
+  `articles/generated/` (v3). Never secrets.
 - **Import** validates the zip, backs up current data (an export to
   `backups/`), stages the files in `pending/` and restarts; the swap happens
   at start-up before the database opens (D-24).
@@ -715,7 +715,13 @@ job. The only network use is downloading images an article links to (15.4).
 - Articles the tutor writes (T25) are the one exception to "only the user's
   folders": they are saved in the app's own `articles/generated/<slug>.md`,
   shown as a **Written by the tutor** group, labelled as AI-written, and
-  exported with the user's data.
+  exported with the user's data. **Write an article** takes a topic, a level
+  (beginner / intermediate / advanced) and a length (short / medium / long);
+  the tutor's only tool is `save_article`. The app writes the frontmatter
+  (`title`, `created`, `tags`, `generated: true`) and removes any image from
+  the body, so a generated article never causes a download (15.4). Only the
+  app's folder makes an article AI-written, not a `generated` key in a
+  user's note (D-43).
 - Identity: an article is `(folder id, path inside the folder)` with its
   content hash. A rescan that finds a path gone and a new path with the same
   hash, or the same `source`, moves the article (and its chats) instead of
@@ -829,7 +835,12 @@ thread is "detached" and listed without a position.
   pasted problems. The tutor reads more of the article only through tools.
 - Article-mode tools: `read_article_section(heading)`,
   `search_article(query)` (both return text from the open article only,
-  capped), `get_profile`. T25 adds `create_problem` from a passage. No
+  capped), `get_profile`, and (T25) `create_problem` from a passage: the
+  tutor's own tool and pipeline (6.3, self-check in Pyodide; nothing is
+  saved unless it passes), at most 4 calls per message, with the problem
+  spec and topics guides in the article prompt. **Make a problem from
+  this** in a thread sends a fixed request; a problem that passes is
+  offered with **Open in Practice** (not opened by itself). No other
   practice tools, no file or network access.
 - Chat messages never render images, in any thread (the chat allowlist has no
   `img`); a test keeps it that way. This stops a planted instruction from

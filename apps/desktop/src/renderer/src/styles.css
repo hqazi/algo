@@ -890,3 +890,27 @@ button.link {
 .callout-done {
   border-left-color: var(--pass);
 }
+
+/* Articles the tutor writes (T25) */
+.lib-write {
+  margin-bottom: 0.5rem;
+}
+.lib-write-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+.lib-write-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.9em;
+}
+.lib-write-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.ai-label {
+  margin-left: 0.35rem;
+}

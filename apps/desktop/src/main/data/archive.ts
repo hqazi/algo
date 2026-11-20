@@ -3,7 +3,8 @@
  *
  * - **Export** writes one zip: `manifest.json`, `tutor.db` (a consistent copy
  *   from `VACUUM INTO`), `settings.json`, and the folders `workspace/`,
- *   `problems/generated/`, `problems/imported/`, `explanations/`. Never
+ *   `problems/generated/`, `problems/imported/`, `explanations/`,
+ *   `articles/generated/` (T25). Never
  *   `secrets.bin`.
  * - **Import** validates a zip completely (names, sizes, the manifest, that
  *   `tutor.db` is ours and not newer than this app) and stages it in
@@ -44,6 +45,7 @@ export const EXPORT_DIRS = [
   'problems/generated',
   'problems/imported',
   'explanations',
+  'articles/generated',
 ] as const;
 /** What an import replaces: the exported items plus the database's side files. */
 const IMPORT_REPLACES = [...EXPORT_FILES, 'tutor.db-wal', 'tutor.db-shm', ...EXPORT_DIRS];

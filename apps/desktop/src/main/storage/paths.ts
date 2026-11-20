@@ -29,6 +29,8 @@ export function dataPaths(dataDir: string) {
     generatedProblems: join(dataDir, 'problems', 'generated'),
     importedProblems: join(dataDir, 'problems', 'imported'),
     explanations: join(dataDir, 'explanations'),
+    /** Articles the tutor wrote (T25, SPEC §15.1); exported. */
+    generatedArticles: join(dataDir, 'articles', 'generated'),
     cache: join(dataDir, 'cache'),
     /** Claude Code's home while it runs as the tutor (its sessions; T11). Never exported. */
     agentHome: join(dataDir, 'agent-home'),

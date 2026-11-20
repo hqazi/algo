@@ -51,6 +51,7 @@ const ARTICLE: ArticleView = {
   tags: ['algorithms'],
   extra: [['rating', '5']],
   missing: false,
+  generated: false,
   body: [
     '# Steps',
     '![[diagram.png]] ![remote](https://cdn.example.com/x.png)',

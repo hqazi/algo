@@ -97,6 +97,12 @@ export function Reader({ id, version = 0, layer, onArticle }: ReaderProps) {
       )}
       <header className="reader-header">
         <h1>{article.title}</h1>
+        {article.generated && (
+          <p className="small" data-testid="ai-written">
+            <span className="pill">AI-written</span>{' '}
+            <span className="muted">Written by the tutor; check it before you rely on it.</span>
+          </p>
+        )}
         {article.source && WEB.test(article.source) && (
           <p className="small">
             <a href={article.source} rel="noopener noreferrer nofollow" data-testid="source-link">

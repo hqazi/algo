@@ -64,7 +64,10 @@ export function LibraryTree({
       {folders.map((f) => (
         <li key={f.id}>
           <details open>
-            <summary>{f.name}</summary>
+            <summary>
+              {f.name}
+              {f.generated && <span className="pill ai-label">AI-written</span>}
+            </summary>
             {f.error && <p className="error-text small">{f.error}</p>}
             {f.root && <Folder node={f.root} selected={selected} />}
           </details>

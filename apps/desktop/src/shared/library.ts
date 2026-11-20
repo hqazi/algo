@@ -52,7 +52,14 @@ export const treeFolder: z.ZodType<TreeFolderView> = z.lazy(() =>
 
 export const treeResponse = z.strictObject({
   folders: z.array(
-    z.strictObject({ id, name, error: z.string().max(500).nullable(), root: treeFolder }),
+    z.strictObject({
+      id,
+      name,
+      /** T25: the app's own "Written by the tutor" group. */
+      generated: z.literal(true).optional(),
+      error: z.string().max(500).nullable(),
+      root: treeFolder,
+    }),
   ),
 });
 
@@ -131,6 +138,8 @@ export const articleResponse = z.strictObject({
   extra: z.array(z.tuple([z.string().max(200), z.string().max(1000)])).max(100),
   /** The file is gone (or cannot be read): the body is empty. */
   missing: z.boolean(),
+  /** T25: written by the tutor (from the app's generated folder): labelled AI-written. */
+  generated: z.boolean(),
   /** The Markdown after the frontmatter. */
   body: z.string().max(6 * 1024 * 1024),
   /** Per image reference (`refKey`): an asset URL or why it is not shown. */
@@ -212,3 +221,15 @@ export type ArticleView = z.output<typeof articleResponse>;
 export type ImagesMode = z.output<typeof imagesMode>;
 export type LoadImagesView = z.output<typeof loadImagesResponse>;
 export type OfflineProgress = z.output<typeof offlineProgress>;
+
+// ---- T25: articles the tutor writes
+
+export const writeArticleRequest = z.strictObject({
+  topic: z.string().min(1).max(300),
+  level: z.enum(['beginner', 'intermediate', 'advanced']),
+  length: z.enum(['short', 'medium', 'long']),
+});
+
+export const writeArticleResponse = z.strictObject({ id, title: z.string().max(2000) });
+
+export type WriteArticleRequest = z.output<typeof writeArticleRequest>;

@@ -75,7 +75,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T22 | Reader with local images | v3 | 3d | T21 | done |
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | done |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
-| T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | in-progress |
+| T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | done |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
 
 ## Order
@@ -1767,9 +1767,63 @@ into a practice problem.
 - "Make a problem from this" in an article thread: `create_problem` with the passage as delimited context; the problem passes the self-check before it appears (§6.3), as with T12.
 
 **Acceptance.**
-- [ ] Fake-tutor tests: an article is written, appears in the tree, renders, is exported; a problem from a passage passes the self-check and opens in Practice; a failing self-check shows nothing new.
+- [x] Fake-tutor tests: an article is written, appears in the tree, renders, is exported; a problem from a passage passes the self-check and opens in Practice; a failing self-check shows nothing new.
 
 **Notes.**
+
+- Built: core `library/generate.ts` (request check; slug, tags; body
+  cleaning: no frontmatter, no repeated `# Title`, every image form turned
+  into its alt text; the file with `title`, `created`, `tags`,
+  `generated: true`; `ArticleWriter`: one article at a time over the
+  tutor's backend, a single `save_article` tool, at most 2 turns and 3
+  saves). Core `tools/article.ts`: `create_problem` in article mode when
+  the context has `createProblem` (the tutor registry's own tool, so T12's
+  guard, factory and Pyodide self-check), 4 calls per turn, `open_problem`
+  + `refresh_state` on success; `article-prompt.ts`: the "problems from a
+  passage" rules, `PASSAGE_PROBLEM_REQUEST`, and the `problem_spec` and
+  `topics` guides when the tool is offered. Main `library/generated/`:
+  `GeneratedArticles` (staged dot file, renamed), `articleWriter`,
+  `library:write-article`. UI: **Write an article** (topic, level, length)
+  in the Library's left pane, opens the new article; **Written by the
+  tutor** group with an AI-written pill; reader label; **Make a problem
+  from this** in an article thread and **Open in Practice** when one
+  passes.
+- Decisions: D-43. SPEC §4.5 (export), §15.1 (writing, images removed),
+  §15.5 (`create_problem`) updated.
+- Wiring outside **Owns**: `core/src/tools/article.ts`,
+  `tools/article-prompt.ts` (as T24 asked), `tutor/prompt.ts`
+  (`rewriteGuide` exported), `library/index.ts`; `main/library/service.ts`
+  (`generatedDir`: indexed as folder `generated`, not in Settings;
+  `articleAt`), `main/library/assets.ts` (`generated` flag from the
+  folder), `main/tutor/index.ts` (article `create_problem`, guides),
+  `main/setup.ts`, `main/storage/paths.ts` (`generatedArticles`),
+  `main/data/archive.ts` (`articles/generated` exported);
+  `shared/{library,ipc,channels}.ts`; renderer `library/WriteArticle.tsx`
+  (new), `LibraryTree.tsx`, `Reader.tsx`, `chat/ArticleChatPane.tsx`,
+  `chat/ChatEffects.tsx` (ignores `open_problem` from `article:` threads),
+  `pages/LibraryPage.tsx`, `styles.css`; three renderer test fixtures gain
+  `generated: false`.
+- Tests: `core/src/library/generate.test.ts` (cleaning, slug, round trip
+  through the library parser, writer with the fake backend, article
+  `create_problem` limit and prompt); `main/library/generated/generated.test.ts`
+  (real index, reader, export, file catalog and Pyodide: an article is
+  written, appears under **Written by the tutor**, renders AI-written, is in
+  the export zip; a passage problem passes after a repair, ran in Pyodide
+  only, and opens through `problems:get`; four failing self-checks add
+  nothing and a fifth call is refused); renderer `ArticleChat.test.tsx`
+  (button sends the request, **Open in Practice**, AI-written label,
+  **Write an article** opens the new id).
+- Checks: typecheck, lint, format (repo paths; `.claude/**` is another
+  agent's worktree), `npm test` (75 files, 998 passed, 12 skipped),
+  validate:content, `check:security` (xvfb, `--no-sandbox`).
+- Not done / not tested: no real AI provider (Anthropic or Claude Code)
+  wrote an article or a passage problem; the Claude Code backend gets the
+  new tools over MCP like any registry but has no fixture for them. Writing
+  has no progress events or Stop (it can take minutes; 5-minute limit).
+  Generated articles cannot be deleted or edited from the UI. No
+  end-to-end (Electron) test of these flows (T26 owns e2e), and
+  `npm run e2e` was not run. Not tried on macOS or Windows.
+
 
 ### T26 — Library security check and end-to-end test
 
