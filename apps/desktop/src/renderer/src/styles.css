@@ -231,7 +231,6 @@ select,
 textarea,
 a,
 .nav,
-.pill,
 .ui-menu-item {
   transition-property: color, background-color, border-color, box-shadow, opacity;
   transition-duration: var(--duration);
@@ -339,8 +338,7 @@ button.danger:hover:not(:disabled),
   border-color: var(--danger);
 }
 .btn-ghost,
-.btn-icon,
-.nav-button {
+.btn-icon {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
@@ -369,8 +367,7 @@ button.danger:hover:not(:disabled),
   font-size: var(--text-sm);
   padding: 3px 10px;
 }
-.btn-lg,
-button.big {
+.btn-lg {
   font-size: 15px;
   padding: 9px 18px;
 }
@@ -585,8 +582,7 @@ legend {
   overflow-y: hidden;
 }
 
-/* components/ui/Badge.tsx and the older `.pill`: 20px, tinted, no border. */
-.pill,
+/* components/ui/Badge.tsx: 20px, tinted, no border. */
 .ui-badge {
   display: inline-flex;
   align-items: center;
@@ -906,35 +902,6 @@ legend {
   flex-wrap: wrap;
 }
 
-.diff-easy {
-  color: var(--easy);
-}
-.diff-medium {
-  color: var(--medium);
-}
-.diff-hard {
-  color: var(--hard);
-}
-.status-solved,
-.level-comfortable,
-.outcome-unaided {
-  background: var(--pass-bg);
-  color: var(--pass);
-  border-color: transparent;
-}
-.status-active,
-.level-learning,
-.outcome-with_hints {
-  background: var(--warn-bg);
-  color: var(--warn);
-  border-color: transparent;
-}
-.status-gave_up,
-.outcome-gave_up {
-  background: var(--fail-bg);
-  color: var(--fail);
-  border-color: transparent;
-}
 
 /* ---------------------------------------------------------------- forms */
 .profile-form fieldset {
@@ -966,77 +933,8 @@ legend {
   gap: 0.25rem 1rem;
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
 }
-.kv {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.3rem 1rem;
-  margin: 0;
-}
-.kv dt {
-  color: var(--muted);
-}
-.kv dd {
-  margin: 0;
-}
 
-.filters {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-.filters input[type='search'] {
-  min-width: 14rem;
-  flex: 1 1 14rem;
-}
-.problem-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.problem-table th,
-.problem-table td {
-  text-align: left;
-  padding: 0.45rem 0.7rem;
-  border-bottom: 1px solid var(--border);
-}
-.problem-table th {
-  font-size: 0.82rem;
-  color: var(--muted);
-  font-weight: 600;
-}
-.problem-table tr:last-child td {
-  border-bottom: none;
-}
 
-.topic-groups {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
-}
-.topic-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.topic-list li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.1rem 0.5rem;
-  padding: 0.4rem 0;
-  border-bottom: 1px solid var(--border);
-}
-.topic-list li:last-child {
-  border-bottom: none;
-}
-.topic-list meter {
-  width: 100%;
-}
-.topic-list .small {
-  grid-column: 1 / -1;
-}
 
 /* ---------------------------------------------------------------- practice */
 .practice {
@@ -1131,10 +1029,6 @@ legend {
   padding: 0.5rem 0.75rem;
   min-height: 5rem;
 }
-.summary {
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
-}
 .summary-pass strong {
   color: var(--pass);
 }
@@ -1189,11 +1083,6 @@ legend {
   margin: 0;
   white-space: pre-wrap;
 }
-.case-note {
-  font-size: 0.8rem;
-  color: var(--muted);
-  margin-top: 0.2rem;
-}
 .badge {
   font-size: var(--text-xs);
   font-weight: 600;
@@ -1207,8 +1096,7 @@ legend {
   color: var(--pass);
 }
 .badge-fail,
-.badge-error,
-.badge-crash {
+.badge-error {
   background: var(--fail-bg);
   color: var(--fail);
 }
@@ -1384,10 +1272,6 @@ legend {
   .page {
     padding: 1rem;
   }
-  .problem-table th:nth-child(4),
-  .problem-table td:nth-child(4) {
-    display: none;
-  }
 }
 
 /* ---------------------------------------------------------------- added in T08 */
@@ -1485,142 +1369,4 @@ button.link {
   gap: 12px;
 }
 
-/* Library page and reader (T22) */
-.reader-pad {
-  padding: 0.75rem 1rem;
-}
-.lib-left {
-  padding: 0.5rem 0.75rem;
-}
-.lib-tools {
-  display: flex;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
-}
-.lib-tools input {
-  flex: 1;
-  min-width: 0;
-}
-.lib-tree {
-  list-style: none;
-  margin: 0;
-  padding-left: 0.9rem;
-}
-.lib-roots {
-  padding-left: 0;
-}
-.lib-tree summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-.lib-article {
-  display: inline-block;
-  padding: 0.1rem 0.25rem;
-  border-radius: 4px;
-  color: var(--text);
-  text-decoration: none;
-}
-.lib-article:hover {
-  background: var(--surface-2);
-}
-.lib-article.active {
-  background: var(--accent-subtle);
-  color: var(--accent-fg);
-}
-.reader {
-  padding: 0.75rem 1.25rem 2rem;
-  max-width: 48rem;
-}
-.reader-header h1 {
-  font-size: 1.4rem;
-  margin: 0 0 0.3rem;
-}
-.reader-header p {
-  margin: 0.2rem 0;
-}
-.reader-tags {
-  display: flex;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-}
-.reader-extra div {
-  display: flex;
-  gap: 0.5rem;
-}
-.reader-extra dt {
-  font-weight: 600;
-}
-.reader-extra dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.article-body {
-  margin-top: 1rem;
-  line-height: 1.6;
-}
-.article-body img {
-  max-width: 100%;
-  height: auto;
-}
-.img-placeholder {
-  display: inline-block;
-  padding: 0.3rem 0.6rem;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  color: var(--muted);
-}
-.wikilink.unresolved {
-  color: var(--muted);
-}
-.callout {
-  border-left: 4px solid var(--accent);
-  background: var(--surface-2);
-  margin: 0.75rem 0;
-  padding: 0.4rem 0.9rem;
-  border-radius: 0 6px 6px 0;
-}
-.callout-title {
-  font-weight: 600;
-}
-.callout-warning,
-.callout-caution,
-.callout-attention {
-  border-left-color: var(--warn);
-}
-.callout-danger,
-.callout-error,
-.callout-bug,
-.callout-failure {
-  border-left-color: var(--danger);
-}
-.callout-tip,
-.callout-success,
-.callout-check,
-.callout-done {
-  border-left-color: var(--pass);
-}
 
-/* Articles the tutor writes (T25) */
-.lib-write {
-  margin-bottom: 0.5rem;
-}
-.lib-write-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
-}
-.lib-write-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.9em;
-}
-.lib-write-actions {
-  display: flex;
-  gap: 0.4rem;
-}
-.ai-label {
-  margin-left: 0.35rem;
-}

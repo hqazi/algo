@@ -158,6 +158,8 @@
 
 /* "Write an article" (library/WriteArticle.tsx) */
 .library-page .lib-write-form {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-1) var(--space-3) var(--space-3);
   padding: var(--space-3);
@@ -165,6 +167,8 @@
   background: var(--surface-2);
 }
 .library-page .lib-write-form label {
+  display: flex;
+  flex-direction: column;
   gap: var(--space-1);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -177,6 +181,7 @@
   margin: 0;
 }
 .library-page .lib-write-actions {
+  display: flex;
   gap: var(--space-2);
 }
 
@@ -239,6 +244,8 @@
   color: var(--muted);
 }
 .library-page .reader-tags {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: var(--space-3);
 }
@@ -268,6 +275,24 @@
   display: grid;
   gap: 2px;
   margin: var(--space-2) 0 0;
+}
+.library-page .reader-extra div {
+  display: flex;
+  gap: var(--space-2);
+}
+.library-page .reader-extra dt {
+  font-weight: 600;
+}
+.library-page .reader-extra dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+/* Loading and error lines in the reader pane. */
+.library-page .reader-pad {
+  padding: var(--space-3) var(--space-4);
+}
+.library-page .wikilink.unresolved {
+  color: var(--muted);
 }
 
 /* Banners: the missing file, linked images to load. */
