@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /** Panes (T29): a shared header per pane, 1px dividers resizable by keyboard. */
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PaneHeader } from './PaneHeader';
 import { Panes, type Pane } from './Panes';
 
@@ -55,5 +56,44 @@ describe('Panes', () => {
     for (let i = 0; i < 30; i++) fireEvent.keyDown(first!, { key: 'ArrowLeft' });
     expect(grid.style.gridTemplateColumns).toBe('15fr 1px 53fr 1px 32fr');
     expect(JSON.parse(localStorage.getItem('t')!)).toEqual([15, 53, 32]);
+  });
+
+  it('stacks the panes as tabs when narrow, keeping their state across the switch', () => {
+    let narrow = false;
+    const listeners = new Set<() => void>();
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      get matches() {
+        return narrow;
+      },
+      media: query,
+      addEventListener: (_: string, f: () => void) => listeners.add(f),
+      removeEventListener: (_: string, f: () => void) => listeners.delete(f),
+    }));
+    function Counter() {
+      const [n, setN] = useState(0);
+      return <button onClick={() => setN(n + 1)}>count {n}</button>;
+    }
+    const panes: [Pane, Pane, Pane] = [PANES[0], { ...PANES[1], content: <Counter /> }, PANES[2]];
+    try {
+      render(<Panes panes={panes} storageKey="t" />);
+      fireEvent.click(screen.getByRole('button', { name: 'count 0' }));
+      act(() => {
+        narrow = true;
+        listeners.forEach((f) => f());
+      });
+      expect(screen.getAllByRole('tab')).toHaveLength(3);
+      expect(screen.queryAllByRole('separator')).toHaveLength(0);
+      // Only the selected pane shows (the middle one by default).
+      const left = document.querySelector<HTMLElement>('[aria-label="Left"]')!;
+      expect(left.getAttribute('role')).toBe('tabpanel');
+      expect(left.hidden).toBe(true);
+      expect(screen.getByRole('tabpanel', { name: 'Middle' }).hidden).toBe(false);
+      // The pane was not remounted: its state survived.
+      expect(screen.getByRole('button', { name: 'count 1' })).toBeTruthy();
+      fireEvent.click(screen.getByRole('tab', { name: 'Left' }));
+      expect(screen.getByRole('tabpanel', { name: 'Left' }).hidden).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

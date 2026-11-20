@@ -95,37 +95,6 @@ export function Panes({
     };
   }
 
-  if (narrow) {
-    return (
-      <div className="panes-narrow">
-        <div className="tabs" role="tablist">
-          {panes.map((p) => (
-            <button
-              key={p.id}
-              role="tab"
-              aria-selected={active === p.id}
-              className={active === p.id ? 'tab active' : 'tab'}
-              onClick={() => setTab(p.id)}
-            >
-              {p.title}
-            </button>
-          ))}
-        </div>
-        {panes.map((p) => (
-          <div
-            key={p.id}
-            role="tabpanel"
-            className="pane"
-            hidden={active !== p.id}
-            aria-label={p.title}
-          >
-            <PaneBody pane={p} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   const gutter = (index: 0 | 1) => (
     <div
       className={dragging === index ? 'gutter dragging' : 'gutter'}
@@ -141,23 +110,52 @@ export function Panes({
     />
   );
 
+  // One tree for both layouts, so crossing 900px keeps each pane's state
+  // (editor, drafts, open chats): only the tabs and gutters come and go.
+  const section = (index: 0 | 1 | 2) => {
+    const p = panes[index];
+    return (
+      <section
+        key={p.id}
+        className="pane"
+        aria-label={p.title}
+        {...(narrow ? { role: 'tabpanel', hidden: active !== p.id } : {})}
+      >
+        <PaneBody pane={p} />
+      </section>
+    );
+  };
+
   return (
     <div
-      className="panes"
+      className={narrow ? 'panes-narrow' : 'panes'}
       ref={box}
-      style={{ gridTemplateColumns: `${sizes[0]}fr 1px ${sizes[1]}fr 1px ${sizes[2]}fr` }}
+      style={
+        narrow
+          ? undefined
+          : { gridTemplateColumns: `${sizes[0]}fr 1px ${sizes[1]}fr 1px ${sizes[2]}fr` }
+      }
     >
-      <section className="pane" aria-label={panes[0].title}>
-        <PaneBody pane={panes[0]} />
-      </section>
-      {gutter(0)}
-      <section className="pane" aria-label={panes[1].title}>
-        <PaneBody pane={panes[1]} />
-      </section>
-      {gutter(1)}
-      <section className="pane" aria-label={panes[2].title}>
-        <PaneBody pane={panes[2]} />
-      </section>
+      {narrow ? (
+        <div className="tabs" role="tablist">
+          {panes.map((p) => (
+            <button
+              key={p.id}
+              role="tab"
+              aria-selected={active === p.id}
+              className={active === p.id ? 'tab active' : 'tab'}
+              onClick={() => setTab(p.id)}
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {section(0)}
+      {narrow ? null : gutter(0)}
+      {section(1)}
+      {narrow ? null : gutter(1)}
+      {section(2)}
     </div>
   );
 }
