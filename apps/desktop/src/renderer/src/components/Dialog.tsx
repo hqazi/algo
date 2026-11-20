@@ -68,7 +68,9 @@ export function Dialog({
     <div className="modal-backdrop" onClick={backdropCloses ? onClose : undefined}>
       <div
         ref={box}
-        className={['modal', 'dialog', wide ? 'wide' : '', className ?? ''].filter(Boolean).join(' ')}
+        className={['modal', 'dialog', wide ? 'wide' : '', className ?? '']
+          .filter(Boolean)
+          .join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

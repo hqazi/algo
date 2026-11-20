@@ -97,6 +97,45 @@ describe('SettingsPage', () => {
     expect(bridge.calls.filter((c) => c.channel === 'tutor:status').length).toBeGreaterThan(1);
   });
 
+  it('lists the sections and jumps to one, which becomes the current section', async () => {
+    renderPage(bridgeWith());
+    const nav = await screen.findByRole('navigation', { name: 'Settings sections' });
+    const items = [...nav.querySelectorAll('button')].map((b) => b.textContent);
+    expect(items).toEqual([
+      'Tutor',
+      'Code execution',
+      'Appearance',
+      'Library',
+      'Profile',
+      'Data',
+      'Updates',
+      'About',
+    ]);
+    const tutor = screen.getByRole('button', { name: 'Tutor' });
+    expect(tutor.getAttribute('aria-current')).toBe('true');
+    await screen.findByRole('heading', { name: 'Library' });
+    fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+    expect(screen.getByRole('button', { name: 'Library' }).getAttribute('aria-current')).toBe(
+      'true',
+    );
+    expect(tutor.hasAttribute('aria-current')).toBe(false);
+    // The section's heading takes focus, so keyboard users land in it.
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Library' }));
+    // Every section stays on the page: controls of the others are still there.
+    expect(screen.getByRole('button', { name: 'Add folder…' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Theme' })).toBeTruthy();
+  });
+
+  it('shows the tutor status as a dot and words', async () => {
+    renderPage(bridgeWith().on('tutor:status', () => TUTOR_ON));
+    await waitFor(() =>
+      expect(screen.getByTestId('tutor-status-line').querySelector('.tone-ok')).toBeTruthy(),
+    );
+    const line = screen.getByTestId('tutor-status-line').textContent;
+    expect(line).toMatch(/^StatusOn: Anthropic API/);
+    expect(line).not.toMatch(/ · /);
+  });
+
   it('sends the key once, clears the field, shows only the last four characters', async () => {
     const bridge = bridgeWith();
     renderPage(bridge);
@@ -196,7 +235,7 @@ describe('SettingsPage', () => {
     );
     await waitFor(() =>
       expect(screen.getByTestId('claude-code-status').textContent).toBe(
-        'Claude Code: Found: /opt/claude (version 2.1.400)',
+        'Claude CodeFound: /opt/claude (version 2.1.400)',
       ),
     );
     fireEvent.click(screen.getByRole('button', { name: 'Recheck' }));

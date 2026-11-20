@@ -73,7 +73,11 @@ export function Segmented<T extends string>({
           }}
           type="button"
           {...(tabs
-            ? { role: 'tab', 'aria-selected': o.value === value, 'aria-controls': controls?.[o.value] }
+            ? {
+                role: 'tab',
+                'aria-selected': o.value === value,
+                'aria-controls': controls?.[o.value],
+              }
             : { 'aria-pressed': o.value === value })}
           tabIndex={i === tabStop ? 0 : -1}
           title={o.title}

@@ -59,7 +59,9 @@ describe('OnboardingPage', () => {
     );
     next();
     fireEvent.click(screen.getByLabelText('Intermediate'));
-    expect(screen.getByRole('radio', { name: 'Intermediate' }).getAttribute('aria-describedby')).toBeTruthy();
+    expect(
+      screen.getByRole('radio', { name: 'Intermediate' }).getAttribute('aria-describedby'),
+    ).toBeTruthy();
     next();
     fireEvent.change(screen.getByRole('combobox', { name: 'Comfort: basics' }), {
       target: { value: 'solid' },

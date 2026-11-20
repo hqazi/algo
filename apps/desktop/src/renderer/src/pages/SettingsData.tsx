@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
+import { SettingRow } from './SettingsRow';
 
 export function DataSection() {
   const app = useApp();
@@ -53,24 +54,26 @@ export function DataSection() {
 
   if (restarting)
     return (
-      <section className="card" aria-labelledby="settings-data">
+      <section className="card settings-section" aria-labelledby="settings-data">
         <h2 id="settings-data">Data</h2>
         <p role="status">Restarting to finish…</p>
       </section>
     );
 
   return (
-    <section className="card" aria-labelledby="settings-data">
+    <section className="card settings-section" aria-labelledby="settings-data">
       <h2 id="settings-data">Data</h2>
       {info && (
-        <dl className="kv">
-          <dt>Data folder</dt>
-          <dd className="path" data-testid="data-dir">
-            {info.dir}
-          </dd>
-          <dt>Backups</dt>
-          <dd className="path">{info.backups}</dd>
-        </dl>
+        <>
+          <SettingRow label="Data folder">
+            <span className="path" data-testid="data-dir">
+              {info.dir}
+            </span>
+          </SettingRow>
+          <SettingRow label="Backups">
+            <span className="path">{info.backups}</span>
+          </SettingRow>
+        </>
       )}
       <div className="actions">
         <button
@@ -91,7 +94,7 @@ export function DataSection() {
           {busy === 'import' ? 'Importing…' : 'Import…'}
         </button>
       </div>
-      <p className="muted small">
+      <p className="muted small setting-help">
         An export is one zip with your progress, chats, solutions, settings, your own problems and
         explanations. It never holds the API key.
       </p>
@@ -114,7 +117,7 @@ export function DataSection() {
           Reset everything…
         </button>
       </div>
-      <p className="muted small">
+      <p className="muted small setting-help">
         Both ask first and export your data to the backups folder before changing anything.
       </p>
     </section>

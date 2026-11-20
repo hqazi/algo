@@ -193,7 +193,9 @@ describe('NewProblemDialog', () => {
     setup({ onClose });
     const tabs = screen.getByRole('tablist', { name: 'How to make the problem' });
     expect(tabs.className).toContain('ui-segmented');
-    expect(screen.getByRole('tab', { name: 'Generate' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Generate' }).getAttribute('aria-selected')).toBe(
+      'true',
+    );
     const options = [...(screen.getByLabelText('Difficulty') as HTMLSelectElement).options];
     expect(options.map((o) => [o.value, o.textContent])).toEqual([
       ['easy', 'Easy'],

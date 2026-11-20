@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ExecStatusView, RuntimesView, SandboxResultView } from '../../../shared/settings';
 import { invoke, stream, type Stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
+import { SettingRow, StatusText, type StatusTone } from './SettingsRow';
 
 const TIME_SCALES = [0.5, 1, 1.5, 2, 3, 5, 10];
 
@@ -44,9 +45,8 @@ function PythonStatus() {
   const py = status?.python;
   const versions = py ? Object.entries(py.versions) : [];
   return (
-    <dl className="kv" data-testid="exec-status">
-      <dt>Python</dt>
-      <dd>
+    <SettingRow label="Python" testId="exec-status">
+      <StatusText tone={failed ? 'warn' : !py ? 'pending' : py.available ? 'ok' : 'error'}>
         {failed
           ? `Unknown (${failed})`
           : !py
@@ -54,10 +54,16 @@ function PythonStatus() {
             : py.available
               ? `Ready · Pyodide${versions.length ? ` (${versions.map(([k, v]) => `${k} ${v}`).join(', ')})` : ''}`
               : `Not available: ${py.reason ?? 'unknown reason'}`}
-      </dd>
-    </dl>
+      </StatusText>
+    </SettingRow>
   );
 }
+
+const STATE_TONE: Record<RuntimeRow['state'], StatusTone> = {
+  running: 'ok',
+  'installed-not-running': 'warn',
+  'not-found': 'off',
+};
 
 function stateText(r: RuntimeRow): string {
   if (r.state === 'running') {
@@ -258,8 +264,11 @@ function RustGo() {
                     onChange={() => void choose(r.runtime)}
                   />{' '}
                   {RUNTIME_NAMES[r.runtime]}{' '}
-                  <span className="muted small" data-testid={`runtime-state-${r.runtime}`}>
-                    ({stateText(r)})
+                  <span className={`runtime-state tone-${STATE_TONE[r.state]}`}>
+                    <span className="status-dot" aria-hidden="true" />
+                    <span className="muted small" data-testid={`runtime-state-${r.runtime}`}>
+                      ({stateText(r)})
+                    </span>
                   </span>
                 </label>
                 {r.state === 'not-found' && (
@@ -310,10 +319,10 @@ export function ExecutionSection() {
     ? TIME_SCALES
     : [...TIME_SCALES, s.timeScale].sort((a, b) => a - b);
   return (
-    <section className="card" aria-labelledby="settings-exec">
+    <section className="card settings-section" aria-labelledby="settings-exec">
       <h2 id="settings-exec">Code execution</h2>
       <PythonStatus />
-      <p className="muted small">
+      <p className="muted small setting-help">
         Python runs inside the app with Pyodide, which has no access to your files or the network.
       </p>
       <RustGo />
@@ -333,7 +342,9 @@ export function ExecutionSection() {
           ))}
         </select>
       </label>
-      <p className="muted small">Raise this on a slow computer if correct solutions time out.</p>
+      <p className="muted small setting-help">
+        Raise this on a slow computer if correct solutions time out.
+      </p>
     </section>
   );
 }

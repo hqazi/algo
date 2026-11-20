@@ -1,0 +1,365 @@
+/* Settings (T33, docs/design.md → Settings): a section list on the left
+   that follows the scroll position, sections as cards on the right, and
+   aligned rows (label left, control right, help under the control). This
+   file loads before styles.css, so its selectors start with `.settings-page`
+   to outrank the base rules. */
+
+.page.settings-page {
+  --settings-label-w: 11.5rem;
+  --settings-control-w: 24rem;
+  --settings-gap: var(--space-5);
+  padding: 0;
+}
+.settings-page .settings-layout {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 46rem);
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-6) var(--space-8);
+}
+
+/* ---- section list */
+.settings-page .settings-nav {
+  position: sticky;
+  top: var(--space-6);
+  align-self: start;
+}
+.settings-page .settings-nav h1 {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-3);
+}
+.settings-page .settings-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.settings-page .settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-sm);
+}
+.settings-page .settings-nav-item:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.settings-page .settings-nav-item[aria-current='true'] {
+  background: var(--accent-subtle);
+  color: var(--accent-fg);
+}
+.settings-page .settings-nav-item svg {
+  flex: none;
+}
+
+/* ---- sections */
+.settings-page .settings-content {
+  min-width: 0;
+}
+.settings-page .card.settings-section {
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  margin-bottom: var(--space-5);
+  scroll-margin-top: var(--space-6);
+}
+.settings-page .settings-section > h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
+}
+.settings-page .settings-section > h2:focus {
+  outline: none;
+}
+.settings-page .settings-section h3 {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: var(--space-6) 0 var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.settings-page .settings-section > p,
+.settings-page .settings-section .key-form > p,
+.settings-page .settings-section .claude-code > p,
+.settings-page .settings-section .linked-images > p {
+  margin: var(--space-2) 0;
+}
+
+/* ---- aligned rows: `.setting-row` (label + value), `.field` (label text +
+   control) and `.inline-form` (label text + control + buttons) share the
+   same two columns. */
+.settings-page .setting-row,
+.settings-page .settings-section .field,
+.settings-page .settings-section .inline-form {
+  display: grid;
+  grid-template-columns: var(--settings-label-w) minmax(0, 1fr);
+  column-gap: var(--settings-gap);
+  align-items: center;
+  margin: var(--space-3) 0;
+  max-width: none;
+}
+.settings-page .settings-section .field {
+  grid-template-columns: var(--settings-label-w) minmax(0, var(--settings-control-w));
+  color: var(--text);
+}
+.settings-page .setting-label {
+  color: var(--text);
+  align-self: start;
+  padding-top: 6px;
+}
+.settings-page .setting-value {
+  min-width: 0;
+  min-height: var(--control-h);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+/* The label column is widened by the gap difference, so the control starts
+   where the other rows' controls do while the buttons sit closer. */
+.settings-page .settings-section .inline-form {
+  grid-template-columns:
+    calc(var(--settings-label-w) + var(--settings-gap) - var(--space-2))
+    minmax(0, var(--settings-control-w)) auto auto 1fr;
+  column-gap: var(--space-2);
+}
+.settings-page .settings-section .inline-form .field {
+  display: contents;
+}
+.settings-page .settings-section .inline-form .field > input {
+  grid-column: 2;
+}
+.settings-page .settings-section .inline-form > button {
+  grid-row: 1;
+}
+/* Help text and actions line up with the controls, not the labels. */
+.settings-page .setting-help,
+.settings-page .setting-note,
+.settings-page .settings-section .key-form > .actions,
+.settings-page .settings-section .inline-actions,
+.settings-page .setting-actions,
+.settings-page .setting-check,
+.settings-page .settings-section .key-form > .warning,
+.settings-page .settings-section .key-form > .error-text,
+.settings-page .settings-section > .warning {
+  margin-left: calc(var(--settings-label-w) + var(--settings-gap));
+}
+.settings-page p.setting-help {
+  margin-top: calc(-1 * var(--space-1));
+  margin-bottom: var(--space-3);
+  max-width: 36rem;
+  line-height: 1.5;
+}
+.settings-page .settings-section .actions,
+.settings-page .settings-section .inline-actions {
+  justify-content: flex-start;
+  margin: var(--space-3) 0;
+}
+.settings-page .settings-section .key-form > .actions,
+.settings-page .settings-section .inline-actions,
+.settings-page .setting-actions {
+  margin-left: calc(var(--settings-label-w) + var(--settings-gap));
+}
+.settings-page .setting-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.settings-page .setting-check input {
+  margin: 2px 0 0;
+  flex: none;
+}
+.settings-page .setting-status,
+.settings-page .setting-inline {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ---- status: a dot and text */
+.status-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.status-text .status-dot,
+.runtime-state .status-dot {
+  flex: none;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+  transform: translateY(-1px);
+}
+.status-text .status-words {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tone-ok .status-dot {
+  background: var(--pass);
+  box-shadow: 0 0 0 3px var(--pass-bg);
+}
+.tone-warn .status-dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px var(--warn-bg);
+}
+.tone-error .status-dot {
+  background: var(--fail);
+  box-shadow: 0 0 0 3px var(--fail-bg);
+}
+.tone-pending .status-dot {
+  background: var(--accent-fg);
+  opacity: 0.6;
+}
+.runtime-state {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: var(--space-1);
+}
+
+/* ---- Code execution: the runtime choices */
+.settings-page .runtime-list {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-1) var(--space-4) var(--space-3);
+  margin: var(--space-3) 0;
+}
+.settings-page .runtime-list legend {
+  font-weight: 600;
+  padding: 0 var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.settings-page .runtime + .runtime {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+}
+.settings-page .runtime > .radio {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  font-weight: 500;
+}
+.settings-page .runtime > .radio input {
+  margin-right: var(--space-2);
+  transform: translateY(2px);
+}
+.settings-page [data-testid='rust-go'] > .inline-actions,
+.settings-page [data-testid='rust-go'] > .setting-help {
+  margin-left: 0;
+}
+.settings-page [data-testid='rust-go'] > p.muted {
+  margin-left: 0;
+}
+
+/* ---- Library folders */
+.settings-page .library-folders {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.settings-page .library-folders > li {
+  padding: var(--space-3) var(--space-4);
+}
+.settings-page .library-folders > li + li {
+  border-top: 1px solid var(--border);
+}
+.library-folder-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.library-folder-icon {
+  color: var(--muted);
+}
+.settings-page .library-folders .folder-actions {
+  margin: var(--space-2) 0 0;
+  padding-left: 24px;
+  align-items: center;
+}
+.settings-page .library-folders .folder-actions > button {
+  font-size: var(--text-sm);
+  padding: 3px 10px;
+}
+.settings-page .library-folders .folder-error,
+.settings-page .library-folders .folder-offline {
+  margin: var(--space-2) 0 0 24px;
+}
+.settings-page .settings-section > .setting-actions {
+  margin-left: 0;
+}
+.settings-page [data-testid='library-empty'] {
+  margin: var(--space-3) 0;
+}
+
+/* ---- Profile inside Settings */
+.settings-page .profile-form .field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+.settings-page .profile-form .actions {
+  justify-content: flex-end;
+  margin: var(--space-4) 0 0;
+}
+
+/* ---- About */
+.settings-page [data-testid='licences'] {
+  columns: 2;
+  column-gap: var(--space-6);
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.settings-page [data-testid='licences'] li {
+  break-inside: avoid;
+  margin-bottom: var(--space-1);
+}
+
+@media (max-width: 900px) {
+  .page.settings-page {
+    --settings-label-w: 9rem;
+  }
+  .settings-page .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+  .settings-page .settings-nav {
+    position: static;
+  }
+  .settings-page .settings-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .settings-page .settings-nav-item {
+    width: auto;
+  }
+  .settings-page [data-testid='licences'] {
+    columns: 1;
+  }
+}

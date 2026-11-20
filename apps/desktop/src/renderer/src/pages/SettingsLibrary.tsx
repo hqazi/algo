@@ -7,7 +7,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FolderView, OfflineProgress } from '../../../shared/library';
 import { invoke, stream } from '../ipc';
+import { Folder } from 'lucide-react';
 import { errorText, useApp } from '../lib/app-context';
+import { SettingRow, StatusText } from './SettingsRow';
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -47,8 +49,9 @@ function LinkedImagesSettings() {
 
   return (
     <div className="linked-images" data-testid="linked-images">
-      <label>
-        Images an article links to{' '}
+      <h3>Linked images</h3>
+      <label className="field">
+        Images an article links to
         <select
           value={mode ?? 'on-open'}
           disabled={!mode}
@@ -62,18 +65,27 @@ function LinkedImagesSettings() {
           <option value="ask">Ask first (Load images)</option>
         </select>
       </label>
-      <p className="small muted">
+      <p className="small muted setting-help">
         The app downloads them itself, once, and keeps a copy so articles work offline. Websites
         never see what you read after that.
       </p>
-      <p className="small" data-testid="image-cache">
-        {usage
-          ? `Image cache: ${plural(usage.images, 'image')}, ${formatBytes(usage.bytes)}.`
-          : 'Image cache: …'}{' '}
-        <button type="button" disabled={!usage || usage.images === 0} onClick={() => void clear()}>
-          Clear
-        </button>
-      </p>
+      <SettingRow label="Cache">
+        <p className="setting-inline" data-testid="image-cache">
+          <span>
+            {usage
+              ? `Image cache: ${plural(usage.images, 'image')}, ${formatBytes(usage.bytes)}.`
+              : 'Image cache: …'}
+          </span>{' '}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            disabled={!usage || usage.images === 0}
+            onClick={() => void clear()}
+          >
+            Clear
+          </button>
+        </p>
+      </SettingRow>
     </div>
   );
 }
@@ -172,9 +184,9 @@ export function LibrarySection() {
     });
 
   return (
-    <section className="card" aria-labelledby="settings-library">
+    <section className="card settings-section" aria-labelledby="settings-library">
       <h2 id="settings-library">Library</h2>
-      <p className="small" data-testid="library-read-only">
+      <p className="small muted" data-testid="library-read-only">
         The app reads these folders and never changes them.
       </p>
       {folders !== null && folders.length === 0 && (
@@ -187,18 +199,25 @@ export function LibrarySection() {
         <ul className="library-folders" aria-label="Library folders">
           {folders.map((f) => (
             <li key={f.id} data-testid={`library-folder-${f.id}`}>
-              <strong>{f.name}</strong>{' '}
-              <span className="small muted">
-                {plural(f.articles, 'article')}
-                {f.missing > 0 && `, ${f.missing} file${f.missing === 1 ? '' : 's'} missing`}
-              </span>
+              <div className="library-folder-head">
+                <Folder className="library-folder-icon" aria-hidden="true" />
+                <strong>{f.name}</strong>{' '}
+                <span className="small muted">
+                  {plural(f.articles, 'article')}
+                  {f.missing > 0 && `, ${f.missing} file${f.missing === 1 ? '' : 's'} missing`}
+                </span>
+              </div>
               {f.error && (
-                <p className="small warning" role="status">
-                  {f.error}
+                <p className="small folder-error" role="status">
+                  <StatusText tone="warn">{f.error}</StatusText>
                 </p>
               )}
               {confirming === f.id ? (
-                <div className="actions" role="group" aria-label={`Remove ${f.name}?`}>
+                <div
+                  className="actions folder-actions"
+                  role="group"
+                  aria-label={`Remove ${f.name}?`}
+                >
                   <span className="small">
                     Remove “{f.name}” from the library? Its files are not touched.
                   </span>
@@ -210,7 +229,7 @@ export function LibrarySection() {
                   </button>
                 </div>
               ) : (
-                <div className="actions">
+                <div className="actions folder-actions">
                   <button type="button" disabled={busy} onClick={() => void open(f.id)}>
                     Open in file manager
                   </button>
@@ -229,7 +248,7 @@ export function LibrarySection() {
                 </div>
               )}
               {offline?.id === f.id && (
-                <p className="small" role="status" data-testid={`offline-${f.id}`}>
+                <p className="small folder-offline" role="status" data-testid={`offline-${f.id}`}>
                   {offline.progress
                     ? `${offline.cancelled ? 'Stopped' : offline.finished ? 'Done' : 'Downloading images'}: ` +
                       `${offline.progress.done} of ${plural(offline.progress.total, 'article')}` +
@@ -243,8 +262,13 @@ export function LibrarySection() {
           ))}
         </ul>
       )}
-      <div className="actions">
-        <button type="button" disabled={busy} onClick={() => void add()}>
+      <div className="actions setting-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => void add()}
+        >
           Add folder…
         </button>
       </div>

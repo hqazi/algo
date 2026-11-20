@@ -8,6 +8,11 @@ const BACKEND: Record<TutorStatusView['backend'], string> = {
   none: 'No backend',
 };
 
+/** The backend's name for people ("Anthropic API"); Settings → Tutor uses it too. */
+export function backendName(backend: TutorStatusView['backend']): string {
+  return BACKEND[backend];
+}
+
 /** `mac` or `other`: where the window controls sit (left or right). */
 export function windowPlatform(): 'mac' | 'other' {
   return /Mac/i.test(navigator.userAgent) ? 'mac' : 'other';

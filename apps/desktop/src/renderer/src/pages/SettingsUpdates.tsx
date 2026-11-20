@@ -5,9 +5,23 @@
 import { useEffect, useState } from 'react';
 import type { UpdateState } from '../../../shared/updates';
 import { invoke, stream } from '../ipc';
+import type { ReactNode } from 'react';
+import { RelativeTime } from '../components/RelativeTime';
 import { errorText, useApp } from '../lib/app-context';
+import { SettingRow, StatusText, type StatusTone } from './SettingsRow';
 
-function describe(s: UpdateState): string {
+const TONE: Record<UpdateState['state'], StatusTone> = {
+  unsupported: 'off',
+  idle: 'off',
+  checking: 'pending',
+  none: 'ok',
+  available: 'warn',
+  downloading: 'pending',
+  downloaded: 'warn',
+  error: 'error',
+};
+
+function describe(s: UpdateState): ReactNode {
   switch (s.state) {
     case 'unsupported':
       return s.reason;
@@ -16,7 +30,12 @@ function describe(s: UpdateState): string {
     case 'checking':
       return 'Checking for updates…';
     case 'none':
-      return `Up to date (checked ${new Date(s.checkedAt).toLocaleString()}).`;
+      return (
+        <>
+          Up to date (checked <RelativeTime value={s.checkedAt} />
+          ).
+        </>
+      );
     case 'available':
       return `Version ${s.version} is available.`;
     case 'downloading':
@@ -53,12 +72,11 @@ export function UpdatesSection({ version }: { version: string | null }) {
   if (!s) return null;
   const supported = state !== null && state.state !== 'unsupported';
   return (
-    <section className="card" aria-labelledby="settings-updates">
+    <section className="card settings-section" aria-labelledby="settings-updates">
       <h2 id="settings-updates">Updates</h2>
-      <dl className="kv">
-        <dt>Version</dt>
-        <dd>{version ?? '…'}</dd>
-      </dl>
+      <SettingRow label="Version">
+        <span className="num">{version ?? '…'}</span>
+      </SettingRow>
       <label className="field">
         Channel
         <select
@@ -72,7 +90,7 @@ export function UpdatesSection({ version }: { version: string | null }) {
           <option value="beta">Beta (pre-releases)</option>
         </select>
       </label>
-      <label className="radio">
+      <label className="radio setting-check">
         <input
           type="checkbox"
           checked={s.auto}
@@ -80,11 +98,13 @@ export function UpdatesSection({ version }: { version: string | null }) {
         />{' '}
         Download updates in the background and install them when the app quits
       </label>
-      <p className="muted small" role="status" data-testid="update-state">
-        {state ? describe(state) : '…'}
-      </p>
+      <SettingRow label="Status">
+        <p className="setting-status" role="status" data-testid="update-state">
+          {state ? <StatusText tone={TONE[state.state]}>{describe(state)}</StatusText> : '…'}
+        </p>
+      </SettingRow>
       {supported && (
-        <div className="actions">
+        <div className="actions setting-actions">
           {state.state === 'downloaded' ? (
             <button
               type="button"

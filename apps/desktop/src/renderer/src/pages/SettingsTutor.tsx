@@ -11,6 +11,8 @@ import type { ClaudeCodeInfoView } from '../../../shared/tutor';
 import { useChatStore, useTutorStatus } from '../chat/store';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
+import { backendName } from '../components/app-frame';
+import { SettingRow, StatusText } from './SettingsRow';
 import { keyText, useKeyStatus } from './SettingsShared';
 
 const BACKENDS = [
@@ -93,15 +95,17 @@ export function KeyForm({ status, onStatus, onConnected }: KeyFormProps) {
   return (
     <div className="key-form">
       {status && (
-        <p data-testid="key-status">
-          <strong>API key:</strong> {keyText(status)}
-          {fromEnv && status.stored && (
-            <span className="muted small">
-              {' '}
-              (a stored key is also kept; the environment’s wins)
-            </span>
-          )}
-        </p>
+        <SettingRow label="API key" testId="key-status">
+          <StatusText tone={status.source === 'none' ? 'off' : 'ok'}>
+            {keyText(status)}
+            {fromEnv && status.stored && (
+              <span className="muted small">
+                {' '}
+                (a stored key is also kept; the environment’s wins)
+              </span>
+            )}
+          </StatusText>
+        </SettingRow>
       )}
       {status?.problem && <p className="error-text small">{status.problem}</p>}
       {status?.storage.weak && (
@@ -155,15 +159,11 @@ export function KeyForm({ status, onStatus, onConnected }: KeyFormProps) {
         )}
       </div>
       {test && (
-        <p
-          className={test.ok ? 'pass-text small' : 'error-text small'}
-          role="status"
-          data-testid="test-result"
-        >
-          {test.message}
+        <p className="setting-note small" role="status" data-testid="test-result">
+          <StatusText tone={test.ok ? 'ok' : 'error'}>{test.message}</StatusText>
         </p>
       )}
-      <p className="muted small">
+      <p className="muted small setting-help">
         Get a key at console.anthropic.com. The key is kept in your system keychain and used only by
         the app’s main process; this page never sees it again.
       </p>
@@ -224,14 +224,13 @@ export function ClaudeCodePanel({
 
   return (
     <div className="claude-code" data-testid="claude-code">
-      <p data-testid="claude-code-status">
-        <strong>Claude Code:</strong>{' '}
+      <SettingRow label="Claude Code" testId="claude-code-status">
         {info ? (
-          <span className={info.usable ? '' : 'error-text'}>{claudeCodeText(info)}</span>
+          <StatusText tone={info.usable ? 'ok' : 'error'}>{claudeCodeText(info)}</StatusText>
         ) : (
-          'Checking…'
+          <StatusText tone="pending">Checking…</StatusText>
         )}
-      </p>
+      </SettingRow>
       <form
         className="inline-form"
         onSubmit={(e) => {
@@ -256,7 +255,7 @@ export function ClaudeCodePanel({
           Recheck
         </button>
       </form>
-      <p className="muted small">
+      <p className="muted small setting-help">
         The tutor runs your installed Claude Code (version {info?.min_version ?? '…'} or later) with
         only the tutor’s tools: no files, shell or web. It uses the API key above, not the Claude
         account Claude Code may be signed in to: Anthropic’s terms do not let other apps use a
@@ -320,25 +319,25 @@ export function TutorSection() {
   }
 
   return (
-    <section className="card" aria-labelledby="settings-tutor">
+    <section className="card settings-section" aria-labelledby="settings-tutor">
       <h2 id="settings-tutor">Tutor</h2>
-      <p data-testid="tutor-status-line">
+      <SettingRow label="Status" testId="tutor-status-line">
         {tutor ? (
           tutor.available ? (
-            <>
-              <span className="pass-text">On</span> · {tutor.backend}
-              {tutor.model ? ` · ${tutor.model}` : ''}
-            </>
+            <StatusText tone="ok">
+              On: {backendName(tutor.backend)}
+              {tutor.model ? <span className="muted">, {tutor.model}</span> : null}
+            </StatusText>
           ) : (
-            <>
-              <span className="error-text">Off</span>
-              {tutor.reason ? ` · ${tutor.reason}` : ''}
-            </>
+            <StatusText tone="off">
+              Off
+              {tutor.reason ? <span className="muted">: {tutor.reason}</span> : null}
+            </StatusText>
           )
         ) : (
-          'Checking…'
+          <StatusText tone="pending">Checking…</StatusText>
         )}
-      </p>
+      </SettingRow>
       <label className="field">
         Backend
         <select
@@ -381,7 +380,7 @@ export function TutorSection() {
           ))}
         </select>
       </label>
-      <p className="muted small">
+      <p className="muted small setting-help">
         Higher effort thinks longer before answering: better reviews, slower replies, more tokens.
         Changes apply from the next message.
       </p>

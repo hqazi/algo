@@ -167,9 +167,7 @@ export function ProfileForm({
   // After Back or Continue, focus the new question's first control.
   useEffect(() => {
     if (!steps || !moved.current) return;
-    stepBox.current
-      ?.querySelector<HTMLElement>('input:checked, input, select, textarea')
-      ?.focus();
+    stepBox.current?.querySelector<HTMLElement>('input:checked, input, select, textarea')?.focus();
   }, [step, steps]);
 
   function go(to: number): void {
@@ -243,9 +241,7 @@ export function ProfileForm({
         ))}
       </select>
       {steps && (
-        <p className="muted small">
-          Any answer can be changed later in Settings → Profile.
-        </p>
+        <p className="muted small">Any answer can be changed later in Settings → Profile.</p>
       )}
     </fieldset>,
   ];
