@@ -16,9 +16,8 @@ import { PaneHeader } from '../../components/PaneHeader';
 import { Badge, Button, IconButton } from '../../components/ui';
 import { invoke } from '../../ipc';
 import { errorText, useApp } from '../../lib/app-context';
-import { when } from '../../lib/format';
+import { fullDate, relativeDate } from '../../lib/format';
 import { navigate } from '../../lib/router';
-import { relativeTime } from './relative-time';
 import { snippet, type ArticleChats } from './useArticleChats';
 import '../../chat/chat.css';
 import './article-chat.css';
@@ -37,8 +36,8 @@ export interface ArticleChatPaneProps {
 /** A thread's last activity: relative, with the full date in the tooltip. */
 function Ago({ iso }: { iso: string }) {
   return (
-    <time dateTime={iso} title={when(iso)}>
-      {relativeTime(iso)}
+    <time dateTime={iso} title={fullDate(iso)}>
+      {relativeDate(iso)}
     </time>
   );
 }

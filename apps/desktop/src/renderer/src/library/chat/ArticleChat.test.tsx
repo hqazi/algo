@@ -14,11 +14,10 @@ import { ChatStore, ChatStoreContext } from '../../chat/store';
 import { MessageView } from '../../chat/MessageView';
 import { Toasts } from '../../components/Toasts';
 import { AppProvider } from '../../lib/app';
-import { when } from '../../lib/format';
+import { fullDate, relativeDate } from '../../lib/format';
 import { LibraryPage } from '../../pages/LibraryPage';
 import { FakeBridge, installBridge } from '../../test/fake-bridge';
 import { baseHandlers, TUTOR_OFF, TUTOR_ON } from '../../test/fixtures';
-import { relativeTime } from './relative-time';
 
 const ID = 'article:12345678-1234-4234-8234-123456789abc';
 const TREE: TreeView = {
@@ -253,8 +252,8 @@ describe('chats on passages', () => {
       .getByRole('button', { name: /Gone passage/ })
       .querySelector('time')!;
     expect(time.getAttribute('dateTime')).toBe('2026-11-20T09:00:00Z');
-    expect(time.getAttribute('title')).toBe(when('2026-11-20T09:00:00Z'));
-    expect(time.textContent).toBe(relativeTime('2026-11-20T09:00:00Z'));
+    expect(time.getAttribute('title')).toBe(fullDate('2026-11-20T09:00:00Z'));
+    expect(time.textContent).toBe(relativeDate('2026-11-20T09:00:00Z'));
 
     fireEvent.click(pane().getByText('Gone passage'));
     // The open chat's actions are icon buttons with their names as tooltips.
