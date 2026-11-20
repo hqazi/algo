@@ -82,6 +82,13 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | done |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | done |
 | T27 | README, user guide, logo, screenshots; rename to Algo | polish | 1d | T26 | done |
+| T28 | Design foundations: tokens, fonts, icons, controls | design | 2d | T27 | todo |
+| T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | todo |
+| T30 | Practice page refresh | design | 2d | T29 | todo |
+| T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | todo |
+| T32 | Library refresh | design | 2d | T30 | todo |
+| T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | todo |
+| T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | todo |
 
 ## Order
 
@@ -98,6 +105,9 @@ v2:  T15 (needs T04) ─┬─ T16 ─┐
 v3:  T21 ─ T22 ─┬─ T23 ─────────┐
                 └─ T24 ─┬───────┴─ T26
                         └─ T25
+design: T28 ─ T29 ─┬─ T30 ─ T32 ─┐
+                   ├─ T31 ───────┼─ T34
+                   └─ T33 ───────┘
 ```
 
 Critical path: T01 → T03 → T07 → T08 → T10. {T02, T03, T05} can run in
@@ -1967,3 +1977,165 @@ project, covering v3.
   `--force-device-scale-factor` and a CDP device-scale override. The new icon
   was not checked in a packaged build (`npm run package:dir` not run). The
   README was not previewed on GitHub itself.
+
+
+---
+
+## Design refresh
+
+A modern, sleek look for the whole app, from a UI/UX review (2026-11-20).
+Target: [`design.md`](design.md).
+
+**Rules for the design tickets.** Read `docs/design.md` first; it is the
+contract for how things look, as `SPEC.md` is for what they do. Keep
+accessible names of controls (icon-only buttons get `aria-label` and
+`title`) so the e2e tests and the guide still hold; where a name must change,
+update the tests and the guide in the same ticket. Put page-specific CSS in
+its own file next to the page (for example `pages/problems.css`) rather than
+growing `styles.css`, so tickets running in parallel do not collide. Any new
+npm dependency must pass `npm run check:deps` (14-day cooldown, D-48), be
+pinned exactly, and have its licence listed in the third-party notices and
+Settings → About. Before finishing: `npm run typecheck`, `npm run lint`,
+`npm test`, `npm run e2e` (Linux without a display: `xvfb-run -a`), and
+look at the changed screens in light and dark (`npm run screenshots`, or a
+scratch copy of `e2e/screenshots.ts` that is not committed).
+
+### T28 — Design foundations: tokens, fonts, icons, controls
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 2d
+- Depends on: T27
+- Owns: `apps/desktop/src/renderer/src/styles.css` (tokens, base elements, controls), `apps/desktop/src/renderer/src/components/ui/` (new), `apps/desktop/src/renderer/src/components/Editor.tsx` (theme only), `apps/desktop/src/renderer/src/main.tsx`, `apps/desktop/package.json` (dependencies), `apps/desktop/build/notices/`, `apps/desktop/electron-builder.yml` (notices), `SettingsPage.tsx` licence list
+
+**Goal.** The design system from `design.md` → Foundations, applied to every
+existing screen through tokens and base element styles, so the app already
+looks cleaner before any page is reworked.
+
+**Acceptance.**
+- [ ] Colour, type, radius, shadow and motion tokens from `design.md`, light and dark; existing token names still work.
+- [ ] Inter and JetBrains Mono bundled (no network fetch at runtime); `lucide-react` added; licences in `build/notices/` (shipped by `extraResources`) and in Settings → About.
+- [ ] Button variants (`primary`, `secondary`, `ghost`, `danger`, `icon`; sizes `sm`, default, `lg`); styled inputs, selects (chevron), textareas; segmented control, menu (popover), auto-growing textarea, pill/badge, tooltip-on-`title` where useful — as small React components in `components/ui/` with unit tests for behaviour (menu keyboard, segmented control selection, textarea growth).
+- [ ] Thin overlay scrollbars; `prefers-reduced-motion` respected.
+- [ ] CodeMirror light and dark themes match the tokens.
+- [ ] Contrast checked for text and accent pairs in both themes (a unit test that computes WCAG ratios for the token pairs is enough).
+- [ ] Screenshots of every page in light and dark looked at; nothing broken.
+
+**Notes.**
+
+### T29 — App frame: title-bar navigation and edge-to-edge panes
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 2d
+- Depends on: T28
+- Owns: `App.tsx` (shell), `components/Panes.tsx`, `components/AppFrame.tsx`/`Nav*.tsx` (new), shell section of `styles.css`, `apps/desktop/src/main/window.ts` (title bar options), `docs/assets/logo.svg` (mark only, read)
+
+**Goal.** `design.md` → App frame.
+
+**Acceptance.**
+- [ ] Navigation in the title bar: macOS `hiddenInset` with room for the traffic lights, Windows/Linux `titleBarOverlay` coloured from the theme (updates when the theme changes); draggable bar, non-draggable controls. A window test covers the options per platform.
+- [ ] Logo mark + **Algo**; nav links with icons and a non-button active state; **New problem** and **Next problem** on the right; tutor status as a dot + label with a tooltip.
+- [ ] Nav hidden during onboarding.
+- [ ] Panes edge to edge with 1px dividers as resize handles (keyboard-resizable, as today), and a shared pane header component used by Practice and Library.
+- [ ] Checks and e2e pass; screenshots looked at in both themes.
+
+**Notes.**
+
+### T30 — Practice page refresh
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 2d
+- Depends on: T29
+- Owns: `pages/PracticePage.tsx`, `components/ResultsPanel.tsx`, `components/Editor.tsx` (toolbar), `chat/` (shared message and composer components), `explanation/ExplanationViewer.tsx` (header), `pages/practice.css` (new)
+
+**Goal.** `design.md` → Practice. The chat message list and composer built
+here are reused by the Library (T32).
+
+**Acceptance.**
+- [ ] Statement header with pills; quiet details block.
+- [ ] Editor toolbar: styled language select, faint save state, **Run** secondary with icon, **Submit** primary; **Give up** and **Reset** in a "More" menu.
+- [ ] Results: sticky summary bar; passing tests collapsed, failing open; input / expected / got grid.
+- [ ] Tutor pane: segmented "This problem / General", icon **New chat**, bubble styles, faint action chips, **Hint / Review / Explain** chips, growing composer with send icon button. Ctrl/Cmd+Enter shortcuts unchanged.
+- [ ] Explanation dialog shows the problem title.
+- [ ] Unit tests and e2e updated for moved controls; screenshots looked at in both themes.
+
+**Notes.**
+
+### T31 — Home dashboard, Problems and Progress refresh
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 2d
+- Depends on: T29
+- Owns: `pages/HomePage.tsx`, `pages/ProblemsPage.tsx`, `pages/ProgressPage.tsx`, `pages/home.css`, `pages/problems.css`, `pages/progress.css` (new); read-only use of existing IPC (add a call only if the dashboard truly needs data that is not exposed, and list it in Notes)
+
+**Goal.** `design.md` → Home, Problems, Progress.
+
+**Acceptance.**
+- [ ] Home: Continue card (or an empty state), Recommended next, progress summary, tutor chat card.
+- [ ] Problems: toolbar with search icon and styled filters; clickable rows with hover; status icons, difficulty dots; Source column only when sources differ; sticky header; keyboard access to rows kept (links or buttons, not bare `div`s).
+- [ ] Progress: stat tiles; balanced topic grid; one compact row per topic with a segmented bar; zero counts hidden.
+- [ ] Tests updated; screenshots looked at in both themes.
+
+**Notes.**
+
+### T32 — Library refresh
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 2d
+- Depends on: T30
+- Owns: `pages/LibraryPage.tsx`, `library/` (including `library/chat/`), `pages/library.css` (new)
+
+**Goal.** `design.md` → Library, reusing T30's chat components.
+
+**Acceptance.**
+- [ ] Tree with chevrons, icons, guides, selected row style; header with filter and icon buttons.
+- [ ] Reader typography (16–17px, ~70ch), source domain with external icon, callouts with icons, **Ask** on hover/focus only (still reachable by keyboard).
+- [ ] Chats pane: relative times with full date tooltip; icon buttons for Rename / New chat / Close; Practice's message and composer styles.
+- [ ] Library e2e passes; screenshots looked at in both themes.
+
+**Notes.**
+
+### T33 — Onboarding, Settings and dialogs refresh
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 2d
+- Depends on: T29
+- Owns: `pages/OnboardingPage.tsx`, `components/ProfileForm.tsx`, `pages/Settings*.tsx`, `intake/` (dialog look only), `components/Toasts.tsx`, `lib/format.ts` (relative dates), `pages/onboarding.css`, `pages/settings.css` (new), the dialog section of `styles.css`
+
+**Goal.** `design.md` → Onboarding, Settings, dialogs; one shared relative
+date formatter used by every page that shows dates.
+
+**Acceptance.**
+- [ ] Onboarding stepper with choice cards, step indicator, Back / Continue, **Use defaults and start** on every step; answers saved exactly as today.
+- [ ] Settings with a section list and aligned form rows; status lines as dot + text.
+- [ ] Dialog styling; New problem's segmented source tabs; capitalised difficulty labels.
+- [ ] Toasts restyled with icons.
+- [ ] Relative date formatter with tests; used where dates are shown (the Library chats pane may adopt it in T32).
+- [ ] Onboarding, settings and intake tests and e2e pass; screenshots looked at in both themes.
+
+**Notes.**
+
+### T34 — Design pass, screenshots and user guide
+
+- Milestone: design
+- Spec: §8, §15.6 (behaviour unchanged); target look in [`design.md`](design.md)
+- Size: 1d
+- Depends on: T30, T31, T32, T33
+- Owns: anything needed for consistency fixes (list them), `apps/desktop/e2e/screenshots.ts`, `docs/assets/screenshots/`, `docs/guide/`, `README.md` (screenshots), `docs/design.md`
+
+**Goal.** One consistent app: fix drift between pages, retake every
+screenshot, and bring the guide in step.
+
+**Acceptance.**
+- [ ] Every page reviewed in light and dark at 1440×880 and at the minimum window size; inconsistencies fixed (spacing, radii, button variants, empty states, focus rings).
+- [ ] Keyboard-only walk through the main flows (onboarding, practice, library, settings) works; focus visible everywhere.
+- [ ] `screenshots.ts` also captures Home, Problems and Settings; all screenshots retaken; README and guide updated to the new look and any moved controls.
+- [ ] `design.md` updated where the built app differs from the plan.
+- [ ] All checks and e2e pass.
+
+**Notes.**

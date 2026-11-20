@@ -5,7 +5,7 @@ and algorithms with an AI tutor. Second version of `hqazi/dsa-tutor`. v1 (Python
 and v2 (Rust, Go, containers) are built; T14, the v1 release check, is
 blocked. v3 adds a Library of articles (SPEC §15, tickets T21–T26). T27
 polished the README and docs and renamed the app from Algorithm Tutor to
-Algo (D-47).
+Algo (D-47). A design refresh (T28–T34, `docs/design.md`) is planned.
 
 ## Read first
 
@@ -15,6 +15,7 @@ Algo (D-47).
   resolve a VERIFY or DECISION, or pin a version.
 - `docs/CONTEXT.md`: what is ported from `dsa-tutor` and where it lives.
 - `docs/architecture.md`: a short tour of the code.
+- `docs/design.md`: the target look for the UI; read it before any UI work.
 - `docs/guide/`: the user guide. Keep it in step with UI changes;
   `npm run screenshots` retakes the pictures in `docs/assets/screenshots/`.
 

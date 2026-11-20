@@ -21,6 +21,7 @@
 | [Specification](SPEC.md) | What the app does, in full. The contract every change follows. |
 | [Decisions](DECISIONS.md) | Why things are the way they are (D-01 onwards). |
 | [Tasks](TASKS.md) | The tickets that built the app, with status and done notes. |
+| [Design](design.md) | The target look for the UI (tickets T28–T34). |
 | [Context](CONTEXT.md) | What was carried over from the first version, `dsa-tutor`. |
 | [Security policy](../SECURITY.md) | How to report a vulnerability, and the security model. |
 | [Changelog](../CHANGELOG.md) | What changed in each version. |
