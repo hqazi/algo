@@ -64,7 +64,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T11 | Tutor: Claude Code backend | v1 | 2d | T10 | done |
 | T12 | New problems: generate, paste, import | v1 | 3d | T07, T10 | done |
 | T13 | Packaging, auto-update and release workflow | v1 | 3d | T08 | done |
-| T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | in-progress |
+| T14 | README, end-to-end test, v1 release check | v1 | 2d | T04, T09, T10, T11, T12, T13 | blocked |
 | T15 | Rust and Go harness generators | v2 | 5d | T04 | done |
 | T16 | Local toolchain executor | v2 | 2d | T15 | done |
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | done |
@@ -1140,6 +1140,9 @@ release (T14's release check) should tick them.
   certificates); unsigned macOS builds cannot install updates (D-27). No
   `latest-mac.yml` / `beta*.yml` produced or read here. The README's
   install and unsigned-app instructions are T14's.
+- (2026-11-20, T14) The README's install and unsigned-app steps are
+  written. The boxes are still open: T14's `v0.1.0-rc.1` tag push was
+  refused (HTTP 403 from the session's git proxy), so no release ran.
 
 ### T14 — README, end-to-end test, v1 release check
 
@@ -1157,10 +1160,56 @@ release (T14's release check) should tick them.
 - Go through every SPEC §14 item and confirm it is resolved or explicitly deferred.
 
 **Acceptance.**
-- [ ] e2e passes in CI.
+- [x] e2e passes in CI.
 - [ ] README followed from scratch on one OS by someone (or a clean VM) without help; done notes say which.
 
-**Notes.**
+**Notes.** (2026-11-20) **Blocked: the test release tag could not be
+pushed.** `git push origin v0.1.0-rc.1` (the one test release the user
+approved, on main `b990d77`) was refused by this session's git proxy with
+HTTP 403, a policy denial, so it was not retried or pushed another way. No
+tag exists on origin, `release.yml` has never run and there is no draft
+release. To unblock: push `v0.1.0-rc.1` on `b990d77` (or later main) from
+somewhere allowed to push tags, watch the Release run, then tick T13's two
+boxes and the release part of this ticket from it. Everything else is done.
+
+- **Built.** README: status, install per OS with the unsigned-build steps
+  (macOS Privacy & Security → Open Anyway, `xattr` fallback, no self-update
+  when unsigned; Windows SmartScreen; Linux `.deb` with apt and AppImage
+  with FUSE 2), first run, connecting the tutor (key, backends, Claude Code
+  with the API key), data folder per OS and export/import/reset backups,
+  privacy (what is sent to Anthropic and what never is, the other network
+  use: update checks and open-set imports), troubleshooting. The T20
+  headings are unchanged (their anchor test passes). `CHANGELOG.md` (new,
+  0.1.0). `e2e/v1.e2e.ts`: the SPEC §13 flow in one run with the fake tutor
+  (onboarding questions, next problem, Run fails, Hint level 1, edit, Run
+  passes, Submit, Progress shows a solve that is not unaided); first in
+  `npm run e2e`.
+- **SPEC §14.** Every item is resolved (D-15, D-23, D-24, D-25, D-27,
+  D-29, D-14); nothing deferred.
+- **Decisions.** D-33 (rc tags, README unsigned steps, e2e).
+- **Wiring outside Owns.** `.github/workflows/release.yml` accepts
+  `vX.Y.Z-rc.N` (pre-release draft; it rejected rc tags before, so the
+  approved tag would have failed at once). `apps/desktop/package.json`
+  (`e2e` script). Test fixes for CI, which was red on main on all three
+  OSes: `practice.e2e.ts` and `settings.e2e.ts` wait for Progress to
+  refresh (Linux race); `container-executor.test.ts` fake docker parses
+  `--volume` in sh and calls `/bin/ls` (the executor's macOS PATH has no
+  `/bin`); `backend.test.ts` allows macOS's `/private/var` path;
+  `pyodide-executor.test.ts` recursion limit 30 s (Windows took over 10 s);
+  `practice.test.ts` waits until the first run holds the problem.
+- **Checks.** Local (Linux x64): typecheck, lint, format:check, `npm test`
+  (821 passed, 12 skipped), `validate:content` (50 valid), `xvfb-run -a
+  npm run e2e` (5 suites, no failures). CI run 44709122560 on `b990d77`:
+  check on ubuntu, macOS and Windows, container and harnesses all pass,
+  including `npm run e2e` on Linux (box 1).
+- **Not done or not tested.** No tag, no release run, no installers built
+  on macOS or Windows, nothing installed from a release, no update between
+  releases (T13's boxes stay open). The README has not been followed from
+  scratch by anyone or on a clean VM (box 2); its macOS, Windows and Ubuntu
+  24.04 steps are written from current OS behaviour and the build config,
+  not tried on those OSes. Asset file names in the Install table follow
+  `artifactName`; the `.deb` name (`amd64`) is not yet confirmed from a
+  real release.
 
 ---
 
