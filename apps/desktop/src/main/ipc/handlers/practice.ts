@@ -69,7 +69,13 @@ export function registerPracticeHandlers(router: IpcRouter, deps: PracticeHandle
   router.handle('problems:get', ({ slug }) => refusing(() => practice.problem(slug)));
   router.handle('problems:next', (req) =>
     refusing(async () =>
-      withoutOk(await t.nextProblem({ topic: req.topic, difficulty: req.difficulty })),
+      withoutOk(
+        await t.nextProblem({
+          topic: req.topic,
+          difficulty: req.difficulty,
+          dryRun: req.preview === true,
+        }),
+      ),
     ),
   );
   router.handle('problems:start', ({ slug }) =>

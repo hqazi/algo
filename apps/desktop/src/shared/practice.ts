@@ -148,6 +148,8 @@ export const problemDetail = z.strictObject({
 export const nextRequest = z.strictObject({
   topic: slug.optional(),
   difficulty: difficulty.optional(),
+  /** Only show the pick (Home's "Recommended next", T31): the focus topic is not moved. */
+  preview: z.boolean().optional(),
 });
 
 const nextCommon = {
