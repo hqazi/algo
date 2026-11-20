@@ -71,7 +71,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | done |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
-| T21 | Library folders and index | v3 | 3d | T05, T09 | todo |
+| T21 | Library folders and index | v3 | 3d | T05, T09 | in-progress |
 | T22 | Reader with local images | v3 | 3d | T21 | todo |
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | todo |
