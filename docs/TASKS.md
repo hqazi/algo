@@ -85,7 +85,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T28 | Design foundations: tokens, fonts, icons, controls | design | 2d | T27 | done |
 | T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | done |
 | T30 | Practice page refresh | design | 2d | T29 | done |
-| T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | in-progress |
+| T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | done |
 | T32 | Library refresh | design | 2d | T30 | in-progress |
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | in-progress |
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | todo |
@@ -2230,12 +2230,70 @@ here are reused by the Library (T32).
 **Goal.** `design.md` → Home, Problems, Progress.
 
 **Acceptance.**
-- [ ] Home: Continue card (or an empty state), Recommended next, progress summary, tutor chat card.
-- [ ] Problems: toolbar with search icon and styled filters; clickable rows with hover; status icons, difficulty dots; Source column only when sources differ; sticky header; keyboard access to rows kept (links or buttons, not bare `div`s).
-- [ ] Progress: stat tiles; balanced topic grid; one compact row per topic with a segmented bar; zero counts hidden.
-- [ ] Tests updated; screenshots looked at in both themes.
+- [x] Home: Continue card (or an empty state), Recommended next, progress summary, tutor chat card.
+- [x] Problems: toolbar with search icon and styled filters; clickable rows with hover; status icons, difficulty dots; Source column only when sources differ; sticky header; keyboard access to rows kept (links or buttons, not bare `div`s).
+- [x] Progress: stat tiles; balanced topic grid; one compact row per topic with a segmented bar; zero counts hidden.
+- [x] Tests updated; screenshots looked at in both themes.
 
-**Notes.**
+**Notes.** (2026-11-20)
+- **Built.** Home (`HomePage.tsx`, `home.css`): heading and subtitle, a
+  **Continue** card (latest open attempt: title, topic, difficulty dot,
+  "Started 5 min ago" with the date as tooltip, hints, **Resume**; other open
+  attempts listed under it; an empty state with an icon and one line), a
+  **Recommended next** card (the pick's title or "A new … problem", topic,
+  difficulty, the reason as a sentence, **Start** / **Create it** running
+  the usual Next problem flow, **Browse problems**), a one-line progress
+  summary (comfortable, learning, not started, problems solved, **All
+  topics**) and the general tutor chat in a card sized to fill a 880px
+  window. Problems (`ProblemsPage.tsx`, `problems.css`): toolbar with a
+  search box with its icon inside, `ui/Select` filters whose options show
+  counts, **Clear** as a ghost button, the count on the right; a table on a
+  card with a sticky header, rows that open the problem on click with a
+  hover fill, titles as real links in `--text` weight 500 without underline,
+  status icons with visually hidden labels, difficulty as dot + word, and
+  Source (column and filter) only when sources differ. Progress
+  (`ProgressPage.tsx`, `progress.css`): four stat tiles, a legend, topic
+  groups as cards balanced by CSS columns, one compact row per topic (name,
+  non-zero counts, level badge, a segmented unaided / with help / tried
+  bar), active problems and the recent attempts table restyled with outcome
+  badges. Shared: `pages/dashboard.ts` (pure helpers), `pages/problem-bits.tsx`
+  and `problem-bits.css` (difficulty dot, status icon). Tests:
+  `pages/dashboard.test.tsx` (12: helpers, Home fresh and in progress, the
+  preview call, no pick; Problems icons, counts, row click, Source column;
+  Progress tiles, rows, zero counts hidden, bar label) and
+  `main/ipc/handlers/practice.test.ts` (2: `preview` is a dry run, a bad
+  `preview` is refused).
+- **Decisions.** D-52.
+- **Wiring outside Owns.** IPC: `shared/practice.ts` `nextRequest` gained
+  `preview?: boolean`, and `main/ipc/handlers/practice.ts` passes it as
+  core's `dryRun` (needed for Recommended next; read-only, no test data
+  involved). e2e: `practice.e2e.ts` and `v1.e2e.ts` read the topic counts
+  (`data-testid="topic-counts"`: "1 unaided", "1 with help") instead of the
+  old "1/3 unaided · 1 solved" text. `docs/guide/getting-started.md`: two
+  paragraphs for the new Home, Problems filters and Progress bars.
+  `styles.css` not touched.
+- **Checked.** `npm run typecheck`, `npm run lint`, `npm run format:check`
+  (only the uncommitted scratch tour script flagged), `npm test` (83 files,
+  1139 passed, 12 skipped), `npm run validate:content` (50 problems),
+  `xvfb-run -a npm run e2e` (all six suites `failures: []`, after rebasing
+  on T30), the security check by hand (`electron
+  out/main/security-check.js --no-sandbox` under xvfb, `failures: []`,
+  before the rebase). Screenshots (scratch script, not committed) of Home
+  fresh and with a problem in progress plus one solved and one given up,
+  Problems (top, scrolled with the sticky header and a hovered row),
+  Progress fresh and with data, at 1440×880 and 1000px wide, light and dark;
+  fixed what they showed (the header stuck below the page padding, the
+  search icon over the placeholder, uneven bar widths, the separator
+  replacing the difficulty dot, the chat pushing the composer off screen).
+- **Not done / not tested.** Not seen on macOS or Windows, in a packaged
+  build, or below 1000px wide (the cards stack under 760px, the tiles go
+  two by two under 900px; not looked at). "Last activity" on Continue is
+  the attempt's start time (no later time is exposed). Home's relative time
+  is a local helper until T33's shared formatter lands. Active problems and
+  Recent attempts on Progress still show slugs, not titles (the attempts
+  data has no title; the e2e tests click the slug). The unused
+  `.problem-table`, `.filters` and `.topic-*` rules in `styles.css` are left
+  for T34. `docs/assets/screenshots/` not retaken (T34).
 
 ### T32 — Library refresh
 

@@ -38,9 +38,13 @@ disk.
 
 **Next problem** stays on your focus topic until you are comfortable with it,
 then moves to the weakest topic whose prerequisites you have. It starts with
-easy problems and moves to medium after two unaided solves. **Problems**
-lists every problem by topic, and the home screen's chat can answer "what
-should I practise next?" when the tutor is on.
+easy problems and moves to medium after two unaided solves. The home screen
+shows the problem you are working on (**Resume**), the next pick with the
+reason for it (**Start**), a short progress summary and the tutor chat, which
+can answer "what should I practise next?" when the tutor is on. **Problems**
+lists every problem by topic; search it, filter it by topic, difficulty or
+status (each choice shows how many problems it leaves), and click a row to
+open the problem.
 
 The app ships with 50 curated problems across 15 topics, from arrays and
 hashing to graphs and dynamic programming.
@@ -49,7 +53,9 @@ hashing to graphs and dynamic programming.
 
 ![Progress: a level per topic](../assets/screenshots/progress.png)
 
-**Progress** shows your level per topic and your recent attempts. A topic is
+**Progress** shows your level per topic and your recent attempts. Each topic
+has a bar of the problems you solved unaided, solved with help, and tried
+without solving yet. A topic is
 *new*, *learning* once you have attempted it, and *comfortable* after three
 different problems solved without hints. Hints and explanations still count,
 as "solved with help".

@@ -1762,3 +1762,48 @@ How `design.md` → Practice was built, where the plan left a choice.
   title, which the caller passes (Practice) or the viewer looks up with
   `problems:get` (opened by the tutor from any page), falling back to the
   slug; **Close** is an icon button with that name.
+
+**D-52 Home dashboard, Problems and Progress** (2026-11-20, T31)
+
+How `design.md` → Home, Problems, Progress was built, where the plan left a
+choice.
+- **Recommended next without side effects.** `problems:next` takes an
+  optional `preview: true`, passed to core's `nextProblem({ dryRun: true })`,
+  so Home can show the pick and its reason without moving the focus topic (a
+  real pick may). **Start** on the card runs the usual Next problem flow,
+  which makes the same pick. Core's reason is written for the tutor; Home
+  capitalises it and drops the "no unattempted problem left here, so
+  generate one (create_problem)" tail, saying "The tutor writes it" and
+  offering **Create it** instead. No other IPC was added: the Continue card
+  uses `status:get` (the latest open attempt by start time; others listed as
+  "Also in progress") and `problems:list` with `status: 'active'` for titles.
+  "Last activity" is the attempt's start time, the only time exposed.
+- **Home's heading stays "Practice"** (every e2e suite waits for it); a
+  one-line subtitle explains the page. The old Unfinished and Recent lists
+  are gone from Home (Progress lists both).
+- **Relative times** on Home ("5 min ago", the full date as the tooltip) use
+  a small `ago()` in `pages/dashboard.ts`; T33's shared formatter replaces
+  it when both are in.
+- **Problems filters run in the renderer** on the full `problems:list`
+  reply (the same equality filters main applied), so each option shows how
+  many problems it would leave given the other filters and the search
+  ("Easy (12)"). Source, as a column and a filter, shows only when the list
+  has more than one source (or a source filter is set). Rows navigate on
+  click; the title stays a real link (keyboard, e2e) and the row gets the
+  hover fill while the link has focus. Status is an icon (empty circle new,
+  lucide `Contrast` half circle in progress, check solved, slashed circle
+  gave up) with the label as visually hidden text and tooltip. The page
+  has no top padding so the table header sticks flush to the top.
+- **Progress topic rows.** The bar shows distinct problems: unaided
+  (`--pass`), with help (`--warn`, solved minus unaided) and tried
+  (`--faint`, attempted minus solved, open attempts included). Its length is
+  out of three (the unaided solves that make a topic comfortable) or the
+  problems attempted if more. Counts sit on the name line, zeros left out;
+  the bar is `role="img"` with "N of 3 unaided solves (…)" as its label.
+  Group cards are balanced with CSS columns (`columns: 3 20rem`) rather
+  than a grid, so short and long groups pack by height.
+- **Page CSS** lives in `pages/home.css`, `problems.css`, `progress.css`
+  and `problem-bits.css` (difficulty dot, status icon). The old
+  `.problem-table`, `.filters`, `.topic-*` rules in `styles.css` are no
+  longer used by these pages and were left for T34 to remove, to keep this
+  ticket out of `styles.css` while T30 and T33 change it.
