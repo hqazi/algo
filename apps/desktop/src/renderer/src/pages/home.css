@@ -1,0 +1,174 @@
+/* Home dashboard (T31, docs/design.md → Home). */
+.home-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.home-head h1 {
+  margin-bottom: var(--space-1);
+}
+.home-head p {
+  margin: 0;
+}
+.home .card {
+  margin: 0;
+}
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.home-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+.home .section-label {
+  margin: 0;
+}
+.home-problem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.home-problem p {
+  margin: 0;
+}
+.home-problem-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.35;
+  color: var(--text);
+  text-decoration: none;
+}
+a.home-problem-title:hover {
+  color: var(--accent-fg);
+}
+.home-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.home-meta > * + *::before {
+  content: '·';
+  margin-right: var(--space-2);
+  color: var(--faint);
+}
+.home-reason {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  margin-top: var(--space-1) !important;
+}
+.home-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-1);
+}
+.home a.btn {
+  font-weight: 500;
+  line-height: 20px;
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text);
+}
+.home a.btn-primary {
+  color: var(--accent-text);
+}
+.home a.btn-ghost {
+  color: var(--muted);
+}
+.home a.btn-ghost:hover {
+  color: var(--text);
+}
+.home-others {
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+.home-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--muted);
+}
+.home-empty svg {
+  flex: none;
+  color: var(--faint);
+  margin-top: 1px;
+}
+.home-empty p {
+  margin: 0;
+}
+
+/* The progress summary: one slim card with four numbers. */
+.home-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  padding: var(--space-3) var(--space-5);
+}
+.home-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  flex: 1;
+}
+.home-stat {
+  display: flex;
+  align-items: baseline;
+  flex-direction: row-reverse;
+  gap: var(--space-2);
+}
+.home-stat dt {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.home-stat dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.home-stat-pass dd {
+  color: var(--pass);
+}
+.home-stat-warn dd {
+  color: var(--warn);
+}
+.home-summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* The tutor chat in a card; the chat itself is styled by chat/chat.css. */
+.home .home-chat {
+  margin: 0;
+  padding: 0;
+  border: none;
+  height: 30rem;
+  min-height: 22rem;
+}
+
+@media (max-width: 760px) {
+  .home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

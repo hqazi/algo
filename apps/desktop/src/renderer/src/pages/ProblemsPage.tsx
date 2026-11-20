@@ -1,12 +1,30 @@
-import { useEffect, useState } from 'react';
-/** Problems (ported from `dsa-tutor/web`): browse and filter by topic, difficulty, source, status. */
-import type { ChangeEvent } from 'react';
-import type { ProblemFilters, ProblemListItem } from '../../../shared/practice';
+/**
+ * Problems (T31, docs/design.md → Problems): search and filter the whole
+ * list, with counts in the filters; rows open the problem on click, and the
+ * title is a real link for the keyboard. Filtering happens here, on the full
+ * list, so each filter can show how many problems each choice leaves.
+ */
+import { useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { Search, X } from 'lucide-react';
+import {
+  PROBLEM_STATUSES,
+  type ProblemFilters,
+  type ProblemListItem,
+} from '../../../shared/practice';
 import { invoke } from '../ipc';
 import { Link } from '../components/Link';
+import { Button, Select } from '../components/ui';
 import { errorText, useApp } from '../lib/app-context';
 import { PROBLEM_STATUS_LABEL, titleCase } from '../lib/format';
 import { useStored } from '../lib/hooks';
+import { navigate } from '../lib/router';
+import { countBy, matching } from './dashboard';
+import { DifficultyDot, StatusIcon } from './problem-bits';
+import './problems.css';
+
+const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+const SOURCES = ['curated', 'generated', 'pasted', 'imported'] as const;
+type Key = keyof ProblemFilters;
 
 export function ProblemsPage() {
   const { topics, topicName, version } = useApp();
@@ -17,7 +35,7 @@ export function ProblemsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    invoke('problems:list', filters)
+    invoke('problems:list', {})
       .then((r) => {
         if (cancelled) return;
         setItems(r.problems);
@@ -31,107 +49,136 @@ export function ProblemsPage() {
     return () => {
       cancelled = true;
     };
-  }, [filters, version]);
+  }, [version]);
 
-  const set = (k: keyof ProblemFilters) => (e: ChangeEvent<HTMLSelectElement>) =>
-    setFilters({ ...filters, [k]: e.target.value || undefined });
+  const all = useMemo(() => items ?? [], [items]);
   const q = search.trim().toLowerCase();
-  const shown = (items ?? []).filter(
-    (p) => !q || p.title.toLowerCase().includes(q) || p.slug.includes(q),
+  const searched = useMemo(
+    () => all.filter((p) => !q || p.title.toLowerCase().includes(q) || p.slug.includes(q)),
+    [all, q],
   );
+  const shown = matching(searched, filters);
+  const counts = (k: Key) => countBy(matching(searched, filters, k), k);
+  const sources = new Set(all.map((p) => p.source));
+  const showSource = sources.size > 1;
+
+  const set = (k: Key) => (e: ChangeEvent<HTMLSelectElement>) =>
+    setFilters({ ...filters, [k]: e.target.value || undefined });
+  const filtered = Object.values(filters).some(Boolean);
+
+  const filter = (
+    k: Key,
+    label: string,
+    any: string,
+    values: readonly string[],
+    name: (v: string) => string,
+  ) => {
+    const c = counts(k);
+    return (
+      <Select value={filters[k] ?? ''} onChange={set(k)} aria-label={label}>
+        <option value="">{any}</option>
+        {values.map((v) => (
+          <option key={v} value={v}>
+            {name(v)} ({c.get(v) ?? 0})
+          </option>
+        ))}
+      </Select>
+    );
+  };
+
+  const open = (slug: string) => (e: MouseEvent<HTMLTableRowElement>) => {
+    // The title link navigates itself; a selection drag is not a click.
+    if ((e.target as Element).closest('a') || getSelection()?.toString()) return;
+    navigate(`/p/${slug}`);
+  };
 
   return (
-    <main className="page">
+    <main className="page problems-page">
       <h1>Problems</h1>
-      <div className="filters" role="search">
-        <input
-          type="search"
-          placeholder="Search titles"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search titles"
-        />
-        <select value={filters.topic ?? ''} onChange={set('topic')} aria-label="Topic">
-          <option value="">All topics</option>
-          {topics.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filters.difficulty ?? ''}
-          onChange={set('difficulty')}
-          aria-label="Difficulty"
-        >
-          <option value="">Any difficulty</option>
-          {['easy', 'medium', 'hard'].map((d) => (
-            <option key={d} value={d}>
-              {titleCase(d)}
-            </option>
-          ))}
-        </select>
-        <select value={filters.source ?? ''} onChange={set('source')} aria-label="Source">
-          <option value="">Any source</option>
-          {['curated', 'generated', 'pasted', 'imported'].map((d) => (
-            <option key={d} value={d}>
-              {titleCase(d)}
-            </option>
-          ))}
-        </select>
-        <select value={filters.status ?? ''} onChange={set('status')} aria-label="Status">
-          <option value="">Any status</option>
-          {Object.entries(PROBLEM_STATUS_LABEL).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </select>
-        {Object.values(filters).some(Boolean) && (
-          <button type="button" onClick={() => setFilters({})}>
-            Clear
-          </button>
+      <div className="problems-toolbar" role="search">
+        <label className="problems-search">
+          <Search aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Search titles"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search titles"
+          />
+        </label>
+        {filter(
+          'topic',
+          'Topic',
+          'All topics',
+          topics.map((t) => t.id),
+          topicName,
         )}
+        {filter('difficulty', 'Difficulty', 'Any difficulty', DIFFICULTIES, titleCase)}
+        {(showSource || filters.source) &&
+          filter(
+            'source',
+            'Source',
+            'Any source',
+            SOURCES.filter((s) => sources.has(s) || filters.source === s),
+            titleCase,
+          )}
+        {filter(
+          'status',
+          'Status',
+          'Any status',
+          PROBLEM_STATUSES,
+          (s) => PROBLEM_STATUS_LABEL[s] ?? s,
+        )}
+        {filtered && (
+          <Button variant="ghost" icon={<X aria-hidden="true" />} onClick={() => setFilters({})}>
+            Clear
+          </Button>
+        )}
+        <span className="problems-count muted small" aria-live="polite">
+          {items !== null && `${shown.length} problem${shown.length === 1 ? '' : 's'}`}
+        </span>
       </div>
       {error && <p className="error-text">{error}</p>}
       {items === null ? (
         <p className="muted">Loading…</p>
       ) : (
         <>
-          <p className="muted small">
-            {shown.length} problem{shown.length === 1 ? '' : 's'}
-          </p>
-          <table className="problem-table">
+          <table className="problems-table">
             <thead>
               <tr>
+                <th className="col-status">
+                  <span className="sr-only">Status</span>
+                </th>
                 <th>Title</th>
                 <th>Topic</th>
                 <th>Difficulty</th>
-                <th>Source</th>
-                <th>Status</th>
+                {showSource && <th>Source</th>}
               </tr>
             </thead>
             <tbody>
               {shown.map((p) => (
-                <tr key={p.slug}>
-                  <td>
+                <tr key={p.slug} onClick={open(p.slug)}>
+                  <td className="col-status">
+                    <StatusIcon status={p.status} />
+                  </td>
+                  <td className="col-title">
                     <Link to={`/p/${p.slug}`}>{p.title}</Link>
                   </td>
-                  <td>{topicName(p.topic)}</td>
+                  <td className="muted">{topicName(p.topic)}</td>
                   <td>
-                    <span className={`pill diff-${p.difficulty}`}>{titleCase(p.difficulty)}</span>
+                    <DifficultyDot difficulty={p.difficulty} />
                   </td>
-                  <td>{titleCase(p.source)}</td>
-                  <td>
-                    <span className={`pill status-${p.status}`}>
-                      {PROBLEM_STATUS_LABEL[p.status]}
-                    </span>
-                  </td>
+                  {showSource && <td className="muted">{titleCase(p.source)}</td>}
                 </tr>
               ))}
             </tbody>
           </table>
-          {shown.length === 0 && <p className="muted">No problems match these filters.</p>}
+          {shown.length === 0 && (
+            <div className="problems-empty">
+              <Search size={20} aria-hidden="true" />
+              <p>No problems match {filtered || q ? 'these filters' : 'yet'}.</p>
+            </div>
+          )}
         </>
       )}
     </main>

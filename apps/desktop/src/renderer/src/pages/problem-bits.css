@@ -1,0 +1,36 @@
+/* Shared by Home, Problems and Progress (T31, pages/problem-bits.tsx). */
+.diff-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.diff-dot::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.diff-dot-easy::before {
+  background: var(--easy);
+}
+.diff-dot-medium::before {
+  background: var(--medium);
+}
+.diff-dot-hard::before {
+  background: var(--hard);
+}
+.status-icon {
+  display: inline-flex;
+  color: var(--faint);
+}
+.status-icon-active {
+  color: var(--warn);
+}
+.status-icon-solved {
+  color: var(--pass);
+}
+.status-icon-gave_up {
+  color: var(--muted);
+}

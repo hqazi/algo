@@ -140,18 +140,20 @@ try {
     .waitForFunction(
       (s) => {
         const t = document.querySelector('main')?.textContent ?? '';
-        return /0\/3 unaided · 1 solved/.test(t) && t.includes(s);
+        const counts = [...document.querySelectorAll('[data-testid="topic-counts"]')].map(
+          (e) => e.textContent ?? '',
+        );
+        return counts.includes('1 with help') && t.includes(s);
       },
       slug,
       { timeout: 10_000 },
     )
     .then(() => true)
     .catch(() => false);
-  const progress = await page.locator('main').innerText();
   check(
     'progress lists the attempt as solved with help (the hint counts)',
     counted,
-    progress.match(/\d+\/3 unaided · [1-9]\d* solved[^\n]*/)?.[0],
+    await page.getByTestId('topic-counts').allTextContents(),
   );
   await shot(page, '4-progress');
 } catch (e) {
