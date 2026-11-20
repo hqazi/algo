@@ -1858,3 +1858,48 @@ left a choice.
   `fullDate` for the tooltip; `components/RelativeTime.tsx` renders both as
   a `<time>`. Used by Settings → Updates; `when()` is left for the pages
   T31 and T32 own.
+
+**D-54 Library page: tree, reader and chats pane** (2026-11-20, T32)
+
+- **Tree.** Folders are buttons with `aria-expanded`, a chevron that turns,
+  and an open/closed folder icon, instead of `<details>` (no native
+  triangle); articles stay links (`aria-current="page"` on the open one,
+  shown as an accent-subtle row). Tab, Enter and Space work as before. A
+  nested list's left border is the indent guide. Which folders are closed
+  is kept for the visit only (not stored); while a filter is typed every
+  matching folder shows open. **Refresh** and **Write an article** are icon
+  buttons in the Articles pane's header (names unchanged; Refresh spins
+  while it runs); **Write an article** toggles the form below the filter.
+  The Level and Length options show capitalised labels; the values sent
+  are unchanged.
+- **Reader.** 16px body, line height 1.7, at most 70ch plus margins: 48px
+  on the left for the chat markers (an accent bar with a wider hit area)
+  and 64px on the right for the headings' **Ask**. The source shows as its
+  domain (`www.` dropped; a `mailto:` shows the address) with an
+  external-link icon; the full URL is the link's `title` and `href`, and
+  clicks still go through `library:open-link`. Tags are `Badge`s.
+- **Callout and placeholder icons** are lucide icons drawn as CSS masks
+  from `data:` SVGs in `pages/library.css`, coloured by the callout type
+  (accent by default; warn, fail, pass, muted for quotes). The article
+  sanitiser is unchanged (no SVG in article HTML), and the UI CSP already
+  allows `data:` images, as for the select chevron (D-49).
+- **Ask beside a heading** is hidden (opacity 0) until the pointer is over
+  that heading or the button, or the button has keyboard focus; it stays
+  in the Tab order with its name. The layer watches `mouseover` on the
+  reader to know which heading is under the pointer.
+- **Chats pane** uses `MessageList` and `Composer` (D-51). **Make a problem
+  from this** is a chip above the composer, as Practice's Hint / Review /
+  Explain, rather than in the composer's `extra` slot, where a 240px pane
+  cut it off. Thread rows: title and relative time on one line (a
+  `<time>` with the full local date as its `title`), the passage snippet
+  below in two lines at most. Rename, New chat and Close are icon buttons
+  with those names. The provider notice keeps its Send and Cancel. The
+  pane's "Chats" title stays visible in a narrow pane (the tutor pane's
+  container query hides its own title to fit the thread switch).
+- **Relative times** use T33's shared `relativeDate`, with `fullDate` as
+  the `<time>`'s tooltip (D-53).
+- **CSS.** The page's look is in `pages/library.css`, scoped under
+  `.library-page`; the T22 Library rules in `styles.css` are overridden
+  there, not deleted, to stay out of `styles.css` while T31 and T33 run in
+  parallel (T34 can delete them). `chat.css` lost `.chat-head`,
+  `.small-button` and `.chat-compose`.

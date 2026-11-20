@@ -18,8 +18,9 @@ browser's job.
 2. Open **Library** in the top bar. The left pane shows your folders and
    articles. Type in the filter box to search by title or tag.
 
-The Library notices new and changed files while it is open; **Refresh**
-rescans by hand. Hidden folders (`.obsidian`, `.trash`, `.git`) and files
+The Library notices new and changed files while it is open; **Refresh** (the
+circular-arrows button at the top of the Articles pane) rescans by hand.
+Click a folder to fold or unfold it. Hidden folders (`.obsidian`, `.trash`, `.git`) and files
 over 5 MB are skipped. A file's YAML frontmatter (`title`, `source`,
 `author`, `published`, `tags`, ...) is shown above the article.
 
@@ -51,12 +52,14 @@ with size and time limits. The page itself never contacts a website.
 ## Chatting about a passage
 
 Select some text and click **Ask about this**, or use the **Ask** button
-beside a heading. The chat pane on the right opens a new conversation tied to
+that appears when you point at a heading (it is also in the Tab order). The chat pane on the right opens a new conversation tied to
 that passage, and a marker appears in the margin beside it.
 
 - Each article can have many chats. The list at the top of the chat pane
-  shows them with their passage and date; click a margin marker or a list
-  entry to reopen one. **Rename** gives it a better title.
+  shows them with their passage and how long ago they were last used (point
+  at the time for the full date); click a margin marker or a list entry to
+  reopen one. The buttons above an open chat are **Rename** (a better
+  title), **New chat** and **Close**.
 - The tutor sees the article's title and outline and the section you asked
   about. It can read other sections or search the article when it needs to,
   but nothing outside it.
@@ -73,7 +76,8 @@ anything.
 
 ## Articles written by the tutor
 
-**Write an article** asks the tutor for an article on a topic, at a level
+**Write an article** (the pen button at the top of the Articles pane) asks
+the tutor for an article on a topic, at a level
 (beginner, intermediate or advanced) and length you choose. Tutor-written
 articles are saved in the app's own data folder, not in your folders, are
 listed under **Written by the tutor**, and are labelled as AI-written. They
