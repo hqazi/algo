@@ -1712,3 +1712,53 @@ bar tutorial) rather than memory.
   is open). The Practice editor toolbar moved as is into the Code pane's
   header, and the Library's **Refresh** into the Articles pane's header;
   T30 and T32 restyle their contents.
+
+**D-51 Practice page: toolbar, results and the shared chat parts** (2026-11-20, T30)
+
+How `design.md` → Practice was built, where the plan left a choice.
+- **Statement.** The title, then difficulty (a dot in its colour), topic and
+  status as `Badge`s. The statement's `## Constraints` section is taken out
+  of the Markdown (`pages/practice-statement.ts`) and shown with the target
+  complexity in a quiet "Details" block on `--surface-2`; statements without
+  that section show only the target there. Statement section headings read
+  as small uppercase labels.
+- **Toolbar.** The language select (only when more than one language is
+  offered, as before), the save state in `--faint` (muted while unsaved or
+  saving, red when it failed; the file path stays its tooltip), then **Run**
+  (secondary, a play icon in the pass colour) and **Submit** (primary), both
+  small (28px) to fit the 44px pane header. The shortcut in their tooltips is
+  ⌘Enter / ⇧⌘Enter on macOS and Ctrl+Enter / Ctrl+Shift+Enter elsewhere.
+  The "More" menu (`…`, accessible name "More") holds **Give up** (danger),
+  which becomes **Reference** once the attempt is recorded, and **Reset**;
+  they are `menuitem`s (D-49).
+- **Results.** The summary bar is sticky inside the results area: an icon,
+  "N/M passed" (`data-testid="summary"`, text unchanged for the tests), the
+  run kind and the run's duration. Failing tests come first (each group in
+  its order) and start open; passing ones are one line with the input as a
+  faint preview and open on click (a button with `aria-expanded`, a chevron,
+  no `<details>` triangle). The grid is Input / Expected / **Got** (was
+  "Actual"), with Expected tinted pass and Got tinted fail when the test
+  failed. Hidden tests read "Hidden test: negative numbers" (was
+  "Hidden · Negative Numbers") and have nothing to open; the hidden-failure
+  note names the categories in a sentence.
+- **Shared chat parts** (`chat/MessageList.tsx`, `chat/Composer.tsx`), for the
+  tutor pane now and the Library's chats in T32. `MessageList` takes a thread
+  view, an empty text and optional reload/retry, and keeps to the bottom
+  while the reader is there. `Composer` is one rounded box with an
+  `AutoGrowTextarea` (to 192px) and an icon button inside: **Send** (primary,
+  arrow) or, while a reply streams, **Stop** (accessible names unchanged);
+  Enter sends, Shift+Enter is a new line, an `extra` slot takes more
+  controls (the Library's "Make a problem from this"). The Library still
+  uses its own markup until T32, so `chat.css` keeps the older
+  `.chat-head`, `.small-button` and `.chat-compose` rules for it.
+- **Tutor pane.** The thread switch is a `Segmented` ("This problem",
+  "General", and another problem's slug when following one); **New chat** is
+  an icon button (pencil-on-square) with its name as the label. Tool chips
+  use lucide check / x / spinner icons instead of "✓ ✗ …" characters, so
+  their text is the summary only and the e2e tests read their `data-state`.
+  Below 340px the pane's "Tutor" title is visually hidden (a container
+  query) so the switch fits.
+- **Explanation dialog.** "Explanation" as a small label over the problem's
+  title, which the caller passes (Practice) or the viewer looks up with
+  `problems:get` (opened by the tutor from any page), falling back to the
+  slug; **Close** is an icon button with that name.

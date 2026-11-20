@@ -25,8 +25,8 @@ under it, and the tutor side by side.
 | **Hint** | The next hint, one level at a time, from a nudge to a near-solution. |
 | **Review** | The tutor runs the tests and reviews your solution. |
 | **Explain** | A full explanation page: plain words, intuition, brute force to optimal, a trace, complexity, a solution and pitfalls. Opening one counts the attempt as solved with help. |
-| **Give up** | Runs the tests one last time, records the attempt (with optional notes for later) and opens the reference solution. Once an attempt is recorded, the button becomes **Reference**. |
-| **Reset** | Replaces your code with the starter. |
+| **Give up** | In the **More** menu (…) beside **Submit**. Runs the tests one last time, records the attempt (with optional notes for later) and opens the reference solution. Once an attempt is recorded, it becomes **Reference**. |
+| **Reset** | In the **More** menu. Replaces your code with the starter. |
 
 Pass or fail always comes from running the tests, never from the model.
 

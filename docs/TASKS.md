@@ -84,7 +84,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T27 | README, user guide, logo, screenshots; rename to Algo | polish | 1d | T26 | done |
 | T28 | Design foundations: tokens, fonts, icons, controls | design | 2d | T27 | done |
 | T29 | App frame: title-bar navigation and edge-to-edge panes | design | 2d | T28 | done |
-| T30 | Practice page refresh | design | 2d | T29 | in-progress |
+| T30 | Practice page refresh | design | 2d | T29 | done |
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | in-progress |
 | T32 | Library refresh | design | 2d | T30 | todo |
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | in-progress |
@@ -2159,14 +2159,65 @@ looks cleaner before any page is reworked.
 here are reused by the Library (T32).
 
 **Acceptance.**
-- [ ] Statement header with pills; quiet details block.
-- [ ] Editor toolbar: styled language select, faint save state, **Run** secondary with icon, **Submit** primary; **Give up** and **Reset** in a "More" menu.
-- [ ] Results: sticky summary bar; passing tests collapsed, failing open; input / expected / got grid.
-- [ ] Tutor pane: segmented "This problem / General", icon **New chat**, bubble styles, faint action chips, **Hint / Review / Explain** chips, growing composer with send icon button. Ctrl/Cmd+Enter shortcuts unchanged.
-- [ ] Explanation dialog shows the problem title.
-- [ ] Unit tests and e2e updated for moved controls; screenshots looked at in both themes.
+- [x] Statement header with pills; quiet details block.
+- [x] Editor toolbar: styled language select, faint save state, **Run** secondary with icon, **Submit** primary; **Give up** and **Reset** in a "More" menu.
+- [x] Results: sticky summary bar; passing tests collapsed, failing open; input / expected / got grid.
+- [x] Tutor pane: segmented "This problem / General", icon **New chat**, bubble styles, faint action chips, **Hint / Review / Explain** chips, growing composer with send icon button. Ctrl/Cmd+Enter shortcuts unchanged.
+- [x] Explanation dialog shows the problem title.
+- [x] Unit tests and e2e updated for moved controls; screenshots looked at in both themes.
 
-**Notes.**
+**Notes.** (2026-11-20)
+- **Built.** `PracticePage.tsx` + `pages/practice.css`: the title with
+  difficulty, topic, status (and source) as `Badge`s; the statement's
+  Constraints section moved with the target complexity into a quiet
+  Details block (`pages/practice-statement.ts`, `splitConstraints`). The
+  Code pane's header: styled `Select` for the language, a faint save state,
+  **Run** (secondary, play icon, shortcut in the tooltip) and **Submit**
+  (primary), and a `Menu` "More" with **Give up** / **Reference** and
+  **Reset** (with icons). `ResultsPanel.tsx`: a sticky summary bar (icon,
+  "N/M passed", run kind, duration), failing tests first and open, passing
+  ones a line with an input preview that opens on click, an Input /
+  Expected / Got grid with expected and got tinted, hidden tests as "Hidden
+  test: <category>" and the hidden failures named in a sentence. `chat/`:
+  new shared `MessageList` and `Composer` (auto-growing text area with the
+  Send/Stop icon button inside, Enter to send, an `extra` slot), used by
+  `ChatPane` with a `Segmented` thread switch, an icon **New chat**, Hint /
+  Review / Explain as chips above the composer; `MessageView` restyled
+  (accent-subtle user bubbles, unboxed tutor text, faint chips with lucide
+  icons); `chat.css` rewritten. `ExplanationViewer`: header with the
+  problem's title (passed in, or looked up with `problems:get`), version
+  `Select`, icon **Close**. Tests: `Composer.test.tsx` (2), and new cases in
+  `ResultsPanel.test.tsx` (collapse/open, summary bar, order),
+  `PracticePage.test.tsx` (header, pills and Details; More menu with Reset
+  and Give up; `splitConstraints`) and `ChatPane.test.tsx` (explanation
+  title).
+- **Decisions.** D-51.
+- **Wiring outside Owns.** `explanation/ExplanationList.tsx` passes the
+  title to the viewer; `explanation/explanation.css` styles the new header.
+  e2e: `practice.e2e.ts` looks for "Hidden test:" (was "Hidden ·");
+  `tutor.e2e.ts` and `library.e2e.ts` check tool chips by `data-state`
+  instead of a leading "✓". `docs/guide/getting-started.md`: Give up and
+  Reset are in the **More** menu. `styles.css` untouched.
+- **Checked.** `npm run typecheck`, `npm run lint`, `npm run format:check`,
+  `npm test` (81 files, 1125 passed, 12 skipped), `npm run
+  validate:content` (50 problems), `xvfb-run -a npm run e2e`: all six
+  suites `failures: []` (v1 and practice in the full run; tutor and library
+  failed there on the chip check, then passed after the fix, run with
+  settings and intake as the rest of the chain). `e2e/screenshots.ts` run
+  to a scratch folder: its selectors still work. The Practice page looked
+  at in light and dark at 1440×880 and 1000×760 (fresh, after Submit with a
+  hidden failure and a hint, after a failing Run, the More menu open, the
+  General thread, the explanation dialog) with a scratch script (not
+  committed); fixed the Details text size, the tutor header wrapping at
+  1000px and failing tests sorting below passing ones.
+- **Not done / not tested.** The Library's chats pane still uses its own
+  list and composer markup (T32 moves it onto `MessageList` and
+  `Composer`; `chat.css` keeps the old rules for it). The narrow layout
+  (under 900px, stacked tabs) was not looked at. The give-up and reference
+  dialogs keep the shared modal look (T33). `npm run check:security` not
+  run (needs `--no-sandbox` as root here; no main-process change).
+  macOS (⌘ shortcut text) and Windows not seen; not checked in a packaged
+  build. `docs/assets/screenshots/` not retaken (T34).
 
 ### T31 — Home dashboard, Problems and Progress refresh
 
