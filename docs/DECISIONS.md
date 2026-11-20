@@ -1399,3 +1399,44 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   never navigate the window: `#/library/<id>` changes the route; `https:`,
   `http:`, `mailto:` go to `library:open-link`, which checks the scheme
   again in main before `shell.openExternal`.
+
+**D-42 Chats on passages: anchors, article mode, thread lifecycle (T24)**
+
+- Anchors (`packages/core/src/library/anchors.ts`) are made and resolved
+  against an `AnchorDoc`: a text plus its headings at offsets. The renderer
+  builds one from the reader's DOM (text nodes, a line break between
+  blocks); main builds one from the Markdown (ATX headings outside fenced
+  code, inline Markdown stripped from titles). Quote, prefix and suffix are
+  whitespace-normalised (runs to one space), so DOM text and Markdown
+  match across line wrapping; the quote is capped at 1,000 characters.
+  Repeats are scored by common prefix/suffix length plus a bonus when the
+  heading path matches. A quote that is gone falls back to its heading
+  (full path first, then the last title alone, case-insensitive); else
+  detached. Inline Markdown inside a quote (`**x**`) can make main fall
+  back to the heading while the reader still finds the quote: the turn
+  then sends the heading's section, which still holds the passage.
+- Article mode: the turn's context, tools and system prompt come from
+  `ChatDeps.article`, so practice tools are never offered on an article
+  thread. Its system prompt is separate (`tools/article-prompt.ts`), built
+  once; everything from the file is inside `<article_text>` /
+  `<article_quote>` with those tags and `</context>` escaped. A detached
+  passage sends the outline and quote but no section; a missing file sends
+  only the stored quote. `read_article_section` takes a title or `A > B`
+  path (`""` for the opening), 8,000 characters; `search_article` returns
+  at most 5 paragraphs of 400 characters with their heading path and the
+  total count.
+- A thread is created only when its first question is sent (the renderer
+  calls `library:thread-create`, then `chat:send`), so choosing a passage
+  and walking away leaves nothing behind. The title is the first line of
+  the first question (80 characters) until renamed. Reset archives as for
+  problems (`<id>~<n>`, with kind, article, anchor and title) and keeps an
+  empty current row at the same passage, so the thread stays listed.
+  `saveThread` keeps the v3 columns when a caller leaves them out.
+- The one-time provider notice is a `meta` row (`library.chat_notice_seen`),
+  shown before the first article message is sent; it survives restarts and
+  is cleared with the data, not per article.
+- Removing a library folder deletes its articles' threads and messages
+  (archived ones too), as T21 left for this ticket.
+- The Claude Code article test replays `article-turn.jsonl`: the recorded
+  `turn.jsonl` with its tool call rewritten to `read_article_section` by
+  hand, not a new recording.

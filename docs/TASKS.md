@@ -74,7 +74,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T21 | Library folders and index | v3 | 3d | T05, T09 | done |
 | T22 | Reader with local images | v3 | 3d | T21 | done |
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
-| T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | in-progress |
+| T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
 
@@ -1646,13 +1646,62 @@ seeing that passage.
 - UI: **Ask about this** on selection, heading margin button, margin markers, thread list (title, snippet, date), open thread, rename, reset (7.4), detached and "file missing" states, the one-time provider notice.
 
 **Acceptance.**
-- [ ] Core tests: anchors survive edits around the passage, pick the right one of repeated quotes, fall back to the heading, detach cleanly.
-- [ ] A turn's context contains the outline and section but not the rest of the article; tools return text from the open article only and are capped.
-- [ ] Fake-tutor tests: an article containing "ignore your instructions and …" is passed inside the untrusted-data delimiters; the tutor has no tool beyond the three.
-- [ ] A test that chat messages never render `img` (a reply with `![x](https://…/?d=secret)` makes no request and shows no image), in article and problem threads.
-- [ ] Both backends: one article turn with tools (fake tutor; Claude Code with its fixture).
+- [x] Core tests: anchors survive edits around the passage, pick the right one of repeated quotes, fall back to the heading, detach cleanly.
+- [x] A turn's context contains the outline and section but not the rest of the article; tools return text from the open article only and are capped.
+- [x] Fake-tutor tests: an article containing "ignore your instructions and …" is passed inside the untrusted-data delimiters; the tutor has no tool beyond the three.
+- [x] A test that chat messages never render `img` (a reply with `![x](https://…/?d=secret)` makes no request and shows no image), in article and problem threads.
+- [x] Both backends: one article turn with tools (fake tutor; Claude Code with its fixture).
 
 **Notes.**
+
+- Built: core `library/anchors.ts` (anchor from a range or a heading;
+  resolve: exact quote, prefix/suffix + heading to pick between repeats,
+  heading only, detached; `markdownDoc`, outline, sections capped at
+  8,000 with a window around the passage; `parseAnchor`), `tools/article.ts`
+  (`articleTurnContext`; `read_article_section`, `search_article`,
+  `get_profile` bound to the open article, capped), `tools/article-prompt.ts`
+  (article system prompt; `<article_text>` / `<article_quote>` delimiters,
+  tags escaped). `ChatService`: `article:<uuid>` threads,
+  `createArticleThread`, `articleThreads`, `renameThread`, article mode
+  per turn (context, tools, prompt from `ChatDeps.article`), title from the
+  first question, reset keeps the passage. Migration
+  `0003-article-threads.sql` (`kind`, `article_id`, `anchor`, `title`;
+  existing threads → `home`/`problem`). Renderer `library/chat/`:
+  `dom-doc.ts` (reader DOM as an `AnchorDoc`), `PassageLayer.tsx`
+  (**Ask about this** on a selection, **Ask** beside headings, margin
+  markers), `ArticleChatPane.tsx` (thread list with title, snippet, date
+  and "detached"; open thread, rename, **New chat**, file-missing and
+  tutor-off states, the one-time notice), `useArticleChats.ts`.
+- IPC: `library:threads`, `library:thread-create`, `library:thread-rename`,
+  `library:chat-notice` (`shared/article-chat.ts`); turns and transcripts
+  reuse `chat:*` (`threadId` accepts `article:<uuid>`).
+- Decisions: D-42. SPEC §15.5 updated (thread created on first question,
+  reset keeps the passage, folder removal deletes chats).
+- Wiring outside **Owns**: `packages/core/src/storage.ts` (thread kind and
+  v3 fields, `listThreads({ articleId })`), `teaching/memory-storage.ts`,
+  `tutor/{chat,backend,prompt}.ts`, `tools/{index,tutor-tools}.ts`
+  (`GET_PROFILE_DESCRIPTION` shared), `library/index.ts`;
+  `main/storage/sqlite-storage.ts`, `migrations/index.ts`;
+  `main/tutor/index.ts` (`readArticle`, `articlePrompt`, article mode);
+  `main/ipc/handlers/article-chat.ts` (new); `main/library/assets.ts`
+  (`readArticleText`), `main/library/index-store.ts` (folder removal
+  deletes its article threads); `main/setup.ts`;
+  `shared/{article-chat,ipc,channels,tutor}.ts`; `renderer/.../Reader.tsx`
+  (`layer`, `onArticle` props), `pages/LibraryPage.tsx`; tests: storage,
+  migration, library, tutor, both backends, `claude-code/fixtures/article-turn.jsonl`.
+- Checks: typecheck, lint, format, `npm test` (70 files, 912 passed, 12
+  skipped), validate:content; `check:security`, `check:storage` and
+  `npm run e2e` built and run under xvfb with `--no-sandbox`: all pass.
+  (Lint and Prettier were run with `.claude/**` ignored: another agent's
+  worktree sits there in this checkout.)
+- Not done / not tested: the Claude Code article turn replays a fixture
+  derived by hand from the recorded turn, not a new recording with the real
+  CLI. Marker and button positions use `getBoundingClientRect`, which jsdom
+  lacks: tests check markers exist and open threads, not where they sit; no
+  end-to-end test drives a selection in Electron (T26). Selections across
+  inline Markdown (`**bold**`) resolve in main to the heading's section
+  (D-42). Not tried on macOS or Windows. T25's `create_problem` is not in
+  the article tools.
 
 ### T25 — Tutor-written articles and problems from passages
 

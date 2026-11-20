@@ -812,7 +812,10 @@ thread is "detached" and listed without a position.
   in the chat pane; the open thread is below the list (layout in 15.6).
 - Storage: `threads` gains `kind` (`home` / `problem` / `article`),
   `article_id`, `anchor` (JSON) and `title` (the first question, editable).
-  Article thread ids are `article:<uuid>`. "Reset chat" works as in 7.4.
+  Article thread ids are `article:<uuid>`. "Reset chat" works as in 7.4;
+  the thread stays at its passage, empty. A thread is created when its
+  first question is sent. Removing a folder deletes its articles' threads
+  (D-42).
 - Each turn sends: the article's title, source and outline (headings only),
   the anchored section (capped at 8,000 characters), the quote, and the
   user's message. The article text is delimited untrusted data (7.2), like
