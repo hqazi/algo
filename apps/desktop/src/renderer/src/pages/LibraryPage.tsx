@@ -87,9 +87,6 @@ export function LibraryPage({ article }: { article: string | null }) {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <button type="button" onClick={() => void refresh()} disabled={busy || empty}>
-          {busy ? 'Refreshing…' : 'Refresh'}
-        </button>
       </div>
       <WriteArticle
         onWritten={() => {
@@ -106,6 +103,20 @@ export function LibraryPage({ article }: { article: string | null }) {
         <LibraryTree tree={tree} filter={filter} selected={article} />
       )}
     </div>
+  );
+
+  const leftActions = (
+    <>
+      <span className="spacer" />
+      <button
+        type="button"
+        className="small-button"
+        onClick={() => void refresh()}
+        disabled={busy || empty}
+      >
+        {busy ? 'Refreshing…' : 'Refresh'}
+      </button>
+    </>
   );
 
   const middle = article ? (
@@ -133,9 +144,15 @@ export function LibraryPage({ article }: { article: string | null }) {
         storageKey="library-pane-sizes"
         initialSizes={[24, 52, 24]}
         panes={[
-          { id: 'articles', title: 'Articles', content: left },
+          { id: 'articles', title: 'Articles', content: left, actions: leftActions },
           { id: 'reader', title: 'Reader', content: middle },
-          { id: 'chats', title: 'Chats', content: right },
+          {
+            id: 'chats',
+            title: 'Chats',
+            content: right,
+            // The chats pane draws its own header once an article is open.
+            header: !article,
+          },
         ]}
       />
     </main>

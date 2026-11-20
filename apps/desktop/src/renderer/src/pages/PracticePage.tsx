@@ -438,73 +438,77 @@ export function PracticePage({ slug }: { slug: string }) {
     error: 'Not saved',
   }[saveState];
 
+  // The editor toolbar sits in the Code pane's header (T29).
+  const codeActions = (
+    <>
+      <button
+        type="button"
+        onClick={() => void execute('run')}
+        disabled={!!busy}
+        title="Run visible tests (Ctrl/Cmd+Enter)"
+      >
+        Run
+      </button>
+      <button
+        type="button"
+        className="primary"
+        onClick={() => void execute('submit')}
+        disabled={!!busy}
+        title="Run all tests and record when they pass (Ctrl/Cmd+Shift+Enter)"
+      >
+        Submit
+      </button>
+      {languages.length > 1 && (
+        <select
+          aria-label="Language"
+          value={detail.language}
+          disabled={!!busy}
+          onChange={(e) => void changeLanguage(e.target.value as ProblemDetail['language'])}
+          data-testid="language-picker"
+        >
+          {languages.map((l) => (
+            <option
+              key={l.language}
+              value={l.language}
+              disabled={!l.available && l.language !== detail.language}
+              title={l.reason ?? l.version ?? ''}
+            >
+              {LANGUAGE_LABEL[l.language]}
+              {l.available ? '' : ' (not installed)'}
+            </option>
+          ))}
+        </select>
+      )}
+      <span
+        className={`save-state save-${saveState}`}
+        title={saveError ?? filePath}
+        data-testid="save-state"
+      >
+        {saveLabel}
+      </span>
+      <span className="spacer" />
+      {detail.attempt_recorded ? (
+        <button type="button" onClick={() => void showReference()}>
+          Reference
+        </button>
+      ) : (
+        <button type="button" onClick={() => setGiveUpOpen(true)} disabled={!!busy}>
+          Give up
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={resetToStarter}
+        disabled={!!busy}
+        title="Replace your code with the starter"
+      >
+        Reset
+      </button>
+    </>
+  );
+
   const codePane = (
     <div className="code-pane">
-      <div className="toolbar">
-        <button
-          type="button"
-          onClick={() => void execute('run')}
-          disabled={!!busy}
-          title="Run visible tests (Ctrl/Cmd+Enter)"
-        >
-          Run
-        </button>
-        <button
-          type="button"
-          className="primary"
-          onClick={() => void execute('submit')}
-          disabled={!!busy}
-          title="Run all tests and record when they pass (Ctrl/Cmd+Shift+Enter)"
-        >
-          Submit
-        </button>
-        {languages.length > 1 && (
-          <select
-            aria-label="Language"
-            value={detail.language}
-            disabled={!!busy}
-            onChange={(e) => void changeLanguage(e.target.value as ProblemDetail['language'])}
-            data-testid="language-picker"
-          >
-            {languages.map((l) => (
-              <option
-                key={l.language}
-                value={l.language}
-                disabled={!l.available && l.language !== detail.language}
-                title={l.reason ?? l.version ?? ''}
-              >
-                {LANGUAGE_LABEL[l.language]}
-                {l.available ? '' : ' (not installed)'}
-              </option>
-            ))}
-          </select>
-        )}
-        <span
-          className={`save-state save-${saveState}`}
-          title={saveError ?? filePath}
-          data-testid="save-state"
-        >
-          {saveLabel}
-        </span>
-        <span className="spacer" />
-        {detail.attempt_recorded ? (
-          <button type="button" onClick={() => void showReference()}>
-            Reference
-          </button>
-        ) : (
-          <button type="button" onClick={() => setGiveUpOpen(true)} disabled={!!busy}>
-            Give up
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={resetToStarter}
-          disabled={!!busy}
-          title="Replace your code with the starter"
-        >
-          Reset
-        </button>
-      </div>
       {languages.find((l) => l.language === detail.language && !l.available) && (
         <div className="notice" role="status" data-testid="language-missing">
           {LANGUAGE_LABEL[detail.language]} cannot run here:{' '}
@@ -554,10 +558,11 @@ export function PracticePage({ slug }: { slug: string }) {
         onTab={setTab}
         panes={[
           { id: 'problem', title: 'Problem', content: problemPane },
-          { id: 'code', title: 'Code', content: codePane },
+          { id: 'code', title: 'Code', content: codePane, actions: codeActions },
           {
             id: 'tutor',
             title: 'Tutor',
+            header: false,
             content: <ChatPane slug={slug} getCode={codeForTutor} />,
           },
         ]}

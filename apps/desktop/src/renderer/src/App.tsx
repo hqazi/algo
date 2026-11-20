@@ -1,18 +1,18 @@
 /**
- * The app shell (ported from `dsa-tutor/web/src/App.tsx`): top bar, routes,
+ * The app shell (ported from `dsa-tutor/web/src/App.tsx`): title bar (T29), routes,
  * toasts, the chat's app-wide effects (T10) and the New Problem dialog (T12).
  */
-import { APP_NAME } from '@algo/core';
 import { useCallback, useEffect, useState } from 'react';
 import { ChatEffects } from './chat/ChatEffects';
 import { useChatStore, useTutorStatus } from './chat/store';
+import { TitleBar } from './components/AppFrame';
 import { Link } from './components/Link';
 import { Toasts } from './components/Toasts';
 import { NewProblemDialog } from './intake/NewProblemDialog';
 import { invoke, isRefusal } from './ipc';
 import { AppProvider } from './lib/app';
 import { errorText, useApp } from './lib/app-context';
-import { navigate, useRoute, type Route } from './lib/router';
+import { navigate, useRoute } from './lib/router';
 import { HomePage } from './pages/HomePage';
 import { PracticePage } from './pages/PracticePage';
 import { ProblemsPage } from './pages/ProblemsPage';
@@ -20,24 +20,6 @@ import { ProgressPage } from './pages/ProgressPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LibraryPage } from './pages/LibraryPage';
-
-function NavLink({
-  to,
-  route,
-  name,
-  children,
-}: {
-  to: string;
-  route: Route;
-  name: Route['name'];
-  children: string;
-}) {
-  return (
-    <Link to={to} className={route.name === name ? 'nav active' : 'nav'}>
-      {children}
-    </Link>
-  );
-}
 
 export function Shell() {
   const app = useApp();
@@ -156,54 +138,17 @@ export function Shell() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <Link to="/" className="brand">
-          {APP_NAME}
-        </Link>
-        <nav aria-label="Main">
-          <button
-            type="button"
-            className="primary"
-            onClick={() => void next()}
-            disabled={nextBusy || !onboarded}
-          >
-            {nextBusy ? 'Picking…' : 'Next problem'}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSuggestion(null);
-              setNewOpen(true);
-            }}
-            disabled={!onboarded}
-          >
-            New problem
-          </button>
-          <NavLink to="/problems" route={route} name="problems">
-            Problems
-          </NavLink>
-          <NavLink to="/progress" route={route} name="progress">
-            Progress
-          </NavLink>
-          <NavLink to="/library" route={route} name="library">
-            Library
-          </NavLink>
-          <NavLink to="/settings" route={route} name="settings">
-            Settings
-          </NavLink>
-        </nav>
-        <span className="spacer" />
-        {tutor &&
-          (tutor.available ? (
-            <span className="ai-on small" title={tutor.model ? `Model: ${tutor.model}` : undefined}>
-              Tutor on
-            </span>
-          ) : (
-            <span className="ai-off small" title={tutor.reason ?? undefined}>
-              Tutor off
-            </span>
-          ))}
-      </header>
+      <TitleBar
+        route={route}
+        onboarding={!onboarded || route.name === 'welcome'}
+        tutor={tutor}
+        nextBusy={nextBusy}
+        onNext={() => void next()}
+        onNew={() => {
+          setSuggestion(null);
+          setNewOpen(true);
+        }}
+      />
       {page}
       <NewProblemDialog
         open={newOpen}

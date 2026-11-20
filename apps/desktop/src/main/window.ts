@@ -19,10 +19,24 @@
  *   affected.
  * - Every web contents in the app (UI, execution host, DevTools): no
  *   navigation, no redirects, no `window.open`, no `<webview>`.
+ *
+ * The title bar (T29, docs/design.md → App frame) is the app's own: the
+ * renderer draws the navigation in it. macOS keeps its traffic lights
+ * (`hiddenInset`); Windows and Linux get the window controls overlay, coloured
+ * from the theme and recoloured when the theme changes.
  */
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
-import { app, BrowserWindow, type CustomScheme, type Session, type WebContents } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  nativeTheme,
+  type BrowserWindowConstructorOptions,
+  type CustomScheme,
+  type Session,
+  type TitleBarOverlayOptions,
+  type WebContents,
+} from 'electron';
 
 export const APP_SCHEME = 'tutor-app';
 export const APP_ORIGIN = `${APP_SCHEME}://app`;
@@ -218,12 +232,85 @@ export function guardAllWebContents(onBlocked?: (what: string, url: string) => v
   });
 }
 
+/** Height of the app's title bar in px; `--titlebar-h` in styles.css matches. */
+export const TITLE_BAR_HEIGHT = 44;
+
+/**
+ * The title bar's colours: `--bg` (bar) and `--muted` (window control
+ * symbols) of each theme in styles.css; `window.test.ts` checks they match.
+ */
+export const TITLE_BAR_COLORS = {
+  light: { color: '#f4f4f6', symbolColor: '#5d5d67' },
+  dark: { color: '#0e0e11', symbolColor: '#a0a0aa' },
+} as const;
+
+/** The overlay for Windows and Linux in this theme. */
+export function titleBarOverlay(dark: boolean): TitleBarOverlayOptions {
+  return { ...TITLE_BAR_COLORS[dark ? 'dark' : 'light'], height: TITLE_BAR_HEIGHT };
+}
+
+/**
+ * Title bar options per platform: macOS hides the title bar and keeps the
+ * traffic lights, centred in the bar; Windows and Linux hide it and draw the
+ * window controls over the page's top right corner.
+ */
+export function titleBarOptions(
+  platform: NodeJS.Platform,
+  dark: boolean,
+): Pick<
+  BrowserWindowConstructorOptions,
+  'titleBarStyle' | 'titleBarOverlay' | 'trafficLightPosition' | 'backgroundColor'
+> {
+  const backgroundColor = TITLE_BAR_COLORS[dark ? 'dark' : 'light'].color;
+  if (platform === 'darwin') {
+    // The lights are 12px tall: y 16 centres them in the 44px bar.
+    return {
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 16, y: 16 },
+      backgroundColor,
+    };
+  }
+  return { titleBarStyle: 'hidden', titleBarOverlay: titleBarOverlay(dark), backgroundColor };
+}
+
+interface ThemeSource {
+  readonly shouldUseDarkColors: boolean;
+  on(event: 'updated', listener: () => void): unknown;
+  removeListener(event: 'updated', listener: () => void): unknown;
+}
+interface OverlayWindow {
+  setTitleBarOverlay(options: TitleBarOverlayOptions): void;
+  setBackgroundColor(color: string): void;
+  once(event: 'closed', listener: () => void): unknown;
+}
+
+/**
+ * Recolour the window controls overlay (Windows, Linux) when the theme
+ * changes; the theme setting drives `nativeTheme` (setup.ts). Nothing to do
+ * on macOS, whose traffic lights follow the system.
+ */
+export function followThemeInTitleBar(
+  win: OverlayWindow,
+  theme: ThemeSource,
+  platform: NodeJS.Platform,
+): void {
+  if (platform === 'darwin') return;
+  const update = () => {
+    const overlay = titleBarOverlay(theme.shouldUseDarkColors);
+    win.setTitleBarOverlay(overlay);
+    win.setBackgroundColor(overlay.color as string);
+  };
+  theme.on('updated', update);
+  win.once('closed', () => theme.removeListener('updated', update));
+}
+
 export function createMainWindow(title: string, opts: UiOptions): BrowserWindow {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     title,
     show: false,
+    ...titleBarOptions(process.platform, nativeTheme.shouldUseDarkColors),
     webPreferences: {
       preload: opts.preloadPath,
       contextIsolation: true,
@@ -237,6 +324,7 @@ export function createMainWindow(title: string, opts: UiOptions): BrowserWindow 
       spellcheck: false,
     },
   });
+  followThemeInTitleBar(win, nativeTheme, process.platform);
   win.once('ready-to-show', () => win.show());
   void win.loadURL(pageUrl(opts));
   return win;

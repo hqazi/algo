@@ -1,11 +1,32 @@
-/** Three resizable panes; stacked tabs under 900 px (ported from `dsa-tutor/web`). */
+/**
+ * Three resizable panes; stacked tabs under 900 px (ported from
+ * `dsa-tutor/web`). Edge to edge (T29): the panes meet at 1px dividers that
+ * are the resize handles (drag, or focus and press the arrow keys). Each pane
+ * gets a `PaneHeader` with its title and `actions`, unless its content draws
+ * its own (`header: false`).
+ */
 import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { useMedia, useStored } from '../lib/hooks';
+import { PaneHeader } from './PaneHeader';
 
 export interface Pane {
   id: string;
   title: string;
   content: ReactNode;
+  /** Shown in the pane's header after the title. */
+  actions?: ReactNode;
+  /** False when the content has its own `PaneHeader` (default true). */
+  header?: boolean;
+}
+
+function PaneBody({ pane }: { pane: Pane }) {
+  if (pane.header === false) return <>{pane.content}</>;
+  return (
+    <>
+      <PaneHeader title={pane.title}>{pane.actions}</PaneHeader>
+      <div className="pane-body">{pane.content}</div>
+    </>
+  );
 }
 
 const MIN = 15; // percent
@@ -30,6 +51,7 @@ export function Panes({
   const active = tab ?? localTab;
   const setTab = onTab ?? setLocalTab;
   const box = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<0 | 1 | null>(null);
 
   function drag(index: 0 | 1) {
     return (e: PointerEvent<HTMLDivElement>) => {
@@ -51,8 +73,10 @@ export function Panes({
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         document.body.classList.remove('resizing');
+        setDragging(null);
       };
       document.body.classList.add('resizing');
+      setDragging(index);
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     };
@@ -95,45 +119,44 @@ export function Panes({
             hidden={active !== p.id}
             aria-label={p.title}
           >
-            {p.content}
+            <PaneBody pane={p} />
           </div>
         ))}
       </div>
     );
   }
 
+  const gutter = (index: 0 | 1) => (
+    <div
+      className={dragging === index ? 'gutter dragging' : 'gutter'}
+      role="separator"
+      aria-orientation="vertical"
+      aria-valuenow={Math.round(sizes[index])}
+      aria-valuemin={MIN}
+      aria-valuemax={100 - MIN}
+      tabIndex={0}
+      aria-label="Resize"
+      onPointerDown={drag(index)}
+      onKeyDown={key(index)}
+    />
+  );
+
   return (
     <div
       className="panes"
       ref={box}
-      style={{ gridTemplateColumns: `${sizes[0]}fr 6px ${sizes[1]}fr 6px ${sizes[2]}fr` }}
+      style={{ gridTemplateColumns: `${sizes[0]}fr 1px ${sizes[1]}fr 1px ${sizes[2]}fr` }}
     >
       <section className="pane" aria-label={panes[0].title}>
-        {panes[0].content}
+        <PaneBody pane={panes[0]} />
       </section>
-      <div
-        className="gutter"
-        role="separator"
-        aria-orientation="vertical"
-        tabIndex={0}
-        aria-label="Resize"
-        onPointerDown={drag(0)}
-        onKeyDown={key(0)}
-      />
+      {gutter(0)}
       <section className="pane" aria-label={panes[1].title}>
-        {panes[1].content}
+        <PaneBody pane={panes[1]} />
       </section>
-      <div
-        className="gutter"
-        role="separator"
-        aria-orientation="vertical"
-        tabIndex={0}
-        aria-label="Resize"
-        onPointerDown={drag(1)}
-        onKeyDown={key(1)}
-      />
+      {gutter(1)}
       <section className="pane" aria-label={panes[2].title}>
-        {panes[2].content}
+        <PaneBody pane={panes[2]} />
       </section>
     </div>
   );

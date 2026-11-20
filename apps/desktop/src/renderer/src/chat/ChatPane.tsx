@@ -14,6 +14,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import type { ChatActionView } from '../../../shared/tutor';
+import { PaneHeader } from '../components/PaneHeader';
 import { MessageView } from './MessageView';
 import { HOME, useChatStore, useThread, useTutorStatus } from './store';
 import './chat.css';
@@ -124,8 +125,7 @@ export const ChatPane = forwardRef<HTMLTextAreaElement, ChatPaneProps>(function 
       aria-label="Tutor chat"
       data-testid="tutor-pane"
     >
-      <div className="chat-head">
-        <h2>Tutor</h2>
+      <PaneHeader title="Tutor">
         {threads.length > 1 && (
           <div className="chat-threads" role="group" aria-label="Chat thread">
             {threads.map((t) => (
@@ -151,7 +151,7 @@ export const ChatPane = forwardRef<HTMLTextAreaElement, ChatPaneProps>(function 
         >
           New chat
         </button>
-      </div>
+      </PaneHeader>
 
       {unavailable && (
         <div className="chat-unavailable" role="status" data-testid="ai-unavailable">

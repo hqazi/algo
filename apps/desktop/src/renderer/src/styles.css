@@ -81,6 +81,9 @@
   --control-h-sm: 28px;
   --control-h: 32px;
   --control-h-lg: 40px;
+  /* App frame (T29): main/window.ts uses the same title bar height. */
+  --titlebar-h: 44px;
+  --pane-header-h: 44px;
   color-scheme: light;
 }
 
@@ -627,59 +630,244 @@ legend {
 }
 
 /* ---------------------------------------------------------------- shell */
+/* The app frame (T29, docs/design.md → App frame): the title bar holds the
+   navigation. The native title bar is hidden (main/window.ts): macOS keeps
+   its traffic lights on the left, Windows and Linux draw the window controls
+   on the right over the area `env(titlebar-area-*)` leaves out. */
 .app {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--bg);
 }
-.topbar {
+.titlebar {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.5rem 1rem;
-  background: var(--surface);
+  gap: var(--space-2);
+  flex: none;
+  height: var(--titlebar-h);
+  padding-left: var(--space-3);
+  padding-right: max(
+    var(--space-3),
+    calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + var(--space-3))
+  );
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.titlebar[data-platform='mac'] {
+  /* Room for the traffic lights (trafficLightPosition x 16, three 12px
+     buttons 8px apart). */
+  padding-left: 84px;
+}
+.titlebar a,
+.titlebar button,
+.titlebar input,
+.titlebar select,
+.titlebar [title] {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
 }
 .brand {
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: var(--space-3);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  font-weight: 650;
+  font-size: var(--text-md);
+  letter-spacing: -0.01em;
   color: var(--text);
   text-decoration: none;
 }
-.topbar nav {
+.brand:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+.logo-mark {
+  flex: none;
+  display: block;
+}
+.titlebar-nav {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  flex-wrap: wrap;
+  gap: 2px;
+  min-width: 0;
 }
-.nav,
-.nav-button {
+.nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--control-h-sm);
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+}
+.nav svg {
+  flex: none;
+}
+.nav:hover {
+  background: var(--surface-3);
   color: var(--text);
   text-decoration: none;
-  padding: 0.35rem 0.7rem;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: 1px solid transparent;
 }
-.nav:hover,
-.nav-button:hover:not(:disabled) {
-  background: var(--surface-2);
+/* The current page: a subtle filled pill, never a button. */
+.nav.active,
+.nav.active:hover {
+  background: var(--accent-subtle);
+  color: var(--accent-fg);
 }
-.nav.active {
-  background: var(--surface-3);
-  font-weight: 500;
+.titlebar-spacer {
+  flex: 1;
+  min-width: var(--space-4);
 }
-.ai-off,
-.ai-on {
-  margin-left: auto;
+.titlebar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.tutor-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
   color: var(--muted);
-  border: 1px dashed var(--border);
-  border-radius: 99px;
-  padding: 0.1rem 0.6rem;
+  cursor: default;
 }
-.ai-on {
-  color: var(--pass);
-  border-style: solid;
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.tutor-status.on .status-dot {
+  background: var(--pass);
+  box-shadow: 0 0 0 3px var(--pass-bg);
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Below 1100px the nav shows icons only; names stay for screen readers
+   and the tooltip-less links keep their accessible names. */
+@media (max-width: 1099px) {
+  .nav {
+    padding: 0 8px;
+  }
+  .nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+}
+
+/* Multi-pane pages (Practice, Library): edge to edge, panes on --surface,
+   1px dividers that are the resize handles. */
+.panes {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  background: var(--surface);
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.pane-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  min-height: var(--pane-header-h);
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+.pane-title {
+  margin: 0 var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text);
+}
+.gutter {
+  position: relative;
+  z-index: 1;
+  background: var(--border);
+  cursor: col-resize;
+  outline: none;
+  transition: background-color var(--duration) var(--ease);
+}
+/* A wider hit area than the 1px line. */
+.gutter::before {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+}
+.gutter:hover,
+.gutter.dragging {
+  background: var(--accent);
+}
+.gutter:focus-visible {
+  background: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+.panes-narrow {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--surface);
+}
+.panes-narrow .pane {
+  flex: 1;
+}
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1;
+  height: var(--control-h-sm);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+.tab.active {
+  background: var(--accent-subtle);
+  color: var(--accent-fg);
+  border-color: transparent;
 }
 
 .page {
@@ -855,52 +1043,6 @@ legend {
   font-size: 1.3rem;
   margin: 0 0 0.4rem;
 }
-.panes {
-  display: grid;
-  flex: 1;
-  min-height: 0;
-  padding: 0.5rem;
-}
-.pane {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: auto;
-  min-width: 0;
-  min-height: 0;
-}
-.gutter {
-  cursor: col-resize;
-  border-radius: 3px;
-}
-.gutter:hover,
-.gutter:focus-visible {
-  background: var(--border);
-}
-.panes-narrow {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 0.5rem;
-  gap: 0.5rem;
-}
-.panes-narrow .pane {
-  flex: 1;
-}
-.tabs {
-  display: flex;
-  gap: 0.25rem;
-}
-.tab {
-  flex: 1;
-  background: transparent;
-}
-.tab.active {
-  background: var(--surface);
-  border-color: var(--accent);
-}
-
 .statement {
   padding: 0.75rem 1rem 1rem;
 }
@@ -943,14 +1085,6 @@ legend {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-}
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
 }
 .spacer {
   flex: 1;
@@ -1145,9 +1279,6 @@ legend {
 @media (max-width: 899px) {
   .page {
     padding: 1rem;
-  }
-  .topbar {
-    gap: 0.5rem;
   }
   .problem-table th:nth-child(4),
   .problem-table td:nth-child(4) {

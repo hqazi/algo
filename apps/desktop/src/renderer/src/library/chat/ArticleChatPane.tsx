@@ -9,6 +9,7 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useChatStore, useThread, useTutorStatus } from '../../chat/store';
+import { PaneHeader } from '../../components/PaneHeader';
 import { MessageView } from '../../chat/MessageView';
 import { invoke } from '../../ipc';
 import { errorText, useApp } from '../../lib/app-context';
@@ -179,9 +180,7 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
       aria-label="Chats about this article"
       data-testid="article-chats"
     >
-      <div className="chat-head">
-        <h2>Chats</h2>
-      </div>
+      <PaneHeader title="Chats" />
       {missing && (
         <p className="notice small" role="status" data-testid="chat-file-missing">
           The file is missing. Existing chats stay; the tutor sees only the passage each chat

@@ -7,9 +7,16 @@ export function Link(props: {
   className?: string;
   children: ReactNode;
   title?: string;
+  'aria-current'?: 'page' | undefined;
 }) {
   return (
-    <a href={`#${props.to}`} className={props.className} title={props.title} onClick={linkClick}>
+    <a
+      href={`#${props.to}`}
+      className={props.className}
+      title={props.title}
+      aria-current={props['aria-current']}
+      onClick={linkClick}
+    >
       {props.children}
     </a>
   );

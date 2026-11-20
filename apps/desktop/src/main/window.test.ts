@@ -1,8 +1,19 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { devCsp, isAllowedRequest, isTrustedUrl, pageUrl, serveUi, UI_CSP } from './window';
+import {
+  devCsp,
+  followThemeInTitleBar,
+  isAllowedRequest,
+  isTrustedUrl,
+  pageUrl,
+  serveUi,
+  TITLE_BAR_COLORS,
+  TITLE_BAR_HEIGHT,
+  titleBarOptions,
+  UI_CSP,
+} from './window';
 
 const DEV = 'http://localhost:5173';
 
@@ -111,5 +122,74 @@ describe('serveUi', () => {
       expect((await get(url)).status, url).toBe(404);
     }
     expect((await get('tutor-app://app/renderer/index.html', 'POST')).status).toBe(404);
+  });
+});
+
+describe('title bar (T29)', () => {
+  it('macOS: hidden inset title bar with the traffic lights centred in the bar', () => {
+    for (const dark of [false, true]) {
+      const o = titleBarOptions('darwin', dark);
+      expect(o.titleBarStyle).toBe('hiddenInset');
+      expect(o.titleBarOverlay).toBeUndefined();
+      expect(o.trafficLightPosition).toEqual({ x: 16, y: 16 });
+    }
+  });
+
+  it('Windows and Linux: hidden title bar with a window controls overlay in the theme', () => {
+    for (const platform of ['win32', 'linux'] as const) {
+      const light = titleBarOptions(platform, false);
+      expect(light.titleBarStyle).toBe('hidden');
+      expect(light.trafficLightPosition).toBeUndefined();
+      expect(light.titleBarOverlay).toEqual({
+        color: '#f4f4f6',
+        symbolColor: '#5d5d67',
+        height: TITLE_BAR_HEIGHT,
+      });
+      expect(light.backgroundColor).toBe('#f4f4f6');
+      expect(titleBarOptions(platform, true).titleBarOverlay).toEqual({
+        color: '#0e0e11',
+        symbolColor: '#a0a0aa',
+        height: TITLE_BAR_HEIGHT,
+      });
+    }
+  });
+
+  it('recolours the overlay when the theme changes, and stops when the window closes', () => {
+    const listeners = new Set<() => void>();
+    const theme = {
+      shouldUseDarkColors: false,
+      on: (_e: 'updated', fn: () => void) => listeners.add(fn),
+      removeListener: (_e: 'updated', fn: () => void) => listeners.delete(fn),
+    };
+    const overlays: unknown[] = [];
+    const backgrounds: string[] = [];
+    let closed = () => {};
+    const win = {
+      setTitleBarOverlay: (o: unknown) => overlays.push(o),
+      setBackgroundColor: (c: string) => backgrounds.push(c),
+      once: (_e: 'closed', fn: () => void) => (closed = fn),
+    };
+    followThemeInTitleBar(win, theme, 'linux');
+    theme.shouldUseDarkColors = true;
+    listeners.forEach((fn) => fn());
+    expect(overlays).toEqual([{ ...TITLE_BAR_COLORS.dark, height: TITLE_BAR_HEIGHT }]);
+    expect(backgrounds).toEqual(['#0e0e11']);
+    closed();
+    expect(listeners.size).toBe(0);
+
+    followThemeInTitleBar(win, theme, 'darwin');
+    expect(listeners.size).toBe(0);
+  });
+
+  it('uses the colours and height the stylesheet uses', async () => {
+    const css = await readFile(new URL('../renderer/src/styles.css', import.meta.url), 'utf8');
+    const dark = css.slice(css.indexOf('@media (prefers-color-scheme: dark)'));
+    const token = (src: string, name: string) =>
+      new RegExp(`--${name}:\\s*([^;]+);`).exec(src)?.[1]?.trim();
+    expect(token(css, 'bg')).toBe(TITLE_BAR_COLORS.light.color);
+    expect(token(css, 'muted')).toBe(TITLE_BAR_COLORS.light.symbolColor);
+    expect(token(dark, 'bg')).toBe(TITLE_BAR_COLORS.dark.color);
+    expect(token(dark, 'muted')).toBe(TITLE_BAR_COLORS.dark.symbolColor);
+    expect(token(css, 'titlebar-h')).toBe(`${TITLE_BAR_HEIGHT}px`);
   });
 });
