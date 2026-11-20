@@ -73,7 +73,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
 | T21 | Library folders and index | v3 | 3d | T05, T09 | done |
 | T22 | Reader with local images | v3 | 3d | T21 | done |
-| T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
+| T23 | Linked images: safe download and cache | v3 | 3d | T22 | in-progress |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | todo |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
