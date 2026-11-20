@@ -1,0 +1,261 @@
+/* Onboarding and the profile questions (T33, docs/design.md → Onboarding).
+   Imported by OnboardingPage and ProfileForm (Settings → Profile uses the
+   choice cards too). This file loads before styles.css, so its selectors
+   are one class more specific than the base rules they change. */
+
+.page.onboarding-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(24px, 7vh, 72px) var(--space-6) var(--space-8);
+}
+.onboarding {
+  width: min(36rem, 100%);
+}
+.onboarding > h1 {
+  font-size: 26px;
+  margin-bottom: var(--space-2);
+}
+.onboarding-intro {
+  color: var(--muted);
+  margin: 0 0 var(--space-6);
+  line-height: 1.55;
+}
+.onboarding-eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 var(--space-2);
+}
+.onboarding-card {
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+.onboarding-card .key-form > p:first-child {
+  margin-top: 0;
+}
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.onboarding-actions > .btn-ghost:first-child {
+  margin-left: -10px;
+  color: var(--muted);
+}
+.onboarding-actions > .btn-ghost:first-child:hover:not(:disabled) {
+  color: var(--text);
+}
+
+/* The step indicator: one bar per question, then "Question n of 5". */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+.stepper-dots {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+}
+.stepper-dots li {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--surface-3);
+  transition: background-color var(--duration) var(--ease);
+}
+.stepper-dots li.done,
+.stepper-dots li.current {
+  background: var(--accent);
+}
+.stepper-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* One question per step: the legend is the question. */
+.profile-form.profile-form-steps fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  background: none;
+}
+.profile-form.profile-form-steps legend {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  padding: 0;
+  margin-bottom: var(--space-4);
+}
+.profile-form.profile-form-steps fieldset > select {
+  width: 100%;
+}
+
+/* Settings → Profile: every question at once, as quiet groups. */
+.profile-form.profile-form-all fieldset {
+  border: none;
+  border-radius: 0;
+  margin: 0;
+  padding: var(--space-4) 0;
+  background: none;
+  border-top: 1px solid var(--border);
+}
+.profile-form.profile-form-all fieldset:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.profile-form.profile-form-all legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin-bottom: var(--space-3);
+}
+.profile-form.profile-form-all legend + * {
+  clear: both;
+}
+.profile-form.profile-form-all .choice-cards {
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+}
+.profile-form.profile-form-all fieldset > select {
+  min-width: 16rem;
+}
+
+/* Choice cards: a radio drawn as a ring, the label as the title and a line
+   of help. The label covers the card, so a click anywhere selects it. */
+.choice-cards {
+  display: grid;
+  gap: var(--space-2);
+}
+.choice-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-3);
+  row-gap: 2px;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition:
+    border-color var(--duration) var(--ease),
+    background-color var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+.choice-card:hover {
+  border-color: var(--faint);
+}
+.choice-card:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+.choice-card:has(input:focus-visible) {
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.choice-card input[type='radio'] {
+  appearance: none;
+  grid-row: 1 / span 2;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-content: center;
+}
+.choice-card input[type='radio']::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-text);
+  transform: scale(0);
+  transition: transform var(--duration) var(--ease);
+}
+.choice-card input[type='radio']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.choice-card input[type='radio']:checked::before {
+  transform: scale(1);
+}
+.choice-card input[type='radio']:focus-visible {
+  outline: none;
+}
+.choice-title {
+  font-weight: 600;
+  cursor: pointer;
+}
+.choice-title::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.choice-help {
+  grid-column: 2;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.interview-date.field {
+  margin-top: var(--space-4);
+  max-width: 14rem;
+}
+
+/* Comfort per area: the area on the left, None / Some / Solid on the right. */
+.profile-form .comfort-grid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: 1fr;
+}
+.comfort-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--border);
+}
+.comfort-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.comfort-row select {
+  flex: none;
+  width: 8rem;
+}
+.profile-form.profile-form-all .comfort-grid {
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+  column-gap: var(--space-6);
+}
+.profile-form.profile-form-all .comfort-row {
+  border-top: none;
+}
+
+@media (max-width: 640px) {
+  .page.onboarding-page {
+    padding: var(--space-6) var(--space-4);
+  }
+  .onboarding-card {
+    padding: var(--space-4);
+  }
+}

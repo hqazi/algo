@@ -54,8 +54,14 @@ try {
   await page.setViewportSize({ width: 1400, height: 860 });
 
   // Onboarding: answer the questions.
+  // One question per step (T33): goal, experience, comfort, hints, focus.
+  const next = () => page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await next();
   await page.getByLabel('Intermediate').check();
+  await next();
+  await next();
   await page.getByLabel('Let me struggle first').check();
+  await next();
   await page.getByRole('button', { name: 'Save and continue' }).click();
   const practice = page.getByRole('heading', { name: 'Practice' });
   const connect = page.getByRole('heading', { name: 'Connect the tutor' });

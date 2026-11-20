@@ -49,8 +49,14 @@ try {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1400, height: 860 });
 
+  // One question per step (T33): goal, experience, comfort, hints, focus.
+  const next = () => page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await next();
   await page.getByLabel('Intermediate').check();
+  await next();
+  await next();
   await page.getByLabel('Let me struggle first').check();
+  await next();
   await page.getByRole('button', { name: 'Save and continue' }).click();
   await page.getByRole('heading', { name: 'Connect the tutor' }).waitFor();
   await page.getByRole('button', { name: 'Skip for now' }).click();

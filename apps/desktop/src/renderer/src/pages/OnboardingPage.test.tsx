@@ -2,7 +2,8 @@
 /**
  * Onboarding (T09, SPEC §2): the five questions are saved in one call, then
  * the "Connect the tutor" step takes a key (tested) or is skipped; with a
- * tutor already available the step is skipped.
+ * tutor already available the step is skipped. The questions come one per
+ * step (T33), with Back / Continue and "Use defaults and start" on each.
  */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -41,18 +42,39 @@ describe('OnboardingPage', () => {
     const b = bridge();
     renderPage(b);
     await screen.findByRole('heading', { name: 'Welcome' });
+    const step = () => screen.getByTestId('step-indicator').textContent;
+    const next = () => fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(step()).toBe('Question 1 of 5');
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
     fireEvent.click(screen.getByLabelText('Preparing for interviews'));
     fireEvent.change(screen.getByLabelText('Interview date (optional)'), {
       target: { value: '2027-01-15' },
     });
+    next();
+    expect(step()).toBe('Question 2 of 5');
+    // Back keeps the answers given so far.
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect((screen.getByLabelText('Preparing for interviews') as HTMLInputElement).checked).toBe(
+      true,
+    );
+    next();
     fireEvent.click(screen.getByLabelText('Intermediate'));
+    expect(screen.getByRole('radio', { name: 'Intermediate' }).getAttribute('aria-describedby')).toBeTruthy();
+    next();
     fireEvent.change(screen.getByRole('combobox', { name: 'Comfort: basics' }), {
       target: { value: 'solid' },
     });
+    next();
     fireEvent.click(screen.getByLabelText('Let me struggle first'));
+    // "Use defaults and start" is on every step.
+    expect(screen.getByRole('button', { name: 'Use defaults and start' })).toBeTruthy();
+    next();
+    expect(step()).toBe('Question 5 of 5');
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
     fireEvent.change(screen.getByRole('combobox', { name: 'Focus topic' }), {
       target: { value: 'hashing' },
     });
+    expect(b.calls.some((c) => c.channel === 'profile:set')).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
 
     await screen.findByRole('heading', { name: 'Connect the tutor' });
