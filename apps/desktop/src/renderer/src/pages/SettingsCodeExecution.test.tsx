@@ -200,6 +200,7 @@ describe('Settings → Code execution', () => {
         editor: { fontSize: 14, keymap: 'default' },
         ui: { theme: 'system' },
         updates: { channel: 'stable', auto: true },
+        library: { images: 'on-open' },
       },
       issues: [],
       default_model: 'm',

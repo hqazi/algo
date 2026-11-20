@@ -10,6 +10,7 @@ import { z } from 'zod';
 import {
   EDITOR_KEYMAPS,
   EXECUTION_RUNTIMES,
+  LIBRARY_IMAGE_MODES,
   MAX_FONT_SIZE,
   MAX_TIME_SCALE,
   MIN_FONT_SIZE,
@@ -37,6 +38,8 @@ const groups = {
   },
   ui: { theme: z.enum(UI_THEMES) },
   updates: { channel: z.enum(UPDATE_CHANNELS), auto: z.boolean() },
+  /** `library.folders` (paths) are never in the view or a patch from the UI. */
+  library: { images: z.enum(LIBRARY_IMAGE_MODES) },
 };
 
 export const settingsView = z.strictObject({
@@ -45,6 +48,7 @@ export const settingsView = z.strictObject({
   editor: z.strictObject(groups.editor),
   ui: z.strictObject(groups.ui),
   updates: z.strictObject(groups.updates),
+  library: z.strictObject(groups.library),
 });
 
 /** A change from the UI: any subset of keys; main validates it again with core's rules. */
@@ -54,6 +58,7 @@ export const settingsPatch = z.strictObject({
   editor: z.strictObject(groups.editor).partial().optional(),
   ui: z.strictObject(groups.ui).partial().optional(),
   updates: z.strictObject(groups.updates).partial().optional(),
+  library: z.strictObject(groups.library).partial().optional(),
 });
 
 export const settingsResponse = z.strictObject({

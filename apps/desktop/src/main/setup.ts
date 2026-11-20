@@ -33,6 +33,8 @@ import {
   readArticleText,
   registerReaderHandlers,
 } from './library/assets';
+import { registerImageHandlers } from './library/images/handlers';
+import { LinkedImages } from './library/images/linked';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import { SecretStore } from './secrets';
 import { electronCrypto } from './secrets/electron-crypto';
@@ -259,8 +261,16 @@ export async function startPractice(
     },
     newId: randomUUID,
   });
+  // Linked images (T23): downloaded by main only, cached outside the vault.
+  const linkedImages = new LinkedImages({
+    cacheDir: join(storage.paths.cache, 'article-images'),
+    assets: libraryAssets,
+    mode: () => storage.settings.get().library.images,
+  });
+  registerImageHandlers(router, library, { assets: libraryAssets, linked: linkedImages });
   registerReaderHandlers(router, library, {
     assets: libraryAssets,
+    linked: linkedImages,
     // Only after `externalUrl` allowed the scheme (https, http, mailto).
     openExternal: async (url) => {
       await shell.openExternal(url);

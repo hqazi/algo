@@ -62,6 +62,9 @@ export const INVOKE_CHANNELS = [
   'library:thread-create',
   'library:thread-rename',
   'library:chat-notice',
+  'library:load-images',
+  'library:image-cache',
+  'library:clear-image-cache',
   'updates:status',
   'updates:check',
   'updates:download',
@@ -75,6 +78,7 @@ export const STREAM_CHANNELS = [
   'updates:watch',
   'exec:pull',
   'library:watch',
+  'library:offline',
 ] as const;
 
 /** Internal Electron channels used to carry streams. */

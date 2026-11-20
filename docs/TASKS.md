@@ -73,7 +73,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
 | T21 | Library folders and index | v3 | 3d | T05, T09 | done |
 | T22 | Reader with local images | v3 | 3d | T21 | done |
-| T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
+| T23 | Linked images: safe download and cache | v3 | 3d | T22 | done |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
@@ -1621,12 +1621,60 @@ something that is not an image.
 - `library.images` setting (`on-open` / `ask`); placeholders with **Load images** and **Retry**; **Make available offline** per folder (background, cancellable, progress); cache size and **Clear** in Settings → Library.
 
 **Acceptance.**
-- [ ] Tests with an injected fetch and resolver: each blocked address class, a public name that resolves to `127.0.0.1` or `10.x`, a redirect to a private address, `http:`, another port, too many redirects, oversized body (with and without `Content-Length`), slow body, HTML served as `image/png`, a PNG claiming 50,000 × 50,000: all refused with a clear placeholder reason.
-- [ ] A test that the connection goes to the checked address (DNS answer changes between check and connect).
-- [ ] A served cached image works with the network off; cache cleared from Settings.
+- [x] Tests with an injected fetch and resolver: each blocked address class, a public name that resolves to `127.0.0.1` or `10.x`, a redirect to a private address, `http:`, another port, too many redirects, oversized body (with and without `Content-Length`), slow body, HTML served as `image/png`, a PNG claiming 50,000 × 50,000: all refused with a clear placeholder reason.
+- [x] A test that the connection goes to the checked address (DNS answer changes between check and connect).
+- [x] A served cached image works with the network off; cache cleared from Settings.
 - [ ] No request leaves the UI window's session (request filter log empty during an article open with remote images).
 
 **Notes.**
+
+- Built (`main/library/images/`): `address.ts` (public unicast only;
+  mapped/compatible/NAT64/6to4 judged by their IPv4; local names),
+  `header.ts` (type and width × height from PNG/JPEG/GIF/WebP headers, no
+  decoding), `download.ts` (https/443, no user info, resolve-then-check
+  every address, `https.request` with a pinned `lookup`, manual redirects
+  ≤ 3 each re-checked, generic headers only, 10 MB, 15 s incl. a stalled
+  body, magic bytes, 100 MP), `cache.ts` (`<data>/cache/article-images/
+  <sha256>` + `.json` record; usage, clear), `linked.ts` (`LinkedImages`:
+  view without network, `data:` decode ≤ 2 MB, 4 at a time, in-flight
+  dedupe, 200 images / 100 MB per article, 1-hour failure memory, Retry),
+  `handlers.ts` (`library:load-images`, `library:image-cache`,
+  `library:clear-image-cache`, stream `library:offline`). Renderer:
+  `library/linked-images.tsx` (auto-load in `on-open`, **Load images** in
+  `ask`, **Retry**; sends the article id only), Settings → Library: mode
+  select, cache size + **Clear**, per folder **Make available offline**
+  with progress and **Cancel download**.
+- Decisions: D-41. SPEC §15.4 gains the IPC/reasons paragraph.
+  `library.images` added to core settings (default `on-open`) and to the
+  settings view/patch (`library.images` only; folders stay out).
+- Wiring outside **Owns**: `shared/{library,ipc,channels,settings}.ts`
+  (new reasons, schemas, 3 invoke + 1 stream channel; ref keys up to 3 MB
+  for `data:`), `packages/core/src/settings.ts` (+test),
+  `main/library/assets.ts` (`AssetRegistry.url(null, …)` = cache variant,
+  no folder check; `readArticle(…, linked)`; long `data:` keys in
+  `extractRefs`), `main/ipc/handlers/settings.ts` (view), `main/setup.ts`,
+  `renderer/.../library/{Reader.tsx,article-markdown.ts}` (bar, reason
+  texts), `pages/SettingsLibrary.tsx`, test fixtures. No migration.
+- Checks: typecheck, lint, format, `npm test` (70 files, 951 passed);
+  `check:security` built and run under xvfb with `--no-sandbox`: all pass.
+  Tests: `images/download.test.ts` (every address class, names, DNS
+  answering a private address, DNS changing after the check, redirects to
+  private/IP/http and > 3, oversize with/without `Content-Length`, stalled
+  body, HTML as `image/png`, 50,000 × 50,000 PNG; the real transport
+  against a local server reached only through the pinned address of an
+  `.invalid` name), `images/linked.test.ts` (IPC: only file references,
+  code skipped, ask/force, cache served after a "restart" with the network
+  off, failure memory/Retry/expiry, 200-image cap, Clear → 404, `data:`
+  rules, offline stream progress), `renderer/.../linked-images.test.tsx`.
+- Not done / not tested: the fourth acceptance box (UI session's request
+  filter log empty during an article open with remote images) is not
+  checked in Electron — main downloads through Node, not the window's
+  session, and `check:security` is unchanged; that log check belongs in
+  T26's security/e2e test. No real network download was tried (tests use
+  fakes and a local plain-HTTP server; TLS/SNI on the real transport is
+  untested). The 100 MB per-article cap is not unit-tested (200-image cap
+  is). Offline download stops when Settings is left. Failure memory is not
+  kept across restarts. Not tried on macOS or Windows.
 
 ### T24 — Chats tied to passages
 

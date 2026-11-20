@@ -11,6 +11,7 @@ import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { navigate } from '../lib/router';
 import { renderArticle } from './article-markdown';
+import { useLinkedImages } from './linked-images';
 
 const WEB = /^(?:https?:|mailto:)/i;
 
@@ -48,7 +49,12 @@ export function Reader({ id, version = 0, layer, onArticle }: ReaderProps) {
     };
   }, [id, version]);
 
-  const html = useMemo(() => (article ? renderArticle(article.body, article) : ''), [article]);
+  const linked = useLinkedImages(article);
+  const images = linked.images;
+  const html = useMemo(
+    () => (article ? renderArticle(article.body, { images, links: article.links }) : ''),
+    [article, images],
+  );
   useEffect(
     () => onArticle?.(article && article.id === id ? article : null),
     [article, id, onArticle],
@@ -129,6 +135,7 @@ export function Reader({ id, version = 0, layer, onArticle }: ReaderProps) {
           </details>
         )}
       </header>
+      {linked.bar}
       <div className="md article-body" ref={setBody} dangerouslySetInnerHTML={{ __html: html }} />
       {layer?.(body, html)}
     </article>

@@ -38,6 +38,15 @@ export const REASON_TEXT: Record<ImageReason, string> = {
   not_image: 'not an image file',
   svg: 'SVG images are not shown',
   too_large: 'image over 25 MB',
+  local_address: 'not loaded: local network address',
+  port: 'not loaded: only the standard https port',
+  redirects: 'not loaded: too many redirects',
+  oversize: 'not loaded: image too large',
+  timeout: 'not loaded: took too long',
+  pixels: 'not loaded: image dimensions too large',
+  http: 'not loaded: the site answered with an error',
+  network: 'not loaded: could not reach the site',
+  limit: 'not loaded: too many images in this article',
 };
 
 const ASSET_SRC = /^tutor-app:\/\/app\/library-asset\/[A-Za-z0-9_-]+$/;

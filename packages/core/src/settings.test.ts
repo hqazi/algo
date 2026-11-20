@@ -18,7 +18,7 @@ describe('parseSettings', () => {
       editor: { fontSize: 14, keymap: 'default' },
       ui: { theme: 'system' },
       updates: { channel: 'stable', auto: true },
-      library: { folders: [] },
+      library: { folders: [], images: 'on-open' },
     });
   });
 
