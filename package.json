@@ -13,6 +13,7 @@
     "apps/desktop"
   ],
   "scripts": {
+    "start": "node scripts/start.mjs",
     "dev": "npm run dev --workspace apps/desktop",
     "build": "npm run build --workspace apps/desktop",
     "package": "npm run package --workspace apps/desktop --",
@@ -29,6 +30,7 @@
     "schema:export": "tsx scripts/export-schemas.ts",
     "validate:content": "tsx scripts/validate-content.ts",
     "check:harnesses": "tsx scripts/check-harnesses.ts",
+    "check:deps": "tsx scripts/check-dep-age.ts",
     "e2e": "npm run e2e --workspace apps/desktop --",
     "e2e:claude-code": "npm run e2e:claude-code --workspace apps/desktop --",
     "screenshots": "npm run screenshots --workspace apps/desktop --",

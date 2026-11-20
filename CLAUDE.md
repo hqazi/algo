@@ -34,4 +34,8 @@ requests).
 - The API key lives only in the main process and the OS keychain.
 - No test calls a real AI provider. Never commit credentials or user data.
 - Pass/fail always comes from running tests.
+- Every npm version in `package-lock.json` is at least 14 days old (supply
+  chain; D-45, D-48). Add or move a dependency only by pinning a version that
+  old and running `npm install --before=<date 14 days ago> --ignore-scripts`;
+  `npm run check:deps` must pass before merging.
 - Report honestly what was not done or not tested.
