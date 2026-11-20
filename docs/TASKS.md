@@ -69,7 +69,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T16 | Local toolchain executor | v2 | 2d | T15 | done |
 | T17 | Container executor (Docker and Podman) | v2 | 3d | T15 | done |
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
-| T19 | Runner image in CI | v2 | 2d | T13, T15 | in-progress |
+| T19 | Runner image in CI | v2 | 2d | T13, T15 | done |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
 
 ## Order
@@ -1342,9 +1342,14 @@ and Go, multi-arch, published on release tags.
 - Published with the app release; version tied to the app.
 
 **Acceptance.**
-- [ ] amd64 and arm64 images built in CI; hello-world per language passes inside each.
+- [x] amd64 and arm64 images built in CI; hello-world per language passes inside each. (Run 44712009992 on main, `push` event: both legs built natively, `smoke.sh` printed ok for python, rust, go and the read-only/uid check on `linux/amd64` and `linux/arm64`, and the real-Docker executor suites passed, 18 + 14 tests, in each.)
 
 **Notes.**
+- Built: `runner-image/Dockerfile` (base `rust:1.100.0-slim-trixie`, Go 1.27.4 copied from `golang:1.27.4-trixie`, both pinned by tag and index digest; `python3-minimal` from Debian trixie, 3.13.5 when built; `USER 65534:65534`; Go/Rust env as D-31), `runner-image/smoke.sh` (hello world in Python, Rust and Go with the executor's hardening flags, plus read-only root and uid 65534), `.github/workflows/runner-image.yml` (native amd64 on `ubuntu-24.04` and arm64 on `ubuntu-24.04-arm`; smoke script and the real-Docker container executor suites against the built image; the tested image is pushed as `sha-<commit>-<arch>`, then joined into multi-arch tags with `docker buildx imagetools create`; publishes on version tags (`X.Y.Z`, plus `latest` for stable) and on `workflow_dispatch` (`version` input, else `edge`), always with `sha-<commit>`; pushes to main and PRs touching the image build and check only; `GITHUB_TOKEN` only, no third-party actions). Decisions in D-34; SPEC §6.5 runner image bullet updated.
+- Wiring outside Owns: `scripts/runner-image.test.ts` (static checks: image name matches `runnerImage()`, bases pinned by digest, uid 65534, both arches and triggers in the workflow), SPEC/DECISIONS.
+- Checked locally: image built with Docker 29.10.0 on amd64, `smoke.sh` passed, container executor, runtimes and code-execution suites passed against it (41 tests); typecheck, lint, format:check, `npm test` (825 passed, 12 skipped), validate:content (50 problems).
+- The first `workflow_dispatch` run (44711327127) failed on amd64 before any push: the two real-Docker test files ran in parallel on one daemon, so the executor suite's "no container left" check saw the other file's container. Fixed by running the files one after the other (run 44712009992 green). The dispatch was not re-run (one manual trigger was allowed), so **no image has been published yet** and the publish job (GHCR login, push, `imagetools create`) has not run; GHCR package visibility is therefore unknown.
+- Not done / not tested: no version tag pushed (tag pushes are refused from the session), so the release-tag path is untested; the published image was not pulled by the app (Settings → Pull / Test sandbox); Podman not tried with the image; arm64 checked only in CI, never locally. The README still says the image is not published (true until a release tag runs).
 
 ### T20 — README: optional container sandbox and toolchains
 
