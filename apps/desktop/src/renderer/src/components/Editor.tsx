@@ -60,7 +60,9 @@ function chrome(dark: boolean): Extension {
   return EditorView.theme(
     {
       '&': { color: 'var(--text)', backgroundColor: 'var(--surface)' },
-      '&.cm-focused': { outline: 'none' },
+      // The editor is a text box: it shows the focus ring inside its edges
+      // (it sits edge to edge in its pane).
+      '&.cm-focused': { outline: '2px solid var(--accent-ring)', outlineOffset: '-2px' },
       '.cm-scroller': {
         fontFamily: 'var(--mono)',
         lineHeight: '1.6',

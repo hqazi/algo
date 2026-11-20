@@ -7,7 +7,7 @@
  * outline go to the tutor's provider. Messages render through the chat's
  * `MessageView` (the chat allowlist: never an image).
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MessageSquare, Pencil, Sparkles, SquarePen, X } from 'lucide-react';
 import { Composer } from '../../chat/Composer';
 import { MessageList } from '../../chat/MessageList';
@@ -63,6 +63,13 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
   /** T25: problems made from a passage in this pane, by thread. */
   const [made, setMade] = useState<Record<string, string>>({});
   const [pending, setPending] = useState<string | null>(null);
+  const composer = useRef<HTMLTextAreaElement>(null);
+
+  // Asking about a passage or heading moves the focus to the question box,
+  // so keyboard users can type at once.
+  useEffect(() => {
+    if (draft) composer.current?.focus();
+  }, [draft]);
 
   useEffect(
     () =>
@@ -311,11 +318,22 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
                   onClick={() => {
                     setConfirming(false);
                     setPending(null);
+                    composer.current?.focus();
                   }}
                 >
                   Cancel
                 </Button>
-                <Button variant="primary" size="sm" onClick={() => void send()}>
+                {/* The notice is an alert dialog: its Send takes the focus, and
+                    the focus goes back to the question box after. */}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  autoFocus
+                  onClick={() => {
+                    void send();
+                    composer.current?.focus();
+                  }}
+                >
                   Send
                 </Button>
               </div>
@@ -345,6 +363,7 @@ export function ArticleChatPane({ chats, missing }: ArticleChatPaneProps) {
               canSend={canSend}
               disabled={unavailable}
               maxLength={MAX_TEXT}
+              textareaRef={composer}
               placeholder={unavailable ? 'The tutor is not set up' : 'Ask about this passage…'}
             />
           </div>

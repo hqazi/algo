@@ -175,7 +175,8 @@
   background: var(--accent-subtle);
 }
 .choice-card:has(input:focus-visible) {
-  box-shadow: 0 0 0 3px var(--accent-ring);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .choice-card input[type='radio'] {
   appearance: none;

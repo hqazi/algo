@@ -209,6 +209,8 @@ describe('chats on passages', () => {
     expect(askUses.classList.contains('shown')).toBe(false);
     fireEvent.click(askUses);
     expect(pane().getByTestId('passage-quote').textContent).toBe('Section: Heaps › Uses');
+    // T34: the question box takes the focus, so the keyboard can type at once.
+    expect(document.activeElement).toBe(pane().getByRole('textbox', { name: 'Message the tutor' }));
   });
 
   it('lists threads with title and snippet, renames, resets, and shows detached ones', async () => {

@@ -912,7 +912,6 @@ legend {
   flex-wrap: wrap;
 }
 
-
 /* ---------------------------------------------------------------- forms */
 .profile-form fieldset {
   border: 1px solid var(--border);
@@ -943,8 +942,6 @@ legend {
   gap: 0.25rem 1rem;
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
 }
-
-
 
 /* ---------------------------------------------------------------- practice */
 .practice {
@@ -1378,5 +1375,3 @@ button.link {
   display: grid;
   gap: 12px;
 }
-
-
