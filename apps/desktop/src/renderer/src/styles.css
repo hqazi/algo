@@ -24,6 +24,9 @@
   --accent-text: #ffffff;
   --accent-fg: #4338ca;
   --focus: #4f46e5;
+  /* A disabled primary button: this fill at reduced opacity, so it keeps the
+     accent's colour instead of sinking into a dark background. */
+  --accent-disabled: #4f46e5;
   /* Meaning: results, statuses, difficulty. */
   --pass: #137a3a;
   --pass-bg: #e7f6ec;
@@ -105,6 +108,7 @@
     --accent-text: #ffffff;
     --accent-fg: #a5b0fc;
     --focus: #818cf8;
+    --accent-disabled: #6655ff;
     --pass: #4ade80;
     --pass-bg: #12261a;
     --fail: #f87171;
@@ -320,6 +324,12 @@ button.primary:hover:not(:disabled),
 button.accent:hover:not(:disabled),
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-hover);
+}
+button.primary:disabled,
+button.accent:disabled,
+.btn-primary:disabled {
+  background: var(--accent-disabled);
+  opacity: 0.55;
 }
 button.primary:active:not(:disabled),
 button.accent:active:not(:disabled),
