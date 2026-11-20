@@ -1269,3 +1269,51 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   installer (with its `.blockmap` on Windows and macOS) are there. The
   channel is taken from the version as electron-builder does (`latest`, or
   the pre-release part before the dot).
+
+**D-37 Library: read the user's Markdown folders, never fetch pages**
+(2026-11-20, planning)
+
+- v3 adds a Library of articles to read offline and discuss with the tutor
+  (SPEC §15). Articles come from Markdown folders the user chooses, normally
+  an Obsidian vault filled by the Obsidian Web Clipper (MIT; extracts pages
+  with Defuddle in the user's browser and saves Markdown with frontmatter).
+  The app reads those folders and never writes to them.
+- Why: clipping in the user's own browser already handles pages they are
+  logged into, and the app gains no new way to fetch web pages, so the
+  security baseline (D-17, D-26) is unchanged except for image downloads
+  (D-38). Keeping articles as plain Markdown in Obsidian's format lets both
+  apps share one folder.
+- A private copy for the user's own reading is ordinary (read-later apps,
+  "Save page as"). Articles from the user's folders are not exported or
+  shared by the app.
+- Rejected: **"Save URL" in the app** (main process fetches and extracts any
+  page: a general-purpose fetcher, no logged-in pages; may come later, would
+  reuse Defuddle so output matches clipped notes); **our own browser
+  extension or a fork of the clipper** (one per browser, store publishing,
+  upkeep); **an in-app browser** (a full web browser inside an app that is
+  locked down on purpose); **writing groups or annotations into the vault**
+  (the app must not change the user's notes).
+
+**D-38 Article images: downloaded by the main process, served locally**
+(2026-11-20, planning)
+
+- Images inside a library folder are served by token under the UI's own
+  origin (`tutor-app://app/library-asset/<token>`). Images an article links
+  to are downloaded once by the main process, checked, cached in
+  `<data>/cache/article-images/` and served the same way (SPEC §15.3, §15.4).
+  The UI window's CSP (`img-src 'self' data:`) and request filter stay as
+  they are: the window still never contacts another host.
+- Why: articles keep their pictures offline, and sites learn the user's
+  address once, not on every read.
+- Safeguards (all in §15.4): `https` only; local-network addresses refused
+  and the connection pinned to the checked address; redirects re-checked;
+  size, time, count and pixel caps; magic bytes decide the type; SVG not
+  served; the main process never decodes images; chat never renders images;
+  only references in the article file are downloaded, never URLs the model
+  writes.
+- Rejected: **loading images straight from the web in the window** (as
+  Obsidian does): no pictures offline, the site sees every read, and it
+  would open the window's "no remote content" rule; **re-encoding images in
+  the main process** (decoding untrusted images in the process that holds
+  the key is the larger risk); **writing downloaded images into the vault**
+  (the app does not change the user's notes, D-37).

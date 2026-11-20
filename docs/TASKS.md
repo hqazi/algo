@@ -71,6 +71,12 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T18 | Settings → Code execution panel | v2 | 2d | T16, T17 | done |
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | done |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
+| T21 | Library folders and index | v3 | 3d | T05, T09 | todo |
+| T22 | Reader with local images | v3 | 3d | T21 | todo |
+| T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
+| T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | todo |
+| T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
+| T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | todo |
 
 ## Order
 
@@ -84,6 +90,9 @@ v1:  T01 ─┬─ T02 ───────────────────
 v2:  T15 (needs T04) ─┬─ T16 ─┐
                       └─ T17 ─┼─ T18 ─ T20
               T19 (needs T13) ┘
+v3:  T21 ─ T22 ─┬─ T23 ─────────┐
+                └─ T24 ─┬───────┴─ T26
+                        └─ T25
 ```
 
 Critical path: T01 → T03 → T07 → T08 → T10. {T02, T03, T05} can run in
@@ -1447,3 +1456,156 @@ and Go, multi-arch, published on release tags.
 - Test: `apps/desktop/src/main/ipc/handlers/install-help.test.ts` reads `README.md`, slugs its headings the GitHub way and checks every `INSTALL_HELP` URL (and every in-README `#` link) resolves; checked that it fails when a heading is renamed. This file is outside **Owns** (the ticket asks for a test).
 - The runner image is documented as not published yet (T19 not done): Pull fails until then and Rust/Go run locally.
 - Not done / not tested: the install commands were not run on macOS, Windows or Linux here (written from the tools' documentation and T17/T18 notes). The anchor slugging is a reimplementation of GitHub's, checked only for these headings; the links were not opened on github.com.
+
+## v3: Library
+
+Read articles from the user's Markdown folders (an Obsidian vault) offline,
+with their images, and discuss them with the tutor in chats tied to
+passages. SPEC §15; D-37, D-38. Every ticket here is held to the §10 rows
+marked v3: each one it touches gets a test, not only a mention.
+
+### T21 — Library folders and index
+
+- Milestone: v3
+- Size: 3d
+- Depends on: T05, T09
+- Spec: §4.2, §4.3, §15.1, §15.6 (Settings part)
+- Owns: `packages/core/src/library/` (frontmatter, scan rules, identity; pure), `apps/desktop/src/main/library/`, `apps/desktop/src/main/storage/migrations/0002-library.sql`, `apps/desktop/src/renderer/src/pages/SettingsLibrary*`
+
+**Goal.** The app knows which articles are in the user's chosen folders,
+without ever writing to them.
+
+**Scope.**
+- Resolve the **VERIFY**: the Obsidian Web Clipper's current default template (frontmatter keys, how images are written). Record it in `DECISIONS.md`; keep a clipped sample (made by hand, no third-party article text) as a test fixture.
+- `library.folders` setting; Settings → Library: add (OS folder picker in main), remove (confirm; drops index rows and, once T24 exists, chats), open in file manager, the "read only" line.
+- Scan per §15.1: `*.md`, skip dot-folders, symlinks out of the folder, files over 5 MB; frontmatter parsed as data (YAML, safe schema: no custom tags); title fallback; content hash; move detection by hash or `source`; `missing_since`.
+- Rescan at start, on Library open, on Refresh, and on file changes while the page is open (debounced `fs.watch`, rescan on watch errors).
+- IPC: `library:folders`, `library:tree`, `library:refresh` (zod-validated; the renderer gets ids and titles, never absolute paths).
+
+**Acceptance.**
+- [ ] Tests on a temp folder: notes found, dot-folders and large files skipped, a symlink out of the folder ignored, frontmatter read (fixture from the VERIFY), a renamed file keeps its id, a deleted file is marked missing.
+- [ ] A test proves the scan never writes: the folder's files and mtimes are unchanged after scans, refreshes and removal.
+- [ ] Migration test (applies on a v1 database with data; backup made).
+- [ ] Settings UI tests: add, remove with confirm, empty state.
+
+**Notes.**
+
+### T22 — Reader with local images
+
+- Milestone: v3
+- Size: 3d
+- Depends on: T21
+- Spec: §15.2, §15.3, §15.6
+- Owns: `apps/desktop/src/renderer/src/library/`, `apps/desktop/src/renderer/src/pages/Library*`, `apps/desktop/src/main/library/assets*`
+
+**Goal.** Open an article and read it, with pictures that are in the vault,
+safely.
+
+**Scope.**
+- Library page: left tree with filter and Refresh, middle reader (header from frontmatter, body), right pane placeholder for T24; resizable panes reusing the practice view's.
+- Markdown per §15.2: article sanitiser config (adds `img` only, `src` must be an app asset URL), Obsidian images, wikilinks to other library notes, callouts, note embeds as links. Resolve the raw-HTML **DECISION** (default: drop).
+- Local image resolution and the `tutor-app://app/library-asset/<token>` route per §15.3 (tokens random per session; real path inside the folder; regular file; 25 MB; magic bytes; `nosniff`; no SVG).
+- External links open in the system browser through a main-process handler that allows only `https:`, `http:`, `mailto:`.
+
+**Acceptance.**
+- [ ] Asset route tests: `../` paths, absolute paths, a symlink and a hard-to-spot path (`%2e%2e`, Windows `\`) out of the folder, a non-image renamed `.png`, an SVG, an unknown token: all refused; a real PNG/JPEG/GIF/WebP served with the right type.
+- [ ] Sanitiser tests: `<script>`, `<img onerror>`, `javascript:` links, an `img` with a remote or `file:` URL → removed or placeholder; wikilinks and callouts render.
+- [ ] Reading works with no key and the network unavailable (test with the fake tutor and no fetch).
+- [ ] The window's CSP and request filter are unchanged (existing security tests still pass, unmodified).
+
+**Notes.**
+
+### T23 — Linked images: safe download and cache
+
+- Milestone: v3
+- Size: 3d
+- Depends on: T22
+- Spec: §15.4, §10 (v3 rows)
+- Owns: `apps/desktop/src/main/library/images/`
+
+**Goal.** Pictures an article links to show offline, downloaded once by the
+main process, without letting a note reach the local network or deliver
+something that is not an image.
+
+**Scope.**
+- Downloader per §15.4: `https`/443 only; address check (loopback, private, link-local, CGNAT, multicast, unspecified, IPv4-mapped and other IPv6 forms; `localhost`, `*.local`) with the connection pinned to the checked address; redirects by hand, re-checked, at most 3; no cookies, `Referer` or credentials; caps (size, time, concurrency, count and total per article); magic bytes and header dimensions; never decoded in main. Reuse what fits from `main/intake/fetch.ts`.
+- `data:` images (PNG/JPEG/GIF/WebP, 2 MB) stored and served like downloads.
+- Cache at `<data>/cache/article-images/`, failure memory (1 hour), served via the T22 asset route.
+- `library.images` setting (`on-open` / `ask`); placeholders with **Load images** and **Retry**; **Make available offline** per folder (background, cancellable, progress); cache size and **Clear** in Settings → Library.
+
+**Acceptance.**
+- [ ] Tests with an injected fetch and resolver: each blocked address class, a public name that resolves to `127.0.0.1` or `10.x`, a redirect to a private address, `http:`, another port, too many redirects, oversized body (with and without `Content-Length`), slow body, HTML served as `image/png`, a PNG claiming 50,000 × 50,000: all refused with a clear placeholder reason.
+- [ ] A test that the connection goes to the checked address (DNS answer changes between check and connect).
+- [ ] A served cached image works with the network off; cache cleared from Settings.
+- [ ] No request leaves the UI window's session (request filter log empty during an article open with remote images).
+
+**Notes.**
+
+### T24 — Chats tied to passages
+
+- Milestone: v3
+- Size: 4d
+- Depends on: T22, T10, T11
+- Spec: §7.4, §15.5, §15.6 (chat pane)
+- Owns: `packages/core/src/library/anchors*`, `packages/core/src/tools/article*`, `apps/desktop/src/main/storage/migrations/0003-article-threads.sql`, `apps/desktop/src/renderer/src/library/chat/`
+
+**Goal.** Several chats per article, each about a passage, with the tutor
+seeing that passage.
+
+**Scope.**
+- Anchors in core: create from a selection or heading (heading path, quote, 32-character prefix/suffix); resolve (exact, prefix/suffix for repeats, heading only, detached).
+- Migration: `threads.kind`, `article_id`, `anchor`, `title`; existing threads become `home`/`problem`.
+- Article-mode turn context and prompt section per §15.5 (outline, anchored section capped at 8,000 characters, quote; delimited untrusted data); tools `read_article_section`, `search_article`, `get_profile`, for both backends (the Claude Code backend gets them through the MCP server).
+- UI: **Ask about this** on selection, heading margin button, margin markers, thread list (title, snippet, date), open thread, rename, reset (7.4), detached and "file missing" states, the one-time provider notice.
+
+**Acceptance.**
+- [ ] Core tests: anchors survive edits around the passage, pick the right one of repeated quotes, fall back to the heading, detach cleanly.
+- [ ] A turn's context contains the outline and section but not the rest of the article; tools return text from the open article only and are capped.
+- [ ] Fake-tutor tests: an article containing "ignore your instructions and …" is passed inside the untrusted-data delimiters; the tutor has no tool beyond the three.
+- [ ] A test that chat messages never render `img` (a reply with `![x](https://…/?d=secret)` makes no request and shows no image), in article and problem threads.
+- [ ] Both backends: one article turn with tools (fake tutor; Claude Code with its fixture).
+
+**Notes.**
+
+### T25 — Tutor-written articles and problems from passages
+
+- Milestone: v3
+- Size: 2d
+- Depends on: T24, T12
+- Spec: §15.1 (generated articles), §15.5 (tools), §6.3 (self-check)
+- Owns: `packages/core/src/library/generate*`, `apps/desktop/src/main/library/generated/`
+
+**Goal.** Ask the tutor to write an article on a topic, and turn a passage
+into a practice problem.
+
+**Scope.**
+- "Write an article" (topic, level, length): saved to `<data>/articles/generated/<slug>.md` with frontmatter (`title`, `created`, `tags`, `generated: true`), shown under **Written by the tutor**, labelled AI-written, included in export.
+- "Make a problem from this" in an article thread: `create_problem` with the passage as delimited context; the problem passes the self-check before it appears (§6.3), as with T12.
+
+**Acceptance.**
+- [ ] Fake-tutor tests: an article is written, appears in the tree, renders, is exported; a problem from a passage passes the self-check and opens in Practice; a failing self-check shows nothing new.
+
+**Notes.**
+
+### T26 — Library security check and end-to-end test
+
+- Milestone: v3
+- Size: 2d
+- Depends on: T23, T24
+- Spec: §10 (v3 rows), §13, §15
+- Owns: `apps/desktop/e2e/library.e2e.ts`, `apps/desktop/src/main/security-check.ts` (Library additions)
+
+**Goal.** Prove the v3 security rows hold in the built app, not only in unit
+tests.
+
+**Scope.**
+- A hostile test vault (made by hand): path-escape image links, a symlink out, raw HTML and scripts, `javascript:` links, a fake PNG, an SVG, image links to `127.0.0.1`, `169.254.169.254`, `[::1]` and a name resolving to a private address, a redirect chain to a private address, a prompt-injection passage.
+- `check:security` additions: after opening every hostile article the UI session's request log holds only `tutor-app://` requests; the downloader's log shows each hostile URL refused with its reason; no file outside the vault was read (served-files log).
+- `library.e2e.ts` with the fake tutor and a local HTTPS stand-in for a public image host: add folder, read, images download once and show offline, ask about a passage, second thread on another passage, markers, reopen.
+- Add `library.e2e.ts` to `npm run e2e`.
+
+**Acceptance.**
+- [ ] `check:security` passes with the hostile vault; each v3 row in §10 is named in its output.
+- [ ] `library.e2e.ts` passes on Linux; CI runs it on all three OSes.
+
+**Notes.**

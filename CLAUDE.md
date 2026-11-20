@@ -1,8 +1,9 @@
 # Algorithm Tutor
 
 A desktop app (Electron + React + TypeScript) for practising data structures
-and algorithms with an AI tutor. Second version of `hqazi/dsa-tutor`. The
-project is in planning: no app code exists yet.
+and algorithms with an AI tutor. Second version of `hqazi/dsa-tutor`. v1 (Python)
+and v2 (Rust, Go, containers) are built; T14, the v1 release check, is
+blocked. v3 adds a Library of articles (SPEC §15, tickets T21–T26).
 
 ## Read first
 
