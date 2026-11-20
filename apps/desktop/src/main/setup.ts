@@ -14,7 +14,7 @@ import {
   session,
   shell,
 } from 'electron';
-import { isoNow } from '@algorithm-tutor/core';
+import { isoNow } from '@algo/core';
 import { EXEC_SCHEME_PRIVILEGES } from './exec/host-window';
 import { registerHandlers } from './ipc/handlers';
 import { DataService, type DataUi } from './data';

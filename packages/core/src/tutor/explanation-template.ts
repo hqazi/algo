@@ -131,7 +131,7 @@ footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; border-top: 
   {{pitfalls}}
 </section>
 
-<footer>Generated {{generated}} by Algorithm Tutor · {{slug}}</footer>
+<footer>Generated {{generated}} by Algo · {{slug}}</footer>
 </main>
 </body>
 </html>

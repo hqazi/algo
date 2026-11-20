@@ -1,4 +1,4 @@
-# Algorithm Tutor: specification
+# Algo: specification
 
 Status: draft 1 (2026-11-17). Tickets that implement it are in
 [`TASKS.md`](TASKS.md); the reasoning behind the main choices is in
@@ -473,7 +473,7 @@ in the local toolchain or a container, in every version.
   detection, `pull` of the runner image, and job runs.
 - If the selected runtime disappears, fall back to `local` with a notice
   (shown in Settings → Code execution while it lasts).
-- **Runner image** `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`, built
+- **Runner image** `ghcr.io/hqazi/algo-runner:<app version>`, built
   and published by CI with Python, Rust and Go toolchains (linux/amd64 and
   linux/arm64; on version tags with the app release, and `edge` on manual
   runs; D-34). **Pull / Update**

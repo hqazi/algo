@@ -31,7 +31,7 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { randomUUID } from 'node:crypto';
-import { resultEvents, stringifyJson, toolStart, type ToolResult } from '@algorithm-tutor/core';
+import { resultEvents, stringifyJson, toolStart, type ToolResult } from '@algo/core';
 import { bearer, type Binding, type McpGateway } from './gateway';
 
 export const MCP_PATH = '/mcp';
@@ -212,11 +212,10 @@ export class McpServer {
           capabilities: { tools: { listChanged: false } },
           serverInfo: {
             name: SERVER_NAME,
-            title: 'Algorithm Tutor tools',
+            title: 'Algo tools',
             version: this.opts.version,
           },
-          instructions:
-            "The algorithm tutor's tools. Use them to read and change the learner's progress.",
+          instructions: "Algo's tutor tools. Use them to read and change the learner's progress.",
         };
       }
       case 'ping':

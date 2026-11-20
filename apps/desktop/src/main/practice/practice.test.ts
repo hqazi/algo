@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { stringifyJson } from '@algorithm-tutor/core';
+import { stringifyJson } from '@algo/core';
 import { PyodidePool } from '../../exec-host/pool';
 import { poolTransport } from '../../exec-host/pool-transport';
 import { nodeWorkerFactory } from '../../exec-host/testing/node-factory';

@@ -27,5 +27,5 @@
   "required": ["schema_version", "tests"],
   "additionalProperties": false,
   "$id": "https://github.com/hqazi/algo/blob/main/content/schema/tests.v2.schema.json",
-  "title": "Algorithm Tutor problem tests.json (v2)"
+  "title": "Algo problem tests.json (v2)"
 }

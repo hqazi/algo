@@ -1,4 +1,4 @@
-# Algorithm Tutor documentation
+# Algo documentation
 
 ## User guide
 

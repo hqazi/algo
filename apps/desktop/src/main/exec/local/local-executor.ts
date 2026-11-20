@@ -31,7 +31,7 @@ import {
   type Language,
   type RunJob,
   type RunReport,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import {
   detectToolchain,
   pathKey,
@@ -293,7 +293,7 @@ export function childEnv(
 ): NodeJS.ProcessEnv {
   const out: NodeJS.ProcessEnv = {};
   for (const [k, v] of Object.entries(env)) {
-    if (/^(ANTHROPIC_|ELECTRON_|ALGORITHM_TUTOR_)/i.test(k)) continue;
+    if (/^(ANTHROPIC_|ELECTRON_|ALGOTUTOR_)/i.test(k)) continue;
     if (k === 'GOFLAGS' || k === 'NODE_OPTIONS') continue;
     out[k] = v;
   }

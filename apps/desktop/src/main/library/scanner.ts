@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import type { Dirent } from 'node:fs';
 import { readdir, readFile, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, relative, sep } from 'node:path';
-import { isNoteFile, isSkippedName, MAX_NOTE_BYTES } from '@algorithm-tutor/core';
+import { isNoteFile, isSkippedName, MAX_NOTE_BYTES } from '@algo/core';
 
 export interface ScannedFile {
   /** Inside the folder, with `/`. */

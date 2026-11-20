@@ -77,7 +77,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | done |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | done |
-| T27 | README, user guide, logo and screenshots | polish | 1d | T26 | done |
+| T27 | README, user guide, logo, screenshots; rename to Algo | polish | 1d | T26 | done |
 
 ## Order
 
@@ -1956,6 +1956,9 @@ project, covering v3.
 - **Repository name.** Every reference to the repository is now
   `hqazi/algo` (D-45), including `publish.repo` for updates and the runner
   image's source label; `settings.e2e.ts` expects the guide URL.
+- **Renamed to Algo** (D-46): display name, data folder, installers,
+  executable, app id, workspaces, runner image, export tag (old one still
+  imports, tested). Screenshots and the social card retaken.
 - **Not done.** Screenshots are 1x (1440×880): Playwright's Electron pages ignored both
   `--force-device-scale-factor` and a CDP device-scale override. The new icon
   was not checked in a packaged build (`npm run package:dir` not run). The

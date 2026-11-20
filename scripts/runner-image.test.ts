@@ -17,7 +17,7 @@ describe('runner image', () => {
   it('is published under the name the app pulls', () => {
     const app = read('apps/desktop/src/main/exec/container/container-executor.ts');
     const name = /`(ghcr\.io\/[^:`]+):\$\{appVersion\}`/.exec(app)?.[1];
-    expect(name).toBe('ghcr.io/hqazi/algorithm-tutor-runner');
+    expect(name).toBe('ghcr.io/hqazi/algo-runner');
     expect(workflow).toContain(`IMAGE: ${name}\n`);
   });
 
@@ -39,6 +39,6 @@ describe('runner image', () => {
     expect(workflow).toMatch(/arch: arm64\n\s+runner: ubuntu-24\.04-arm\n/);
     expect(workflow).toContain("tags: ['v*']");
     expect(workflow).toContain('workflow_dispatch:');
-    expect(workflow).toContain('runner-image/smoke.sh algorithm-tutor-runner:ci');
+    expect(workflow).toContain('runner-image/smoke.sh algo-runner:ci');
   });
 });

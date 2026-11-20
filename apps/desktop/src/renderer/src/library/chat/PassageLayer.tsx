@@ -12,7 +12,7 @@ import {
   parseAnchor,
   resolveAnchor,
   type AnchorState,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { AnchorView } from '../../../../shared/article-chat';
 import { domDoc, offsetOf, rangeOf, type DomDoc } from './dom-doc';
 import type { ArticleChats } from './useArticleChats';

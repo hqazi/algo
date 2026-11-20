@@ -30,7 +30,7 @@ import {
   type Storage,
   type TestResult,
   type TutorToolContext,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type {
   AttemptView,
   CaseView,

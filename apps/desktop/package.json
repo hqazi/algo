@@ -1,10 +1,10 @@
 {
-  "name": "@algorithm-tutor/desktop",
+  "name": "@algo/desktop",
   "version": "0.0.0",
   "private": true,
-  "description": "Algorithm Tutor desktop app (Electron).",
+  "description": "Algo desktop app (Electron).",
   "author": {
-    "name": "Algorithm Tutor authors",
+    "name": "Algo authors",
     "url": "https://github.com/hqazi/algo"
   },
   "homepage": "https://github.com/hqazi/algo",
@@ -27,7 +27,7 @@
     "package:dir": "electron-vite build && tsx packaging/package.ts --dir"
   },
   "devDependencies": {
-    "@algorithm-tutor/core": "*",
+    "@algo/core": "*",
     "@anthropic-ai/sdk": "1.5.0",
     "@codemirror/commands": "6.11.1",
     "@codemirror/lang-python": "6.2.1",

@@ -155,7 +155,7 @@ describe('export and import', () => {
     const ui = fakeUi({ chooseImportFile: () => Promise.resolve(zip) });
     const r = await service(b, ui).importInteractive();
     expect(r.staged).toBe(true);
-    expect(r.backup).toMatch(/backups[\\/]algorithm-tutor-2026-11-19-1430-before-import\.zip$/);
+    expect(r.backup).toMatch(/backups[\\/]algo-2026-11-19-1430-before-import\.zip$/);
     expect(existsSync(r.backup!)).toBe(true);
     expect(ui.restarts).toBe(1);
     // Nothing is replaced until the next start.
@@ -239,6 +239,14 @@ describe('readArchive refuses', () => {
     const e = await goodZip();
     refuse(without(e, 'manifest.json'), /no manifest/);
     refuse({ ...e, 'manifest.json': strToU8('{"format":"other"}') }, /not an export of this app/);
+  });
+  it('accepts an export made before the app was renamed Algo', async () => {
+    const e = await goodZip();
+    const manifest = JSON.parse(new TextDecoder().decode(e['manifest.json'])) as object;
+    const legacy = { ...manifest, format: 'algorithm-tutor-export' };
+    expect(() =>
+      readArchive(zipSync({ ...e, 'manifest.json': strToU8(JSON.stringify(legacy)) })),
+    ).not.toThrow();
   });
   it('names outside the layout, absolute or with ..', async () => {
     const e = await goodZip();

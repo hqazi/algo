@@ -7,9 +7,9 @@ shows it and opens it):
 
 | OS | Folder |
 |---|---|
-| macOS | `~/Library/Application Support/Algorithm Tutor` |
-| Windows | `%APPDATA%\Algorithm Tutor` |
-| Linux | `~/.config/Algorithm Tutor` |
+| macOS | `~/Library/Application Support/Algo` |
+| Windows | `%APPDATA%\Algo` |
+| Linux | `~/.config/Algo` |
 
 It holds your progress and chats (`tutor.db`), settings (`settings.json`),
 your solutions (`workspace/<problem>/solution.py`), the problems you made or

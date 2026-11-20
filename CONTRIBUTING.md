@@ -1,4 +1,4 @@
-# Contributing to Algorithm Tutor
+# Contributing to Algo
 
 Thanks for your interest! Bug reports, problem ideas, documentation fixes and
 code are all welcome.

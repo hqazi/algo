@@ -1555,3 +1555,27 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
 - Rejected: a docs site generator (VitePress, Docusaurus). Plain Markdown
   renders on GitHub with no build or hosting; revisit if the guide grows.
 
+**D-46 The app is called Algo** (2026-11-20, T27; supersedes the "Kept" item of D-45)
+
+The owner renamed the app to match the repository; they are its only user,
+so nothing has to stay compatible with installed builds.
+- Display name **Algo** (`APP_NAME`, `productName`, window title, docs).
+  The data folder follows Electron's app name, so it is now
+  `.../Algo` (macOS `~/Library/Application Support/Algo`, Windows
+  `%APPDATA%\Algo`, Linux `~/.config/Algo`). Nothing migrates the old
+  `Algorithm Tutor` folder; move it by hand, or export from the old build
+  and import in the new one.
+- Technical names `algo`: installers `algo-<version>-<os>-<arch>.<ext>`, the
+  Linux executable and `.desktop` file, app id `io.github.hqazi.algo`,
+  workspaces `algo`, `@algo/core`, `@algo/desktop`, the runner image
+  `ghcr.io/hqazi/algo-runner` (published by the next runner-image run), job
+  containers `algo-job-*` with label `algo.job=1`, the importer's
+  `User-Agent`, generated harness headers.
+- Exports are tagged `algo-export`; `algorithm-tutor-export` still imports.
+- The API key is encrypted per app name by `safeStorage`, so the renamed app
+  cannot read a key stored by the old one: enter it again.
+- Kept: the `ALGOTUTOR_*` development variables (they already read as "algo
+  tutor") and the `tutor-app://` protocol. The local executor now strips
+  `ALGOTUTOR_*` from the toolchain environment; it stripped
+  `ALGORITHM_TUTOR_*`, a prefix nothing used.
+

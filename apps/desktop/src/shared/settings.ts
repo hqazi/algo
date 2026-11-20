@@ -19,7 +19,7 @@ import {
   TUTOR_EFFORTS,
   UI_THEMES,
   UPDATE_CHANNELS,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 
 const groups = {
   tutor: {

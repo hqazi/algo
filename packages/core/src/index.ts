@@ -1,6 +1,6 @@
-export const APP_NAME = 'Algorithm Tutor';
+export const APP_NAME = 'Algo';
 
-/** The display name of the app, optionally with a version: "Algorithm Tutor 1.2.3". */
+/** The display name of the app, optionally with a version: "Algo 1.2.3". */
 export function appTitle(version?: string): string {
   const v = version?.trim();
   return v ? `${APP_NAME} ${v}` : APP_NAME;

@@ -7,7 +7,7 @@
  * values), runs it in fresh Pyodide workers and answers with a
  * `HarnessOutput`. Grading and redaction happen in the main process.
  */
-import type { HarnessCaseResult, HarnessOutput, HarnessRequest } from '@algorithm-tutor/core';
+import type { HarnessCaseResult, HarnessOutput, HarnessRequest } from '@algo/core';
 
 export type { HarnessCaseResult, HarnessOutput, HarnessRequest };
 

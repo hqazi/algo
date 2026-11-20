@@ -29,7 +29,7 @@ import {
   type ToolOutput,
   type TutorBackend,
   type TutorToolContext,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import type { FileCatalog } from '../practice/catalog';
 import { Fetcher, type FetchFn } from './fetch';
 

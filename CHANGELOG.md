@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Algorithm Tutor. Versions follow
+All notable changes to Algo. Versions follow
 [semantic versioning](https://semver.org); tags `vX.Y.Z-beta.N` are beta
 releases and `vX.Y.Z-rc.N` release candidates (draft test releases).
 

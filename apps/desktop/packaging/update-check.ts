@@ -110,7 +110,7 @@ async function main(oldImage: string, feedDir: string): Promise<void> {
   if (!newImage) throw new Error(`no AppImage in ${feedDir}`);
   const work = mkdtempSync(join(tmpdir(), 'algotutor-update-'));
   // No version in the name: electron-updater replaces the file in place.
-  const installed = join(work, 'algorithm-tutor.AppImage');
+  const installed = join(work, 'algo.AppImage');
   copyFileSync(oldImage, installed);
   const stop = await serve(feedDir);
   try {

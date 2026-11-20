@@ -1,6 +1,6 @@
 # Architecture
 
-A short tour of how Algorithm Tutor is put together. The full contract is
+A short tour of how Algo is put together. The full contract is
 [`SPEC.md`](SPEC.md); the reasons behind each choice are in
 [`DECISIONS.md`](DECISIONS.md).
 

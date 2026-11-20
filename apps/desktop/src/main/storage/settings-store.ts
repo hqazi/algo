@@ -20,7 +20,7 @@ import {
   settingsForFile,
   type Settings,
   type SettingsIssue,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 
 export interface SettingsChange {
   settings: Settings;

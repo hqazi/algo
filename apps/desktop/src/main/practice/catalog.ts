@@ -23,7 +23,7 @@ import {
   type ProblemSummary,
   type Storage,
   type Topic,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 
 export interface CatalogDirs {
   /** The app's `content/` folder (read-only). */

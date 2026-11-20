@@ -12,7 +12,7 @@ Fixes go into the latest release; the app updates itself (see
 
 ## The security model, in short
 
-Algorithm Tutor runs code you write, code an AI model writes, and Markdown
+Algo runs code you write, code an AI model writes, and Markdown
 articles from the web. It is built so that none of these can reach your files,
 your network or your API key. The full threat table is in
 [SPEC §10](docs/SPEC.md#10-security); the main lines are:

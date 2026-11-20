@@ -21,7 +21,7 @@
  * - `{"type":"result","subtype":"success"|"error_…","is_error":…,"session_id":…}`:
  *   the end of the turn.
  */
-import { chatError, done, textDelta, type ChatEvent, type ErrorKind } from '@algorithm-tutor/core';
+import { chatError, done, textDelta, type ChatEvent, type ErrorKind } from '@algo/core';
 
 /** Rate-limit retries waited out before the turn ends with an error. */
 export const RETRIES_SHOWN = 3;

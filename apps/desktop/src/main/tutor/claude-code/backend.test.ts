@@ -12,7 +12,7 @@ import {
   markdownDoc,
   type ChatEvent,
   type Turn,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import { buildArgs, TOOL_PREFIX } from './command';
 import { recap } from './backend';
 import { fakeTools, rig, turn, type Rig } from './fixtures/harness';
@@ -442,7 +442,7 @@ describe.skipIf(!realClaude)('the real Claude Code CLI (opt-in)', () => {
     for (const q of api.requests) {
       expect(q.apiKey).toBe('sk-ant-test-real-key');
       expect(q.tools.every((n) => n.startsWith('mcp__tutor__'))).toBe(true);
-      expect(q.system).toContain('You are the Algorithm Tutor (test).');
+      expect(q.system).toContain('You are the Algo (test).');
     }
     expect(typeof t.backendState.session_id).toBe('string');
   }, 120_000);

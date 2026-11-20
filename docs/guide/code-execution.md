@@ -115,7 +115,7 @@ are detected as Docker. Start them first (for example `colima start`).
 
 ### The runner image
 
-Jobs run in the runner image `ghcr.io/hqazi/algorithm-tutor-runner`, tagged
+Jobs run in the runner image `ghcr.io/hqazi/algo-runner`, tagged
 with the app version, which has the Python, Rust and Go toolchains. The app
 never downloads it on its own: press **Pull image** in
 **Settings → Code execution** (once per runtime; Podman and Docker keep

@@ -6,12 +6,7 @@
  * losing a running job. Cancelling that stream only stops following; the
  * job itself stops with `intake:cancel`.
  */
-import {
-  IntakeError,
-  OpenSetError,
-  type IntakeEvent,
-  type IntakeRequest,
-} from '@algorithm-tutor/core';
+import { IntakeError, OpenSetError, type IntakeEvent, type IntakeRequest } from '@algo/core';
 import type { AppIntake } from '../../intake';
 import { IpcRefusal, type IpcRouter } from '../router';
 

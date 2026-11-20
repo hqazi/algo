@@ -35,7 +35,7 @@ with `--appimage-extract-and-run`.
 No keyring is running. Install and unlock GNOME Keyring or KWallet, or set
 `ANTHROPIC_API_KEY`.
 
-### macOS: "Algorithm Tutor is damaged and can't be opened"
+### macOS: "Algo is damaged and can't be opened"
 
 The app is unsigned; run the `xattr` command under
 [Installation → macOS](installation.md#macos).

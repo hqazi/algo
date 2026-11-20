@@ -19,7 +19,7 @@ import {
   type ProblemMeta,
   type RunJob,
   type TestCase,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import { findOnPath, parseVersion, toolPath } from './detect';
 import {
   childEnv,

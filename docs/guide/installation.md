@@ -1,6 +1,6 @@
 # Installation
 
-Algorithm Tutor is one installer per operating system. Nothing else has to be
+Algo is one installer per operating system. Nothing else has to be
 installed to practise in Python: no Python, Node or Docker.
 
 ## Download
@@ -10,11 +10,11 @@ Download the file for your computer from the
 
 | OS | File |
 |---|---|
-| macOS, Apple silicon (M1 and later) | `algorithm-tutor-<version>-mac-arm64.dmg` |
-| macOS, Intel | `algorithm-tutor-<version>-mac-x64.dmg` |
-| Windows 10 and 11 (x64) | `algorithm-tutor-<version>-win-x64.exe` |
-| Linux x64, Debian or Ubuntu | `algorithm-tutor-<version>-linux-amd64.deb` |
-| Linux x64, any distribution | `algorithm-tutor-<version>-linux-x86_64.AppImage` |
+| macOS, Apple silicon (M1 and later) | `algo-<version>-mac-arm64.dmg` |
+| macOS, Intel | `algo-<version>-mac-x64.dmg` |
+| Windows 10 and 11 (x64) | `algo-<version>-win-x64.exe` |
+| Linux x64, Debian or Ubuntu | `algo-<version>-linux-amd64.deb` |
+| Linux x64, any distribution | `algo-<version>-linux-x86_64.AppImage` |
 
 The `.zip`, `.blockmap` and `.yml` files on the same page are for the
 updater; you do not need them.
@@ -26,48 +26,48 @@ updater; you do not need them.
 
 ## macOS
 
-1. Open the `.dmg` and drag **Algorithm Tutor** to **Applications**.
+1. Open the `.dmg` and drag **Algo** to **Applications**.
 2. Open it from Applications. macOS says it cannot check the app for
    malicious software (or that it "is damaged"). Click **Done** (not *Move to
    Trash*).
 3. Open **System Settings → Privacy & Security**, scroll to *Security*, and
-   click **Open Anyway** next to the message about Algorithm Tutor. Confirm
+   click **Open Anyway** next to the message about Algo. Confirm
    with your password.
 
 If there is no **Open Anyway** button (or the app is reported as damaged),
 remove the download quarantine in Terminal, then open the app again:
 
 ```sh
-xattr -dr com.apple.quarantine "/Applications/Algorithm Tutor.app"
+xattr -dr com.apple.quarantine "/Applications/Algo.app"
 ```
 
 ## Windows
 
-1. Run `algorithm-tutor-<version>-win-x64.exe`.
+1. Run `algo-<version>-win-x64.exe`.
 2. Windows SmartScreen says "Windows protected your PC". Click
    **More info**, then **Run anyway**.
 3. The installer installs for your user only (no administrator rights) and
-   lets you choose the folder. Open **Algorithm Tutor** from the Start menu.
+   lets you choose the folder. Open **Algo** from the Start menu.
 
 ## Linux
 
 **Debian, Ubuntu and derivatives:**
 
 ```sh
-sudo apt install ./algorithm-tutor-<version>-linux-amd64.deb
+sudo apt install ./algo-<version>-linux-amd64.deb
 ```
 
-Then open **Algorithm Tutor** from your applications menu, or run
-`algorithm-tutor`.
+Then open **Algo** from your applications menu, or run
+`algo`.
 
 **AppImage (any distribution):**
 
 ```sh
-chmod +x algorithm-tutor-<version>-linux-x86_64.AppImage
+chmod +x algo-<version>-linux-x86_64.AppImage
 ```
 
 ```sh
-./algorithm-tutor-<version>-linux-x86_64.AppImage
+./algo-<version>-linux-x86_64.AppImage
 ```
 
 AppImages need FUSE 2 (`sudo apt install libfuse2t64` on Ubuntu 24.04 and

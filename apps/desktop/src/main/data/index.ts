@@ -6,7 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { Storage } from '@algorithm-tutor/core';
+import type { Storage } from '@algo/core';
 import type { DataPaths } from '../storage/paths';
 import {
   exportData,

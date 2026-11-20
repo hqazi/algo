@@ -71,7 +71,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           npm run package:dir
-          xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algorithm-tutor
+          xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algo
 
   # Rust and Go harnesses (T15) with the toolchains preinstalled on the runner
   # image: hand-written solutions pass, failure modes, every type round-trips,
@@ -101,7 +101,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: docker version
-      - run: docker build -t algorithm-tutor-runner:test apps/desktop/src/main/exec/container/test-image
+      - run: docker build -t algo-runner:test apps/desktop/src/main/exec/container/test-image
       - run: npx vitest run apps/desktop/src/main/exec/container apps/desktop/src/main/runtimes
         env:
-          ALGOTUTOR_TEST_RUNNER_IMAGE: algorithm-tutor-runner:test
+          ALGOTUTOR_TEST_RUNNER_IMAGE: algo-runner:test

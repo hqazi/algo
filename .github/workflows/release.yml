@@ -60,7 +60,7 @@ jobs:
           pre=()
           [[ "$VERSION" == *-* ]] && pre=(--prerelease)
           gh release create "$GITHUB_REF_NAME" --draft --verify-tag "${pre[@]}" \
-            --title "Algorithm Tutor $VERSION" --generate-notes
+            --title "Algo $VERSION" --generate-notes
 
   build:
     name: build (${{ matrix.os }})
@@ -129,13 +129,13 @@ jobs:
           case "$RUNNER_OS" in
             Linux)
               sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-              xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algorithm-tutor ;;
+              xvfb-run -a npx tsx apps/desktop/packaging/smoke.ts apps/desktop/dist/linux-unpacked/algo ;;
             macOS)
               # The build for this runner's arch: mac-arm64 on Apple silicon, mac on Intel.
               if [ "$(uname -m)" = arm64 ]; then dir=apps/desktop/dist/mac-arm64; else dir=apps/desktop/dist/mac; fi
-              npx tsx apps/desktop/packaging/smoke.ts "$dir/Algorithm Tutor.app/Contents/MacOS/Algorithm Tutor" ;;
+              npx tsx apps/desktop/packaging/smoke.ts "$dir/Algo.app/Contents/MacOS/Algo" ;;
             Windows)
-              npx tsx apps/desktop/packaging/smoke.ts "apps/desktop/dist/win-unpacked/Algorithm Tutor.exe" ;;
+              npx tsx apps/desktop/packaging/smoke.ts "apps/desktop/dist/win-unpacked/Algo.exe" ;;
           esac
       - name: remove the notarization key
         if: always() && runner.os == 'macOS'
@@ -164,7 +164,7 @@ jobs:
           echo "$assets"
           ch=latest
           if [[ "$VERSION" == *-* ]]; then ch=${VERSION#*-}; ch=${ch%%.*}; fi
-          a="algorithm-tutor-$VERSION"
+          a="algo-$VERSION"
           missing=0
           for f in "$ch.yml" "$ch-mac.yml" "$ch-linux.yml" \
             "$a-win-x64.exe" "$a-win-x64.exe.blockmap" \

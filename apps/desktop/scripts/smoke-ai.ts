@@ -11,7 +11,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { DEFAULT_SETTINGS, isoNow, MemoryStorage, type ChatEvent } from '@algorithm-tutor/core';
+import { DEFAULT_SETTINGS, isoNow, MemoryStorage, type ChatEvent } from '@algo/core';
 import { FileCatalog } from '../src/main/practice/catalog';
 import { FileWorkspace } from '../src/main/practice/file-workspace';
 import { Practice } from '../src/main/practice/service';

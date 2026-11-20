@@ -11,7 +11,7 @@ tags:
   - "clippings"
 ---
 Binary search halves the range on every step. This text was written for the
-Algorithm Tutor tests; it is not from a real article.
+Algo tests; it is not from a real article.
 
 ![A sorted array with the middle element marked](https://example.com/images/middle.png)
 

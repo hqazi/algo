@@ -20,7 +20,7 @@ import {
   isSkippedName,
   MAX_NOTE_BYTES,
   parseNote,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import {
   IMAGE_FILE,
   LIBRARY_ASSET_PREFIX,

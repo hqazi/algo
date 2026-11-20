@@ -46,7 +46,7 @@ import {
   type TurnContext,
   type TutorBackend,
   type TutorToolContext,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import { McpGateway } from '../mcp/gateway';
 import { McpServer } from '../mcp/server';
 import type { Practice } from '../practice/service';

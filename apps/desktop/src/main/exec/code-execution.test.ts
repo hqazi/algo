@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { RunJob, RunReport } from '@algorithm-tutor/core';
+import type { RunJob, RunReport } from '@algo/core';
 import { STREAM_START, type IpcResult } from '../../shared/ipc';
 import { pullEvent, runtimesView, sandboxResult } from '../../shared/settings';
 import { INSTALL_HELP, registerCodeExecutionHandlers } from '../ipc/handlers/code-execution';

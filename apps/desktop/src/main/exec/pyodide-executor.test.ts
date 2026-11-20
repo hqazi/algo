@@ -14,7 +14,7 @@ import {
   type Problem,
   type RunJob,
   type TestCase,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import { PyodidePool } from '../../exec-host/pool';
 import { poolTransport } from '../../exec-host/pool-transport';
 import { nodeWorkerFactory } from '../../exec-host/testing/node-factory';

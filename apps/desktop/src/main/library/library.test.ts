@@ -20,7 +20,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_NOTE_BYTES } from '@algorithm-tutor/core';
+import { MAX_NOTE_BYTES } from '@algo/core';
 import clipped from '../../../../../packages/core/src/library/fixtures/clipped-default.md?raw';
 import { STREAM_CANCEL, STREAM_START, type IpcResult } from '../../shared/ipc';
 import { IpcRouter } from '../ipc/router';

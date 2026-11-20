@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="docs/assets/logo.svg" width="120" height="120" alt="Algorithm Tutor logo">
+<img src="docs/assets/logo.svg" width="120" height="120" alt="Algo logo">
 
-# Algorithm Tutor
+# Algo
 
 **Practise data structures and algorithms with an AI tutor.**<br>
 It hints, reviews and explains. Real tests decide pass or fail.
@@ -29,10 +29,10 @@ It hints, reviews and explains. Real tests decide pass or fail.
 > [Installation](docs/guide/installation.md) shows the one-time step for each
 > OS.
 
-## Why Algorithm Tutor?
+## Why Algo?
 
 Most practice sites either hand you the answer or leave you alone with a red
-"wrong answer". Algorithm Tutor sits in between: a desktop app with the
+"wrong answer". Algo sits in between: a desktop app with the
 problem, an editor, a test runner and a tutor side by side, that helps you get
 unstuck one step at a time and never takes your word, or the model's, for
 whether a solution works.
@@ -148,7 +148,7 @@ the checks and ground rules. The full [specification](docs/SPEC.md) and the
 
 ## Acknowledgements
 
-Algorithm Tutor is the successor to
+Algo is the successor to
 [`dsa-tutor`](https://github.com/hqazi/dsa-tutor), whose teaching model,
 problems and interface it carries forward. It is built on
 [Electron](https://www.electronjs.org), [React](https://react.dev),

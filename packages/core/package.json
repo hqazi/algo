@@ -1,5 +1,5 @@
 {
-  "name": "@algorithm-tutor/core",
+  "name": "@algo/core",
   "version": "0.0.0",
   "private": true,
   "description": "Pure tutor logic shared by every shell. No Electron, no Node built-ins.",

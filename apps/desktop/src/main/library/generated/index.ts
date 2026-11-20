@@ -15,7 +15,7 @@ import {
   GenerateError,
   type ArticleToSave,
   type TutorBackend,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import { IpcRefusal, type IpcRouter } from '../../ipc/router';
 import type { LibraryService } from '../service';
 

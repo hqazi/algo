@@ -37,7 +37,7 @@ import {
   type Language,
   type RunJob,
   type RunReport,
-} from '@algorithm-tutor/core';
+} from '@algo/core';
 import { cancelled, harnessError, missing, runHarnessBatches } from '../local/batches';
 import { compileError, KILL_SLACK_MS } from '../local/local-executor';
 import { runProcess, type ProcessResult } from '../local/process';
@@ -45,7 +45,7 @@ import { detectRuntime, runtimeEnv, type Runtime, type RuntimeStatus } from '../
 
 export interface ContainerExecutorOptions {
   runtime: Runtime;
-  /** The runner image, e.g. `ghcr.io/hqazi/algorithm-tutor-runner:<app version>`. */
+  /** The runner image, e.g. `ghcr.io/hqazi/algo-runner:<app version>`. */
   image: string;
   /** Where job folders are made (`<data>/cache/container-jobs`). */
   jobsDir: string;
@@ -77,7 +77,7 @@ export interface PullProgress {
 
 /** Docker's default runner image for an app version (built by CI, T19). */
 export function runnerImage(appVersion: string): string {
-  return `ghcr.io/hqazi/algorithm-tutor-runner:${appVersion}`;
+  return `ghcr.io/hqazi/algo-runner:${appVersion}`;
 }
 
 /** `exec` overhead before the first test. */
@@ -121,7 +121,7 @@ export function containerRunArgs(o: {
     '--name',
     o.name,
     '--label',
-    'algorithm-tutor.job=1',
+    'algo.job=1',
     '--pull',
     'never',
     '--rm',
@@ -291,7 +291,7 @@ export class ContainerExecutor implements Executor {
 
     const project = language === 'rust' ? rustProject(job.signature) : goProject(job.signature);
     const id = randomBytes(6).toString('hex');
-    const name = `algorithm-tutor-job-${id}`;
+    const name = `algo-job-${id}`;
     const jobDir = join(this.opts.jobsDir, id);
     const buildMs = this.opts.buildTimeoutMs ?? BUILD_TIMEOUT_MS;
     const perTest = job.timeLimitMs + KILL_SLACK_MS;

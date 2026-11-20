@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog } from 'electron';
-import { APP_NAME } from '@algorithm-tutor/core';
+import { APP_NAME } from '@algo/core';
 import { applyPending } from './data';
 import type { AppPractice } from './practice';
 import { afterReady, beforeReady, startPractice } from './setup';

@@ -116,5 +116,5 @@
   ],
   "additionalProperties": false,
   "$id": "https://github.com/hqazi/algo/blob/main/content/schema/meta.v2.schema.json",
-  "title": "Algorithm Tutor problem meta.json (v2)"
+  "title": "Algo problem meta.json (v2)"
 }

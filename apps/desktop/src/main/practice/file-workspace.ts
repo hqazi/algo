@@ -13,7 +13,7 @@
 import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { checkSlug, SOLUTION_FILES, type Language, type Workspace } from '@algorithm-tutor/core';
+import { checkSlug, SOLUTION_FILES, type Language, type Workspace } from '@algo/core';
 
 /** Largest solution file the app saves or reads (bytes, UTF-8). */
 export const MAX_SOLUTION_BYTES = 200_000;

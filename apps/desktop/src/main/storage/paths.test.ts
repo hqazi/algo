@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { dataPaths, resolveDataDir } from './paths';
 
 describe('resolveDataDir', () => {
-  const userData = resolve('/users/me/AppData/Algorithm Tutor');
+  const userData = resolve('/users/me/AppData/Algo');
 
   it('is userData by default', () => {
     expect(resolveDataDir({ userData })).toBe(userData);
