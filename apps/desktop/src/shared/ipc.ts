@@ -173,6 +173,17 @@ export const invokeChannels = {
   'library:tree': { request: z.undefined(), response: L.treeResponse },
   /** Rescans now (Refresh), then the tree. */
   'library:refresh': { request: z.undefined(), response: L.treeResponse },
+  /**
+   * Opens an article in the reader (T22): its header, body, and per image
+   * reference an asset URL (random token, never a path) or why it is not
+   * shown. Reads the file only; no network. Refused: `not_found`.
+   */
+  'library:article': { request: L.folderRequest, response: L.articleResponse },
+  /** Opens an article's link in the system browser: `https:`, `http:`, `mailto:` only. Refused: `scheme`. */
+  'library:open-link': {
+    request: L.openLinkRequest,
+    response: z.strictObject({ opened: z.boolean() }),
+  },
 
   // ---- updates (T13)
   /** Where the updater is (`unsupported` in development builds). */

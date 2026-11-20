@@ -24,6 +24,7 @@ import {
   countArticles,
   deleteFolderRows,
   listArticles,
+  type ArticleRow,
   type IndexedNote,
 } from './index-store';
 import { FolderUnavailableError, scanFolder } from './scanner';
@@ -223,6 +224,22 @@ export class LibraryService {
     return this.deps.settings.onChange((c) => {
       if (c.changed.includes('library.folders')) fn();
     });
+  }
+
+  /**
+   * An article's row, its folder's path and the folder's other articles
+   * (main only: the reader resolves images and wikilinks with them).
+   */
+  article(id: string): { folderPath: string; row: ArticleRow; siblings: ArticleRow[] } {
+    const rows = this.deps.storage.readSql((db) => listArticles(db));
+    const row = rows.find((r) => r.id === id);
+    const folder = row && this.list().find((f) => f.id === row.folderId);
+    if (!row || !folder) throw new LibraryError('not_found', 'That article is not in the library.');
+    return {
+      folderPath: folder.path,
+      row,
+      siblings: rows.filter((r) => r.folderId === row.folderId),
+    };
   }
 
   /** Absolute paths of the folders, for watching (main only). */

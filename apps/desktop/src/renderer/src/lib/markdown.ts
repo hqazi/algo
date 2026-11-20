@@ -19,7 +19,7 @@ const marked = new Marked({
   },
 });
 
-const ALLOWED_TAGS = [
+export const ALLOWED_TAGS = [
   'p',
   'br',
   'hr',
@@ -47,7 +47,7 @@ const ALLOWED_TAGS = [
   'td',
   'span',
 ];
-const ALLOWED_ATTR = ['href', 'title', 'class', 'align', 'start'];
+export const ALLOWED_ATTR = ['href', 'title', 'class', 'align', 'start'];
 
 let hooked = false;
 function hook() {

@@ -80,6 +80,11 @@ export interface UiOptions {
   preloadPath: string;
   /** In development: the Vite dev server the page is loaded from. */
   devServerUrl?: string | undefined;
+  /**
+   * Serves `tutor-app://app/library-asset/<token>` (Library images, T22);
+   * without it that path is not found.
+   */
+  libraryAssets?: { handles: (url: string) => boolean; serve: (req: Request) => Promise<Response> };
   /** Called with every request the session blocked (checks and logging). */
   onBlocked?: (url: string) => void;
 }
@@ -152,7 +157,11 @@ export function isAllowedRequest(url: string, devServerUrl: string | undefined):
 
 /** Lock down the session the UI runs in. Call once, after ready. */
 export function secureUiSession(ses: Session, opts: UiOptions): void {
-  ses.protocol.handle(APP_SCHEME, (req) => serveUi(req, opts.rendererDir));
+  ses.protocol.handle(APP_SCHEME, (req) =>
+    opts.libraryAssets?.handles(req.url)
+      ? opts.libraryAssets.serve(req)
+      : serveUi(req, opts.rendererDir),
+  );
   ses.webRequest.onBeforeRequest((details, callback) => {
     // Only requests made by pages; the main process's own `net` requests
     // (updates, later) carry no web contents.

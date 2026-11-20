@@ -26,6 +26,7 @@ import { registerIntakeHandlers } from './ipc/handlers/intake';
 import { chatCreateProblem, openIntake, openSets, problemFactory, type AppIntake } from './intake';
 import { IpcRouter } from './ipc/router';
 import { openLibrary, registerLibraryHandlers } from './library';
+import { AssetRegistry, isLibraryAssetRequest, registerReaderHandlers } from './library/assets';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import { SecretStore } from './secrets';
 import { electronCrypto } from './secrets/electron-crypto';
@@ -44,6 +45,13 @@ export interface SetupHooks {
   onBlocked?: (what: string, url: string) => void;
 }
 
+/** The library's folder ids, once the Library is open. */
+let libraryFolders: () => string[] = () => [];
+/** Library images by session token (T22), served by the UI's protocol. */
+const libraryAssets = new AssetRegistry({
+  isLibraryFolder: (id) => libraryFolders().includes(id),
+});
+
 /** Before `app.whenReady()`. */
 export function beforeReady(hooks: SetupHooks = {}): void {
   // Sandbox every renderer, including any a window forgets to configure.
@@ -59,7 +67,13 @@ export function beforeReady(hooks: SetupHooks = {}): void {
 
 /** After `app.whenReady()`: lock down the UI session and start IPC. */
 export function afterReady(ui: UiOptions): IpcRouter {
-  secureUiSession(session.defaultSession, ui);
+  secureUiSession(session.defaultSession, {
+    ...ui,
+    libraryAssets: {
+      handles: isLibraryAssetRequest,
+      serve: (req) => libraryAssets.serve(req),
+    },
+  });
   const router = new IpcRouter(ipcMain, {
     isTrustedUrl: (url) => isTrustedUrl(url, ui),
     onError: (channel, error) => console.error(`ipc ${channel}:`, error),
@@ -223,6 +237,15 @@ export async function startPractice(
     log: (m) => console.warn(m),
   });
   registerLibraryHandlers(router, library, { log: (m) => console.warn(m) });
+  libraryFolders = () => library.paths().map((f) => f.id);
+  registerReaderHandlers(router, library, {
+    assets: libraryAssets,
+    // Only after `externalUrl` allowed the scheme (https, http, mailto).
+    openExternal: async (url) => {
+      await shell.openExternal(url);
+      return true;
+    },
+  });
   registerCodeExecutionHandlers(router, {
     codeExecution: practice.codeExecution,
     openExternal: async (url) => {

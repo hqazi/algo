@@ -13,6 +13,7 @@ export type Route =
   | { name: 'problem'; slug: string }
   | { name: 'progress' }
   | { name: 'settings' }
+  | { name: 'library'; article: string | null }
   | { name: 'not_found'; path: string };
 
 const SLUG = '([a-z0-9]+(?:-[a-z0-9]+)*)';
@@ -24,6 +25,9 @@ export function parse(path: string): Route {
   if (p === '/problems') return { name: 'problems' };
   if (p === '/progress') return { name: 'progress' };
   if (p === '/settings') return { name: 'settings' };
+  if (p === '/library') return { name: 'library', article: null };
+  const lib = /^\/library\/([A-Za-z0-9_-]{1,100})$/.exec(p);
+  if (lib) return { name: 'library', article: lib[1]! };
   const m = new RegExp(`^/p/${SLUG}$`).exec(p);
   if (m) return { name: 'problem', slug: m[1]! };
   return { name: 'not_found', path: p };
@@ -35,6 +39,8 @@ export function href(route: Route): string {
       return '/';
     case 'problem':
       return `/p/${route.slug}`;
+    case 'library':
+      return route.article ? `/library/${route.article}` : '/library';
     case 'not_found':
       return route.path;
     default:

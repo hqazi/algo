@@ -56,6 +56,8 @@ export const INVOKE_CHANNELS = [
   'library:open-folder',
   'library:tree',
   'library:refresh',
+  'library:article',
+  'library:open-link',
   'updates:status',
   'updates:check',
   'updates:download',

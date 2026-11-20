@@ -19,6 +19,7 @@ import { ProblemsPage } from './pages/ProblemsPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { LibraryPage } from './pages/LibraryPage';
 
 function NavLink({
   to,
@@ -138,6 +139,9 @@ export function Shell() {
       case 'settings':
         page = <SettingsPage />;
         break;
+      case 'library':
+        page = <LibraryPage article={route.article} />;
+        break;
       default:
         page = (
           <main className="page">
@@ -180,6 +184,9 @@ export function Shell() {
           </NavLink>
           <NavLink to="/progress" route={route} name="progress">
             Progress
+          </NavLink>
+          <NavLink to="/library" route={route} name="library">
+            Library
           </NavLink>
           <NavLink to="/settings" route={route} name="settings">
             Settings

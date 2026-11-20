@@ -14,13 +14,18 @@ export function Panes({
   panes,
   tab,
   onTab,
+  storageKey = 'pane-sizes',
+  initialSizes = [32, 40, 28],
 }: {
   panes: [Pane, Pane, Pane];
   tab?: string;
   onTab?: (id: string) => void;
+  /** Where the sizes are remembered (each page its own). */
+  storageKey?: string;
+  initialSizes?: [number, number, number];
 }) {
   const narrow = useMedia('(max-width: 899px)');
-  const [sizes, setSizes] = useStored<[number, number, number]>('pane-sizes', [32, 40, 28]);
+  const [sizes, setSizes] = useStored<[number, number, number]>(storageKey, initialSizes);
   const [localTab, setLocalTab] = useState(panes[1].id);
   const active = tab ?? localTab;
   const setTab = onTab ?? setLocalTab;
