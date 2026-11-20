@@ -10,10 +10,13 @@ import { useVersions } from './useVersions';
 
 export function ExplanationList({
   slug,
+  title,
   active,
   onViewed,
 }: {
   slug: string;
+  /** The problem's title, for the viewer's header. */
+  title?: string | undefined;
   active: boolean;
   onViewed?: (marked: boolean) => void;
 }) {
@@ -40,6 +43,7 @@ export function ExplanationList({
         <ExplanationViewer
           key={open}
           slug={slug}
+          title={title}
           version={open}
           onClose={() => setOpen(null)}
           {...(onViewed ? { onViewed } : {})}

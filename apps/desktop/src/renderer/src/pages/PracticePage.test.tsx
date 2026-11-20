@@ -12,6 +12,7 @@ import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
 import { baseHandlers, DETAIL, REPORT, WORKSPACE } from '../test/fixtures';
 import { PracticePage } from './PracticePage';
+import { splitConstraints } from './practice-statement';
 
 // jsdom has no layout; CodeMirror measures text ranges.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -72,7 +73,54 @@ const type = (text: string): void => {
   });
 };
 
+describe('splitConstraints', () => {
+  it('takes the Constraints section out of the statement', () => {
+    const md = 'Intro.\n\n## Examples\n\nx\n\n## Constraints\n\n- 1 <= n\n\n## Notes\n\nA note.\n';
+    expect(splitConstraints(md)).toEqual({
+      body: 'Intro.\n\n## Examples\n\nx\n\n## Notes\n\nA note.\n',
+      constraints: '- 1 <= n',
+    });
+    expect(splitConstraints('A.\n\n## Constraints\n- k > 0\n')).toEqual({
+      body: 'A.\n',
+      constraints: '- k > 0',
+    });
+    expect(splitConstraints('No section.\n')).toEqual({ body: 'No section.\n', constraints: null });
+  });
+});
+
 describe('PracticePage', () => {
+  it('shows the title, pills and a Details block with constraints and the target', async () => {
+    bridge.on('problems:get', () => ({
+      ...DETAIL,
+      statement_md: '# Two Receipts\n\nFind two receipts.\n\n## Constraints\n\n- 2 <= n\n',
+    }));
+    await open();
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Two Receipts');
+    expect(screen.getByText('Easy').className).toContain('ui-badge-easy');
+    expect(screen.getByText('Hash maps & sets')).toBeTruthy();
+    const details = screen.getByRole('region', { name: 'Details' });
+    expect(details.textContent).toContain('2 <= n');
+    expect(details.textContent).toContain('Target time O(n), space O(n)');
+    expect(screen.queryByRole('heading', { name: 'Constraints' })).toBeNull();
+  });
+
+  it('keeps Give up and Reset in the More menu', async () => {
+    const confirm = window.confirm;
+    window.confirm = () => true;
+    try {
+      await open();
+      type('# mine\n');
+      fireEvent.click(screen.getByRole('button', { name: 'More' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Reset' }));
+      await waitFor(() => expect(editorText()).toBe(WORKSPACE.starter));
+      fireEvent.click(screen.getByRole('button', { name: 'More' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Give up' }));
+      expect(screen.getByRole('dialog', { name: 'Give up on this one?' })).toBeTruthy();
+    } finally {
+      window.confirm = confirm;
+    }
+  });
+
   it('shows the statement, the starter code and the tutor (not set up)', async () => {
     await open();
     expect(screen.getByText('Find two receipts.')).toBeTruthy();
@@ -135,7 +183,10 @@ describe('PracticePage', () => {
     expect(await screen.findByText('Solved unaided. Recorded.')).toBeTruthy();
     expect(screen.getByText(/Level up: Hash maps & sets is now learning/)).toBeTruthy();
     expect(screen.getByTestId('problem-status').textContent).toBe('Solved');
-    fireEvent.click(screen.getByRole('button', { name: 'Reference' }));
+    // Give up becomes Reference once the attempt is recorded, in the More menu.
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.queryByRole('menuitem', { name: 'Give up' })).toBeNull();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reference' }));
     expect(await screen.findByText('def ref(): ...')).toBeTruthy();
   });
 
@@ -148,7 +199,9 @@ describe('PracticePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
     expect((await screen.findByTestId('summary')).textContent).toBe('0/1 passed');
     expect(screen.getByTestId('problem-status').textContent).toBe('In progress');
-    expect(screen.getByRole('button', { name: 'Give up' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.getByRole('menuitem', { name: 'Give up' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Reset' })).toBeTruthy();
   });
 
   it("shows the tutor's test run in the results panel", async () => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Ported from dsa-tutor/web/tests/results.test.tsx; values are JSON text now.
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CaseView, ExampleView, ReportView } from '../../../shared/practice';
 import { ResultsPanel } from './ResultsPanel';
@@ -43,7 +43,9 @@ describe('ResultsPanel', () => {
     render(<ResultsPanel report={report} kind="submit" examples={examples} />);
     expect(screen.getByTestId('summary').textContent).toBe('2/5 passed');
     expect(screen.getAllByRole('listitem')).toHaveLength(5);
-    expect(screen.getByText(/2 hidden tests failed/)).toBeTruthy();
+    expect(screen.getByText(/2 hidden tests failed/).textContent).toContain(
+      '(negative numbers and large input)',
+    );
   });
 
   it('shows input, expected, actual and stdout for a failing visible test', () => {
@@ -53,20 +55,46 @@ describe('ResultsPanel', () => {
     expect(row.getByText('nums = [3,3], target = 6')).toBeTruthy();
     expect(row.getByText('[0,1]')).toBeTruthy();
     expect(row.getByText('[0,0]')).toBeTruthy();
+    expect(row.getByText('Got')).toBeTruthy();
     expect(row.getByText('debug line')).toBeTruthy();
+  });
+
+  it('collapses passing tests to one line and opens failing ones', () => {
+    render(<ResultsPanel report={report} kind="run" examples={examples} />);
+    const pass = screen.getByTestId('case-example-1');
+    const fail = screen.getByTestId('case-example-2');
+    const passHead = within(pass).getByRole('button');
+    expect(passHead.getAttribute('aria-expanded')).toBe('false');
+    expect(pass.querySelector('dl')).toBeNull();
+    expect(within(fail).getByRole('button').getAttribute('aria-expanded')).toBe('true');
+    expect(fail.querySelector('dl')).not.toBeNull();
+    fireEvent.click(passHead);
+    expect(passHead.getAttribute('aria-expanded')).toBe('true');
+    expect(within(pass).getByText('Expected')).toBeTruthy();
+    // Hidden tests have nothing to open.
+    expect(within(screen.getByTestId('case-hidden-2')).queryByRole('button')).toBeNull();
+  });
+
+  it('shows the run kind and time in the summary bar', () => {
+    render(<ResultsPanel report={report} kind="submit" examples={examples} />);
+    const bar = screen.getByTestId('summary').parentElement!;
+    expect(bar.textContent).toContain('Submit (all tests)');
+    expect(bar.textContent).toContain('9 ms');
+    expect(bar.className).toContain('summary-fail');
   });
 
   it('fills a passing visible test from the public examples', () => {
     render(<ResultsPanel report={report} kind="run" examples={examples} />);
+    fireEvent.click(within(screen.getByTestId('case-example-1')).getByRole('button'));
     const row = within(screen.getByTestId('case-example-1'));
     expect(row.getByText('nums = [2,7], target = 9')).toBeTruthy();
-    expect(row.queryByText('Actual')).toBeNull();
+    expect(row.queryByText('Got')).toBeNull();
   });
 
   it('shows only category and status for hidden tests', () => {
     render(<ResultsPanel report={report} kind="submit" examples={examples} />);
     const row = screen.getByTestId('case-hidden-2');
-    expect(row.textContent).toContain('Negative Numbers');
+    expect(row.textContent).toContain('Hidden test: negative numbers');
     expect(row.textContent).toContain('Fail');
     expect(row.querySelector('dl')).toBeNull();
     expect(within(screen.getByTestId('case-hidden-3')).getByText('Timeout')).toBeTruthy();

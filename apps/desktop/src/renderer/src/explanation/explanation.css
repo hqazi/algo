@@ -10,8 +10,16 @@
   gap: 0.5rem;
   flex-wrap: wrap;
 }
+/* T30: "Explanation" as a small label over the problem's title. */
+.explanation-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
 .explanation-head h2 {
   margin: 0;
+  font-size: var(--text-lg);
   overflow-wrap: anywhere;
 }
 .explanation-head .spacer {

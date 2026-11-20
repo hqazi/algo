@@ -1,10 +1,15 @@
 /**
- * Per-test results (ported from `dsa-tutor/web`). Visible cases show input,
- * expected, actual and stdout; hidden cases show category and status only (the
- * main process never sends more for them, and the IPC contract refuses more).
+ * Per-test results (ported from `dsa-tutor/web`; restyled in T30, docs/design.md
+ * → Practice). A summary bar stays at the top ("10/11 passed", the run kind
+ * and time). Passing tests are one line each and open on click; failing ones
+ * start open with input, expected and got in a compact grid. Hidden cases show
+ * category and status only (the main process never sends more for them, and
+ * the IPC contract refuses more).
  */
+import { useState } from 'react';
+import { ChevronRight, CircleCheck, CircleX } from 'lucide-react';
 import type { CaseView, ExampleView, ReportView } from '../../../shared/practice';
-import { args, STATUS_LABEL, titleCase, withExamples } from '../lib/format';
+import { args, STATUS_LABEL, withExamples } from '../lib/format';
 
 export interface ResultsProps {
   report: ReportView | null;
@@ -15,74 +20,105 @@ export interface ResultsProps {
   error?: string | null;
 }
 
+/** "negative-numbers" → "negative numbers". */
+function words(category: string): string {
+  return category.replace(/[-_]+/g, ' ').trim();
+}
+
+type VisibleCase = Extract<CaseView, { visibility: 'visible' }>;
+
+function CaseBody({ c }: { c: VisibleCase }) {
+  const failed = c.status !== 'pass';
+  return (
+    <dl className="case-body">
+      {c.input !== undefined && (
+        <>
+          <dt>Input</dt>
+          <dd>
+            <code>{args(c.input)}</code>
+          </dd>
+        </>
+      )}
+      {c.expected !== undefined && (
+        <>
+          <dt>Expected</dt>
+          <dd className={failed ? 'case-expected' : undefined}>
+            <code>{c.expected}</code>
+          </dd>
+        </>
+      )}
+      {c.status === 'fail' && c.actual !== undefined && (
+        <>
+          <dt>Got</dt>
+          <dd className="case-got">
+            <code>{c.actual}</code>
+          </dd>
+        </>
+      )}
+      {c.error_type && (
+        <>
+          <dt>Error</dt>
+          <dd className="case-got">
+            <code>
+              {c.error_type}
+              {c.line ? ` (line ${c.line})` : ''}
+            </code>
+          </dd>
+        </>
+      )}
+      {c.message && (
+        <>
+          <dt>Message</dt>
+          <dd>
+            <pre>{c.message}</pre>
+          </dd>
+        </>
+      )}
+      {c.stdout && (
+        <>
+          <dt>Stdout</dt>
+          <dd>
+            <pre>{c.stdout}</pre>
+          </dd>
+        </>
+      )}
+    </dl>
+  );
+}
+
 function CaseRow({ c }: { c: CaseView }) {
   const hidden = c.visibility === 'hidden';
-  const label = hidden ? `Hidden · ${titleCase(c.category || 'test')}` : c.id;
-  return (
-    <li className={`case case-${c.status}`} data-testid={`case-${c.id}`}>
-      <div className="case-head">
-        <span className={`badge badge-${c.status}`}>{STATUS_LABEL[c.status] ?? c.status}</span>
-        <span className="case-name">{label}</span>
-        {!hidden && c.category && c.category !== 'example' && (
-          <span className="case-cat">{titleCase(c.category)}</span>
-        )}
-        {c.time_ms !== undefined && <span className="case-time">{c.time_ms} ms</span>}
-      </div>
-      {!hidden && (
-        <dl className="case-body">
-          {c.input !== undefined && (
-            <>
-              <dt>Input</dt>
-              <dd>
-                <code>{args(c.input)}</code>
-              </dd>
-            </>
-          )}
-          {c.expected !== undefined && (
-            <>
-              <dt>Expected</dt>
-              <dd>
-                <code>{c.expected}</code>
-              </dd>
-            </>
-          )}
-          {c.status === 'fail' && c.actual !== undefined && (
-            <>
-              <dt>Actual</dt>
-              <dd>
-                <code>{c.actual}</code>
-              </dd>
-            </>
-          )}
-          {c.error_type && (
-            <>
-              <dt>Error</dt>
-              <dd>
-                <code>
-                  {c.error_type}
-                  {c.line ? ` (line ${c.line})` : ''}
-                </code>
-              </dd>
-            </>
-          )}
-          {c.message && (
-            <>
-              <dt>Message</dt>
-              <dd>
-                <pre>{c.message}</pre>
-              </dd>
-            </>
-          )}
-          {c.stdout && (
-            <>
-              <dt>Stdout</dt>
-              <dd>
-                <pre>{c.stdout}</pre>
-              </dd>
-            </>
-          )}
-        </dl>
+  const [open, setOpen] = useState(!hidden && c.status !== 'pass');
+  const label = hidden ? `Hidden test: ${words(c.category || 'test')}` : c.id;
+  const head = (
+    <>
+      {!hidden && <ChevronRight className="case-chevron" size={14} aria-hidden="true" />}
+      <span className={`badge badge-${c.status}`}>{STATUS_LABEL[c.status] ?? c.status}</span>
+      <span className="case-name">{label}</span>
+      {!hidden && c.category && c.category !== 'example' && (
+        <span className="case-cat">{words(c.category)}</span>
       )}
+      {c.visibility === 'visible' && !open && c.input !== undefined && (
+        <code className="case-peek">{args(c.input)}</code>
+      )}
+      {c.time_ms !== undefined && <span className="case-time">{c.time_ms} ms</span>}
+    </>
+  );
+  return (
+    <li className={`case case-${c.status}${open ? ' open' : ''}`} data-testid={`case-${c.id}`}>
+      {hidden ? (
+        <div className="case-head">{head}</div>
+      ) : (
+        <button
+          type="button"
+          className="case-head"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {head}
+        </button>
+      )}
+      {c.visibility === 'visible' && open && <CaseBody c={c} />}
     </li>
   );
 }
@@ -105,17 +141,30 @@ const KIND_TEXT = {
   tutor: 'Run by the tutor',
 };
 
+/** "a, b and c". */
+function list(items: string[]): string {
+  if (items.length <= 1) return items.join('');
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+function seconds(ms: number): string {
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
+}
+
 export function ResultsPanel({ report, kind, examples = [], busy, error }: ResultsProps) {
   if (busy)
     return (
       <section className="results" aria-live="polite">
-        <p className="muted">{BUSY_TEXT[busy]}</p>
+        <p className="results-note muted">
+          <span className="results-spinner" aria-hidden="true" />
+          {BUSY_TEXT[busy]}
+        </p>
       </section>
     );
   if (error)
     return (
       <section className="results" aria-live="polite">
-        <p className="error-text" role="alert">
+        <p className="results-note error-text" role="alert">
           {error}
         </p>
       </section>
@@ -123,22 +172,28 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
   if (!report) {
     return (
       <section className="results" aria-live="polite">
-        <p className="muted">
+        <p className="results-note muted">
           Run checks the visible examples; Submit runs every test, including hidden ones.
         </p>
       </section>
     );
   }
   const cases = withExamples(report.cases, examples);
-  const hiddenFailed = cases.filter((c) => c.visibility === 'hidden' && c.status !== 'pass').length;
+  const hiddenFailed = cases.filter((c) => c.visibility === 'hidden' && c.status !== 'pass');
+  const categories = [...new Set(hiddenFailed.map((c) => words(c.category || 'test')))];
+  const Icon = report.all_passed ? CircleCheck : CircleX;
   return (
     <section className="results" aria-live="polite">
-      <div className={`summary ${report.all_passed ? 'summary-pass' : 'summary-fail'}`}>
+      <div className={`results-summary ${report.all_passed ? 'summary-pass' : 'summary-fail'}`}>
+        <Icon size={16} aria-hidden="true" />
         <strong data-testid="summary">
           {report.passed}/{report.total} passed
         </strong>
-        {kind && <span className="muted"> · {KIND_TEXT[kind]}</span>}
-        {report.all_passed && <span> ✓</span>}
+        {kind && <span className="muted">{KIND_TEXT[kind]}</span>}
+        <span className="spacer" />
+        {report.duration_ms > 0 && (
+          <span className="results-time faint">{seconds(report.duration_ms)}</span>
+        )}
       </div>
       {report.run_error && (
         <div className="run-error" role="alert" data-testid="run-error">
@@ -148,15 +203,18 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
           <pre className="code-block">{report.run_error.message}</pre>
         </div>
       )}
-      {hiddenFailed > 0 && (
-        <p className="muted small">
-          {hiddenFailed} hidden test{hiddenFailed === 1 ? '' : 's'} failed. Hidden tests show their
-          category only; think about which cases that category covers.
+      {hiddenFailed.length > 0 && (
+        <p className="results-hidden muted small">
+          {hiddenFailed.length === 1
+            ? '1 hidden test failed'
+            : `${hiddenFailed.length} hidden tests failed`}{' '}
+          ({list(categories)}). Hidden tests show their category only; think about which cases that
+          covers.
         </p>
       )}
       <ul className="cases">
         {cases.map((c) => (
-          <CaseRow key={c.id} c={c} />
+          <CaseRow key={`${c.id}:${c.status}`} c={c} />
         ))}
       </ul>
     </section>

@@ -2,8 +2,10 @@
  * One chat message: user text as plain text; assistant text as sanitised
  * Markdown (lib/markdown: raw HTML dropped, then DOMPurify) with tool chips
  * in the order they ran, and an error line when the turn failed. Ported from
- * `dsa-tutor/web/src/chat/MessageView.tsx`.
+ * `dsa-tutor/web/src/chat/MessageView.tsx`; restyled in T30 (user messages as
+ * accent-subtle bubbles, tutor messages unboxed, faint chips).
  */
+import { Check, LoaderCircle, X } from 'lucide-react';
 import { Markdown } from '../components/Markdown';
 import type { ToolChipView } from '../../../shared/tutor';
 import type { Part, ViewMessage } from './store';
@@ -28,7 +30,7 @@ const ERROR_HELP: Record<string, string> = {
 
 function Chip({ chip }: { chip: ToolChipView }) {
   const state = chip.ok === null ? 'running' : chip.ok ? 'ok' : 'fail';
-  const icon = chip.ok === null ? '…' : chip.ok ? '✓' : '✗';
+  const Icon = chip.ok === null ? LoaderCircle : chip.ok ? Check : X;
   return (
     <li
       className={`chip chip-${state}`}
@@ -36,9 +38,7 @@ function Chip({ chip }: { chip: ToolChipView }) {
       data-testid="tool-chip"
       data-state={state}
     >
-      <span className="chip-icon" aria-hidden="true">
-        {icon}
-      </span>
+      <Icon className="chip-icon" size={12} strokeWidth={2.25} aria-hidden="true" />
       <span className="chip-text">{chip.summary}</span>
       {state === 'fail' && <span className="sr-only"> (failed)</span>}
     </li>
@@ -65,7 +65,7 @@ export function MessageView({ message, onRetry }: { message: ViewMessage; onRetr
     return (
       <div className="msg msg-user" data-testid="msg-user">
         {message.action && (
-          <span className="pill msg-action">{ACTION_LABEL[message.action] ?? message.action}</span>
+          <span className="msg-action">{ACTION_LABEL[message.action] ?? message.action}</span>
         )}
         <div className="msg-text">{message.text}</div>
       </div>
@@ -101,7 +101,7 @@ export function MessageView({ message, onRetry }: { message: ViewMessage; onRetr
             {ERROR_HELP[err.kind] && <span className="muted"> {ERROR_HELP[err.kind]}</span>}
             {onRetry && (
               <div>
-                <button type="button" className="small-button" onClick={onRetry}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>
                   Try again
                 </button>
               </div>

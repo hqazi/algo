@@ -70,7 +70,7 @@ try {
   check('the starter fails Run with visible results', /^0\/\d+ passed$/.test(first ?? ''), first);
   check(
     'Run shows only visible tests',
-    (await page.locator('.case').count()) > 0 && (await page.getByText(/^Hidden ·/).count()) === 0,
+    (await page.locator('.case').count()) > 0 && (await page.getByText(/^Hidden test:/).count()) === 0,
   );
   await shot(page, '1-starter-run');
 
@@ -103,7 +103,7 @@ try {
   );
   check(
     'hidden tests appear by category after Submit',
-    (await page.getByText(/^Hidden ·/).count()) > 0,
+    (await page.getByText(/^Hidden test:/).count()) > 0,
   );
   check('the file on disk is the solution', readFileSync(file, 'utf8') === reference);
   await shot(page, '2-submitted');

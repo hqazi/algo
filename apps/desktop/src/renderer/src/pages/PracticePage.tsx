@@ -6,6 +6,7 @@
  * `show_results` events show in the results panel.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 import type {
   LanguageOption,
   ProblemDetail,
@@ -14,15 +15,19 @@ import type {
 } from '../../../shared/practice';
 import { ChatPane } from '../chat/ChatPane';
 import { useChatStore, useTutorStatus } from '../chat/store';
+import { windowPlatform } from '../components/app-frame';
 import { Editor } from '../components/Editor';
 import { ExplanationList } from '../explanation/ExplanationList';
 import { Markdown } from '../components/Markdown';
 import { Panes } from '../components/Panes';
 import { ResultsPanel } from '../components/ResultsPanel';
+import { Badge, Button, Menu, Select, type BadgeTone, type MenuItem } from '../components/ui';
 import { invoke, isRefusal, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { args, PROBLEM_STATUS_LABEL, titleCase } from '../lib/format';
 import { hasExamplesSection, statementForApp } from '../lib/markdown';
+import { splitConstraints } from './practice-statement';
+import './practice.css';
 
 type Busy = 'run' | 'submit' | 'give_up' | null;
 type SaveState = 'saved' | 'unsaved' | 'saving' | 'error';
@@ -30,6 +35,13 @@ type SaveState = 'saved' | 'unsaved' | 'saving' | 'error';
 export const AUTOSAVE_MS = 700;
 
 const LANGUAGE_LABEL = { python: 'Python', rust: 'Rust', go: 'Go' } as const;
+
+const STATUS_TONE: Record<ProblemDetail['status'], BadgeTone> = {
+  new: 'neutral',
+  active: 'warn',
+  solved: 'pass',
+  gave_up: 'fail',
+};
 
 export function PracticePage({ slug }: { slug: string }) {
   const { notify, refresh, topicName, settings } = useApp();
@@ -384,18 +396,23 @@ export function PracticePage({ slug }: { slug: string }) {
   // The leading "# Title" is shown as plain text above the tags.
   const full = statementForApp(detail.statement_md);
   const heading = /^\s*#\s+(.+)\n/.exec(full);
-  const statement = heading ? full.slice(heading[0].length) : full;
+  const { body: statement, constraints } = splitConstraints(
+    heading ? full.slice(heading[0].length) : full,
+  );
+  const title = meta.title || heading?.[1] || slug;
 
   const problemPane = (
     <div className="statement">
-      <h1 className="statement-title">{meta.title || heading?.[1]}</h1>
+      <h1 className="statement-title">{title}</h1>
       <div className="statement-meta">
-        <span className={`pill diff-${meta.difficulty}`}>{titleCase(meta.difficulty)}</span>
-        <span className="pill">{topicName(meta.topic)}</span>
-        <span className={`pill status-${detail.status}`} data-testid="problem-status">
-          {PROBLEM_STATUS_LABEL[detail.status]}
+        <Badge tone={meta.difficulty} dot>
+          {titleCase(meta.difficulty)}
+        </Badge>
+        <Badge>{topicName(meta.topic)}</Badge>
+        <span data-testid="problem-status" className="statement-status">
+          <Badge tone={STATUS_TONE[detail.status]}>{PROBLEM_STATUS_LABEL[detail.status]}</Badge>
         </span>
-        {meta.source !== 'curated' && <span className="pill">{titleCase(meta.source)}</span>}
+        {meta.source !== 'curated' && <Badge tone="accent">{titleCase(meta.source)}</Badge>}
       </div>
       {origin && (
         <p className="origin small muted" data-testid="origin">
@@ -410,9 +427,9 @@ export function PracticePage({ slug }: { slug: string }) {
           )}
         </p>
       )}
-      <Markdown source={statement} />
+      <Markdown source={statement} className="statement-body" />
       {!hasExamplesSection(statement) && detail.examples.length > 0 && (
-        <section>
+        <section className="statement-body md">
           <h2>Examples</h2>
           {detail.examples.map((ex) => (
             <div key={ex.id} className="example">
@@ -424,10 +441,17 @@ export function PracticePage({ slug }: { slug: string }) {
           ))}
         </section>
       )}
-      <p className="small muted">
-        Target: time {meta.expected_complexity.time}, space {meta.expected_complexity.space}
-      </p>
-      <ExplanationList slug={slug} active={detail.status === 'active'} />
+      <section className="statement-details" aria-labelledby="details-title">
+        <h2 className="section-label" id="details-title">
+          Details
+        </h2>
+        {constraints && <Markdown source={constraints} className="details-constraints" />}
+        <p className="details-target">
+          <span className="muted">Target</span> time <code>{meta.expected_complexity.time}</code>,
+          space <code>{meta.expected_complexity.space}</code>
+        </p>
+      </section>
+      <ExplanationList slug={slug} title={title} active={detail.status === 'active'} />
     </div>
   );
 
@@ -438,29 +462,36 @@ export function PracticePage({ slug }: { slug: string }) {
     error: 'Not saved',
   }[saveState];
 
+  const mac = windowPlatform() === 'mac';
+  const moreItems: MenuItem[] = [
+    detail.attempt_recorded
+      ? {
+          label: 'Reference',
+          title: 'Show the reference solution',
+          onSelect: () => void showReference(),
+        }
+      : {
+          label: 'Give up',
+          title: 'Record the attempt as gave up and show the reference solution',
+          onSelect: () => setGiveUpOpen(true),
+          disabled: !!busy,
+          danger: true,
+        },
+    {
+      label: 'Reset',
+      title: 'Replace your code with the starter',
+      onSelect: resetToStarter,
+      disabled: !!busy,
+    },
+  ];
+
   // The editor toolbar sits in the Code pane's header (T29).
   const codeActions = (
     <>
-      <button
-        type="button"
-        onClick={() => void execute('run')}
-        disabled={!!busy}
-        title="Run visible tests (Ctrl/Cmd+Enter)"
-      >
-        Run
-      </button>
-      <button
-        type="button"
-        className="primary"
-        onClick={() => void execute('submit')}
-        disabled={!!busy}
-        title="Run all tests and record when they pass (Ctrl/Cmd+Shift+Enter)"
-      >
-        Submit
-      </button>
       {languages.length > 1 && (
-        <select
+        <Select
           aria-label="Language"
+          wrapperClassName="language-select"
           value={detail.language}
           disabled={!!busy}
           onChange={(e) => void changeLanguage(e.target.value as ProblemDetail['language'])}
@@ -477,7 +508,7 @@ export function PracticePage({ slug }: { slug: string }) {
               {l.available ? '' : ' (not installed)'}
             </option>
           ))}
-        </select>
+        </Select>
       )}
       <span
         className={`save-state save-${saveState}`}
@@ -487,23 +518,26 @@ export function PracticePage({ slug }: { slug: string }) {
         {saveLabel}
       </span>
       <span className="spacer" />
-      {detail.attempt_recorded ? (
-        <button type="button" onClick={() => void showReference()}>
-          Reference
-        </button>
-      ) : (
-        <button type="button" onClick={() => setGiveUpOpen(true)} disabled={!!busy}>
-          Give up
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={resetToStarter}
+      <Button
+        size="sm"
+        className="run-button"
+        icon={<Play size={14} aria-hidden="true" />}
+        onClick={() => void execute('run')}
         disabled={!!busy}
-        title="Replace your code with the starter"
+        title={`Run the visible tests (${mac ? '⌘Enter' : 'Ctrl+Enter'})`}
       >
-        Reset
-      </button>
+        Run
+      </Button>
+      <Button
+        size="sm"
+        variant="primary"
+        onClick={() => void execute('submit')}
+        disabled={!!busy}
+        title={`Run all tests and record the attempt when they pass (${mac ? '⇧⌘Enter' : 'Ctrl+Shift+Enter'})`}
+      >
+        Submit
+      </Button>
+      <Menu label="More" items={moreItems} triggerVariant="icon" />
     </>
   );
 

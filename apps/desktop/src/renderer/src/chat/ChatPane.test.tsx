@@ -12,7 +12,7 @@ import { withFrameCsp } from '../explanation/sandbox';
 import { ExplanationList } from '../explanation/ExplanationList';
 import { CHAT_FIXTURES, RUN_REPORT, SLUG } from '../test/chat-fixtures';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
-import { baseHandlers, TUTOR_OFF, TUTOR_ON } from '../test/fixtures';
+import { baseHandlers, DETAIL, TUTOR_OFF, TUTOR_ON } from '../test/fixtures';
 import { ChatEffects } from './ChatEffects';
 import { ChatPane } from './ChatPane';
 import {
@@ -84,8 +84,8 @@ describe('ChatPane with recorded turns', () => {
     await play('what-next');
     expect(lastStream().request).toEqual({ thread: HOME, text: 'What should I practise next?' });
     expect(screen.getAllByTestId('tool-chip').map((c) => c.textContent)).toEqual([
-      '✓Next: pair-with-target',
-      '✓Opened pair-with-target',
+      'Next: pair-with-target',
+      'Opened pair-with-target',
     ]);
     expect(window.location.hash).toBe(`#/p/${SLUG}`);
     expect(store.follow).toEqual({ from: HOME, to: SLUG });
@@ -112,8 +112,8 @@ describe('ChatPane with recorded turns', () => {
     expect(within(assistant).getByText('click').getAttribute('href')).toBeNull();
     expect((window as unknown as { __pwned?: number }).__pwned).toBeUndefined();
     expect(screen.getAllByTestId('tool-chip').map((c) => c.textContent)).toEqual([
-      '✓Read your code',
-      '✓Hint level 1 of 4',
+      'Read your code',
+      'Hint level 1 of 4',
     ]);
   });
 
@@ -123,7 +123,9 @@ describe('ChatPane with recorded turns', () => {
     await play('run-tests');
     const shown = ui.find((e) => e.action === 'show_results');
     expect(shown).toMatchObject({ slug: SLUG, report: { passed: 0, total: 10 } });
-    expect(screen.getByTestId('tool-chip').textContent).toBe('✓0/10 passed');
+    const chip = screen.getByTestId('tool-chip');
+    expect(chip.textContent).toBe('0/10 passed');
+    expect(chip.getAttribute('data-state')).toBe('ok');
     expect(log().getByText('Not yet: some cases fail.')).toBeTruthy();
   });
 
@@ -146,11 +148,16 @@ describe('ChatPane with recorded turns', () => {
       '<!doctype html><html><head><title>x</title></head><body><h1>Two Receipts</h1></body></html>';
     bridge
       .on('explanations:page', ({ slug }) => ({ slug, version: '20261119T100000000Z', html }))
-      .on('explanations:viewed', ({ slug }) => ({ slug, attempt_marked_explained: true }));
+      .on('explanations:viewed', ({ slug }) => ({ slug, attempt_marked_explained: true }))
+      .on('problems:get', () => DETAIL);
     setup();
     fireEvent.click(await screen.findByRole('button', { name: 'Explain' }));
     await play('explain');
     const frame = await screen.findByTitle(`Explanation for ${SLUG}`);
+    // The header names the problem by its title, not its slug.
+    expect((await screen.findByRole('heading', { name: 'Two Receipts', level: 2 })).id).toBe(
+      'expl-title',
+    );
     expect(frame.getAttribute('sandbox')).toBe('');
     expect(frame.getAttribute('srcdoc')).toBe(withFrameCsp(html));
     await waitFor(() => expect(bridge.channels()).toContain('explanations:viewed'));
