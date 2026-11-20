@@ -1,0 +1,60 @@
+[
+  {
+    "match": "next hint",
+    "steps": [
+      { "tool": "read_solution", "input": { "slug": "$context.slug" } },
+      { "tool": "take_hint", "input": { "slug": "$context.slug" } },
+      {
+        "text": "Your window **starts over** whenever it meets a repeat, so it forgets characters that could still belong to the answer.\n\nTry `\"dvdf\"` by hand. When the second `d` arrives, the best window is `vdf`, not `df`. Where should the new window **start**, and what would you need to remember to jump there in one step?"
+      }
+    ]
+  },
+  {
+    "match": "explain this problem",
+    "steps": [
+      {
+        "tool": "render_explanation",
+        "input": {
+          "content": {
+            "slug": "$context.slug",
+            "plain_words": "Find the longest run of **consecutive** characters in which no character appears twice, and return its length.",
+            "intuition": "Keep a window `[start, i]` with no repeats. Each new character either extends it, or repeats something inside it: then the window must start just after that earlier copy. Remember where you last saw each character and the start can **jump** there instead of creeping forward.",
+            "brute_force": {
+              "idea": "Check every substring and keep the longest one with no repeats.",
+              "time": "O(n^3)",
+              "space": "O(n)"
+            },
+            "optimal": {
+              "idea": "Sliding window with a map from character to its last index.",
+              "time": "O(n)",
+              "space": "O(min(n, alphabet))"
+            },
+            "trace": "For `\"abba\"`:\n\n1. `a` at 0: window `a`, best 1.\n2. `b` at 1: window `ab`, best 2.\n3. `b` at 2: last `b` is at 1, so start = 2. Window `b`.\n4. `a` at 3: last `a` is at 0, **before** start, so the window stays `ba`. Best 2.",
+            "complexity": {
+              "time": "O(n)",
+              "space": "O(min(n, alphabet))",
+              "why": "Each index is visited once and `start` only moves forward; the map holds at most one entry per distinct character."
+            },
+            "solution": "def longest_distinct(s):\n    last = {}\n    start = 0\n    best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n",
+            "pitfalls": [
+              "Moving `start` backwards when the earlier copy is already outside the window (`\"abba\"`).",
+              "Clearing the whole window on a repeat: `\"dvdf\"` then answers 2 instead of 3.",
+              "Forgetting the empty string."
+            ]
+          }
+        }
+      },
+      { "text": "I opened an explanation with a trace and the pitfalls to watch for." }
+    ]
+  },
+  {
+    "match": "sliding window",
+    "steps": [
+      { "tool": "read_article_section", "input": { "heading": "Shrinking the window" } },
+      {
+        "text": "The window is valid as long as it has no repeats. When the new character `c` is already inside it, every window that still contains the old `c` is invalid, so `start` can jump straight past it.\n\nThat is why each index enters and leaves the window **at most once**: `end` moves right `n` times and `start` only ever moves right too, so the whole scan is **O(n)**, even though there is a loop inside a loop.\n\nWant a short problem to try it on?"
+      }
+    ]
+  },
+  [{ "text": "This is the screenshot tutor. It has no script for this message." }]
+]

@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import {
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -46,7 +47,9 @@ const write = (rel: string, text: string): void => {
 };
 
 beforeEach(() => {
-  base = mkdtempSync(join(tmpdir(), 'tutor-library-'));
+  // The real path: the library stores folders resolved (macOS /var → /private/var,
+  // Windows 8.3 short names expanded).
+  base = realpathSync(mkdtempSync(join(tmpdir(), 'tutor-library-')));
   vault = join(base, 'Vault');
   outside = join(base, 'Elsewhere');
   mkdirSync(vault);

@@ -150,7 +150,7 @@ export const sandboxResult = z.strictObject({
     z.strictObject({ language: z.enum(['rust', 'go']), ok: z.boolean(), message: z.string() }),
   ),
 });
-/** README sections the How to install → links open (fixed URLs; the renderer names a topic). */
+/** Install guide sections the How to install → links open (fixed URLs; the renderer names a topic). */
 export const installHelpRequest = z.strictObject({ topic: z.enum(['container', 'toolchains']) });
 
 export const profileUpdate = z.strictObject({

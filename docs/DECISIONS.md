@@ -1524,3 +1524,27 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
 - The hostile vault is built at run time (`main/testing/hostile-vault.ts`)
   rather than committed, so the symlink out and the file outside the vault
   are real on every OS.
+
+**D-45 Docs: the README is a front page, the user guide lives in `docs/guide/`**
+(2026-11-20, T27)
+
+- The README had grown to 360 lines of install, sandbox and troubleshooting
+  detail and did not mention the Library. It is now a front page (logo,
+  features, screenshots, quick start, links); the detail moved, unchanged
+  where still true, to `docs/guide/*.md`. Settings → Code execution's
+  **How to install →** links now open `docs/guide/code-execution.md`
+  (`GUIDE_URL`), whose headings keep the old anchors
+  (`#optional-a-container-sandbox`, `#installing-rust-and-go`). Builds
+  already released link to the README's old anchors and land at the top of
+  the README, which links to the guide.
+- New links use `github.com/hqazi/algo`, the repository's current name.
+  `electron-builder.yml` (`publish.repo`), the runner image name
+  (`ghcr.io/hqazi/algorithm-tutor-runner`) and the schema `$id`s keep
+  `algorithm-tutor`: changing them changes where installed apps look for
+  updates and images, which is a release decision, not a docs one. GitHub's
+  redirect covers them while no new repository takes the old name.
+- Screenshots are generated (`npm run screenshots`) from the built app and a
+  scripted tutor, so they can be retaken after UI changes.
+- Rejected: a docs site generator (VitePress, Docusaurus). Plain Markdown
+  renders on GitHub with no build or hosting; revisit if the guide grows.
+

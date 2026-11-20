@@ -255,7 +255,7 @@ describe('IPC', () => {
     expect((await call('exec:test', { runtime: 'local' })).ok).toBe(false);
   });
 
-  it('exec:install-help opens only the fixed README sections', async () => {
+  it('exec:install-help opens only the fixed install guide sections', async () => {
     const { call, opened } = setup();
     expect(await call('exec:install-help', { topic: 'container' })).toEqual({
       ok: true,

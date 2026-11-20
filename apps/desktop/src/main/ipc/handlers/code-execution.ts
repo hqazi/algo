@@ -1,16 +1,17 @@
 /**
  * Settings → Code execution over IPC (T18, SPEC §6.5): detection (with
- * Recheck), Pull / Update of the runner image, Test sandbox, and the README
- * links. The renderer names a topic, never a URL.
+ * Recheck), Pull / Update of the runner image, Test sandbox, and the
+ * install guide links. The renderer names a topic, never a URL.
  */
 import type { CodeExecution } from '../../exec/code-execution';
 import type { IpcRouter } from '../router';
 
-export const README_URL = 'https://github.com/hqazi/algorithm-tutor#';
-/** README headings (T20 owns them): "Optional: a container sandbox", "Installing Rust and Go". */
+/** The user guide page on code execution (`docs/guide/code-execution.md`). */
+export const GUIDE_URL = 'https://github.com/hqazi/algo/blob/main/docs/guide/code-execution.md#';
+/** Its headings: "Optional: a container sandbox", "Installing Rust and Go". */
 export const INSTALL_HELP = {
-  container: `${README_URL}optional-a-container-sandbox`,
-  toolchains: `${README_URL}installing-rust-and-go`,
+  container: `${GUIDE_URL}optional-a-container-sandbox`,
+  toolchains: `${GUIDE_URL}installing-rust-and-go`,
 } as const;
 
 export interface CodeExecutionHandlerDeps {

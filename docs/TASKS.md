@@ -77,6 +77,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | done |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | done |
 | T26 | Library security check and end-to-end test | v3 | 2d | T23, T24 | done |
+| T27 | README, user guide, logo and screenshots | polish | 1d | T26 | done |
 
 ## Order
 
@@ -1900,3 +1901,58 @@ tests.
   untested. `npm run package:dir` was not re-run to confirm the new
   exclusions. Selections are made with a DOM `Range` plus a `mouseup`, not a
   real mouse drag.
+
+---
+
+## Polish
+
+### T27 — README, user guide, logo and screenshots
+
+- Milestone: polish
+- Size: 1d
+- Depends on: T26
+- Spec: §8, §15 (documented, not changed)
+- Owns: `README.md`, `docs/README.md`, `docs/guide/`, `docs/architecture.md`, `docs/assets/`, `CONTRIBUTING.md`, `SECURITY.md`, `.github/ISSUE_TEMPLATE/`, `apps/desktop/build/icon.png`, `apps/desktop/e2e/screenshots.ts`
+
+**Goal.** A front page and docs that read like a finished open-source
+project, covering v3.
+
+**Acceptance.**
+- [x] README is a front page: logo, badges, screenshot, features (including the Library), quick start, docs index, development, acknowledgements.
+- [x] The user guide in `docs/guide/` holds what the README used to (install, first run, tutor, data and privacy, troubleshooting) plus a Library page and a code execution page.
+- [x] Settings → Code execution's install links point at `docs/guide/code-execution.md` headings; a test checks them.
+- [x] Every relative link and anchor in the README and docs resolves (`scripts/docs-links.test.ts`).
+- [x] Screenshots come from the built app (`npm run screenshots`), not mock-ups.
+
+**Notes.** (2026-11-20)
+- **Built.** New logo (`docs/assets/logo.svg`; the app icon
+  `apps/desktop/build/icon.png` is rendered from it), a social preview card
+  (`docs/assets/social-preview.png`, to upload in the repository's
+  Settings → General → Social preview), five screenshots from
+  `e2e/screenshots.ts` with a scripted tutor (`e2e/fake-tutor-screens.json`).
+  README rewritten as a front page; the long install, sandbox and
+  troubleshooting sections moved to `docs/guide/` (seven pages, one new for
+  the Library); `docs/architecture.md` (Mermaid diagrams), `docs/README.md`
+  index, `CONTRIBUTING.md`, `SECURITY.md`, issue forms. CHANGELOG lists the
+  Library. Links use the repository's current name, `hqazi/algo` (D-45).
+- **Found while taking screenshots, fixed.** The Library chat composer
+  squeezed its text box to a few characters beside **Make a problem from
+  this** (`article-chat.css`: the text box gets its own row).
+  `longest-distinct` had no test for the classic "start the window over on
+  a repeat" bug, which passed all ten tests; added hidden test `dvdf`
+  (category "repeat inside the window").
+  CI on `main` was red on macOS and Windows since the T26 merge:
+  `library.test.ts` compared the stored folder with the temp path, but the
+  library stores the real path (`/private/var/...`, Windows long names);
+  the test now resolves its temp folder first (test-only change).
+- **Wiring outside Owns.** `code-execution.ts` (`GUIDE_URL`),
+  `install-help.test.ts`, comments in `settings.ts`, `ipc.ts`,
+  `SettingsCodeExecution.tsx`, `code-execution.test.ts`, `library.test.ts`;
+  `package.json`
+  scripts `screenshots`; `content/problems/sliding-window/longest-distinct/tests.json`.
+- **Not done.** Packaging config, the updater and the runner image still
+  name `hqazi/algorithm-tutor` (they work through GitHub's redirect; D-45).
+  Screenshots are 1x (1440×880): Playwright's Electron pages ignored both
+  `--force-device-scale-factor` and a CDP device-scale override. The new icon
+  was not checked in a packaged build (`npm run package:dir` not run). The
+  README was not previewed on GitHub itself.

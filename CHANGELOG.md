@@ -28,3 +28,9 @@ First version of the desktop app, the successor to
   backups) and updates. Every setting applies without a restart.
 - Rust and Go (v2 preview): with your own `cargo` and `go`, or in a Docker
   or Podman container.
+- The Library (v3): read Markdown folders or an Obsidian vault offline, with
+  local and linked images (downloaded once, safely, and cached), chats tied
+  to passages, problems made from a passage, and articles written by the
+  tutor.
+- A new logo and app icon; the README is a front page and the user guide
+  lives in [`docs/guide/`](docs/guide/installation.md).
