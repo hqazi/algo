@@ -115,6 +115,6 @@
     "languages"
   ],
   "additionalProperties": false,
-  "$id": "https://github.com/hqazi/algorithm-tutor/blob/main/content/schema/meta.v2.schema.json",
+  "$id": "https://github.com/hqazi/algo/blob/main/content/schema/meta.v2.schema.json",
   "title": "Algorithm Tutor problem meta.json (v2)"
 }

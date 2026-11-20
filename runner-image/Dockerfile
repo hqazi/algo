@@ -35,7 +35,7 @@ ENV PATH=/usr/local/cargo/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/
 # Fails the build if a toolchain is missing.
 RUN python3 --version && cargo --version && rustc --version && go version
 
-LABEL org.opencontainers.image.source="https://github.com/hqazi/algorithm-tutor" \
+LABEL org.opencontainers.image.source="https://github.com/hqazi/algo" \
       org.opencontainers.image.description="Algorithm Tutor runner: Python, Rust and Go for the container sandbox" \
       org.opencontainers.image.licenses="Apache-2.0"
 

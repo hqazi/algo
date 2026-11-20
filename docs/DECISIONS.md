@@ -1537,12 +1537,19 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   (`#optional-a-container-sandbox`, `#installing-rust-and-go`). Builds
   already released link to the README's old anchors and land at the top of
   the README, which links to the guide.
-- New links use `github.com/hqazi/algo`, the repository's current name.
-  `electron-builder.yml` (`publish.repo`), the runner image name
-  (`ghcr.io/hqazi/algorithm-tutor-runner`) and the schema `$id`s keep
-  `algorithm-tutor`: changing them changes where installed apps look for
-  updates and images, which is a release decision, not a docs one. GitHub's
-  redirect covers them while no new repository takes the old name.
+- The repository is `hqazi/algo` (the owner renamed it; GitHub redirects
+  the old `hqazi/algorithm-tutor`). Every reference to the repository uses
+  the new name: links, `electron-builder.yml` (`publish.repo`, so installed
+  apps look for updates there), the package `repository`/`homepage`, the
+  `.deb` maintainer, the runner image's `image.source` label and the schema
+  `$id`s. Builds already out still ask `hqazi/algorithm-tutor` for updates
+  and reach `hqazi/algo` through the redirect, which holds as long as no new
+  repository takes the old name.
+- Kept: the product name **Algorithm Tutor**, the executable and installer
+  names (`algorithm-tutor-<version>-...`), the app id, the data folder and
+  the runner image `ghcr.io/hqazi/algorithm-tutor-runner`. They name the
+  app, not the repository; renaming them would move users' data or break
+  image pulls for released builds.
 - Screenshots are generated (`npm run screenshots`) from the built app and a
   scripted tutor, so they can be retaken after UI changes.
 - Rejected: a docs site generator (VitePress, Docusaurus). Plain Markdown

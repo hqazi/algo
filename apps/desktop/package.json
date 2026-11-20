@@ -5,9 +5,9 @@
   "description": "Algorithm Tutor desktop app (Electron).",
   "author": {
     "name": "Algorithm Tutor authors",
-    "url": "https://github.com/hqazi/algorithm-tutor"
+    "url": "https://github.com/hqazi/algo"
   },
-  "homepage": "https://github.com/hqazi/algorithm-tutor",
+  "homepage": "https://github.com/hqazi/algo",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./out/main/index.js",

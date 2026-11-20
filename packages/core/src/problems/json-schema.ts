@@ -9,7 +9,7 @@
 import { z } from 'zod';
 import { metaSchema, testsFileSchema } from './schema';
 
-const BASE_ID = 'https://github.com/hqazi/algorithm-tutor/blob/main/content/schema/';
+const BASE_ID = 'https://github.com/hqazi/algo/blob/main/content/schema/';
 
 export const SCHEMA_FILES = {
   'meta.v2.schema.json': { schema: metaSchema, title: 'Algorithm Tutor problem meta.json (v2)' },

@@ -39,7 +39,7 @@ extraResources:
 publish:
   provider: github
   owner: hqazi
-  repo: algorithm-tutor
+  repo: algo
   # The workflow uploads to a draft; a maintainer publishes it (ticking
   # "pre-release" for a beta tag).
   releaseType: draft
@@ -74,7 +74,7 @@ linux:
   synopsis: Practise data structures and algorithms with an AI tutor
   description: Practise data structures and algorithms with an AI tutor.
   syncDesktopName: true
-  maintainer: Algorithm Tutor <https://github.com/hqazi/algorithm-tutor>
+  maintainer: Algorithm Tutor <https://github.com/hqazi/algo>
   target:
     - target: AppImage
       arch: [x64]

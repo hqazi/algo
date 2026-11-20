@@ -1934,7 +1934,7 @@ project, covering v3.
   troubleshooting sections moved to `docs/guide/` (seven pages, one new for
   the Library); `docs/architecture.md` (Mermaid diagrams), `docs/README.md`
   index, `CONTRIBUTING.md`, `SECURITY.md`, issue forms. CHANGELOG lists the
-  Library. Links use the repository's current name, `hqazi/algo` (D-45).
+  Library. Links use the repository's name, `hqazi/algo` (D-45).
 - **Found while taking screenshots, fixed.** The Library chat composer
   squeezed its text box to a few characters beside **Make a problem from
   this** (`article-chat.css`: the text box gets its own row).
@@ -1950,9 +1950,10 @@ project, covering v3.
   `SettingsCodeExecution.tsx`, `code-execution.test.ts`, `library.test.ts`;
   `package.json`
   scripts `screenshots`; `content/problems/sliding-window/longest-distinct/tests.json`.
-- **Not done.** Packaging config, the updater and the runner image still
-  name `hqazi/algorithm-tutor` (they work through GitHub's redirect; D-45).
-  Screenshots are 1x (1440×880): Playwright's Electron pages ignored both
+- **Repository name.** Every reference to the repository is now
+  `hqazi/algo` (D-45), including `publish.repo` for updates and the runner
+  image's source label; `settings.e2e.ts` expects the guide URL.
+- **Not done.** Screenshots are 1x (1440×880): Playwright's Electron pages ignored both
   `--force-device-scale-factor` and a CDP device-scale override. The new icon
   was not checked in a packaged build (`npm run package:dir` not run). The
   README was not previewed on GitHub itself.
