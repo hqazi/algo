@@ -37,6 +37,8 @@ const LICENCES: { name: string; licence: string; note?: string }[] = [
   { name: 'marked', licence: 'MIT' },
   { name: 'DOMPurify', licence: 'MPL-2.0 or Apache-2.0' },
   { name: 'zod, fflate', licence: 'MIT' },
+  { name: 'Inter and JetBrains Mono (fonts)', licence: 'OFL-1.1' },
+  { name: 'Lucide icons (lucide-react)', licence: 'ISC', note: 'some icons from Feather, MIT' },
 ];
 
 /** Keyed by the saved size, so a change from elsewhere resets the field. */
