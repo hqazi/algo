@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { OpenSetEntryView, OpenSetView } from '../../../shared/intake';
 import { invoke } from '../ipc';
 import { errorText } from '../lib/app-context';
+import { titleCase } from '../lib/format';
 
 export const IMPORT_NOTE =
   'Imported problems come from open problem sets whose licence permits reuse; the licence and ' +
@@ -131,7 +132,7 @@ export function ImportPanel({ value, onChange, topics }: ImportPanelProps) {
                     <strong>{e.title}</strong>
                     <span className="muted small">
                       {' '}
-                      · {topicName.get(e.topic) ?? e.topic} · {e.difficulty}
+                      · {topicName.get(e.topic) ?? e.topic} · {titleCase(e.difficulty)}
                       {e.imported ? (
                         <>
                           {' '}

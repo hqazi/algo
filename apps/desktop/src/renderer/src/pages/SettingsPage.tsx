@@ -237,7 +237,8 @@ function useScrollSpy(page: RefObject<HTMLElement | null>) {
         setCurrent(id);
         return;
       }
-      const top = el.getBoundingClientRect().top + 96;
+      // A section is current once its heading is in the top third.
+      const top = el.getBoundingClientRect().top + Math.min(240, el.clientHeight / 3);
       let id = SECTIONS[0]!.id;
       for (const s of SECTIONS) {
         const h = document.getElementById(s.id);

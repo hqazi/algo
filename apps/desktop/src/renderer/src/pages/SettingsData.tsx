@@ -75,7 +75,7 @@ export function DataSection() {
           </SettingRow>
         </>
       )}
-      <div className="actions">
+      <div className="actions setting-actions">
         <button
           type="button"
           disabled={!!busy}
@@ -99,7 +99,7 @@ export function DataSection() {
         explanations. It never holds the API key.
       </p>
       <h3>Reset</h3>
-      <div className="actions">
+      <div className="actions setting-actions">
         <button
           type="button"
           className="danger"

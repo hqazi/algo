@@ -1308,6 +1308,11 @@ legend {
 .dialog-body > :last-child {
   margin-bottom: 0;
 }
+/* Growing text boxes in forms (the dialogs' Idea and Problem statement)
+   show no resize grip, whatever `.field textarea` says. */
+.field textarea.ui-autogrow {
+  resize: none;
+}
 .dialog-footer {
   display: flex;
   justify-content: flex-end;

@@ -36,8 +36,14 @@
   box-shadow: var(--shadow-sm);
   padding: var(--space-6);
 }
-.onboarding-card .key-form > p:first-child {
-  margin-top: 0;
+.onboarding-card .setting-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.onboarding-card .setting-label {
+  color: var(--muted);
 }
 .onboarding-actions {
   display: flex;
@@ -151,6 +157,7 @@
   column-gap: var(--space-3);
   row-gap: 2px;
   align-items: center;
+  align-content: center;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
@@ -181,6 +188,10 @@
   background: var(--surface);
   display: grid;
   place-content: center;
+  /* Above the label's overlay, so the radio itself takes its clicks. */
+  position: relative;
+  z-index: 1;
+  cursor: pointer;
 }
 .choice-card input[type='radio']::before {
   content: '';

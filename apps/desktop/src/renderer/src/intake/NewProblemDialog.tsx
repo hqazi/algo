@@ -14,7 +14,7 @@ import {
   type IntakeRequestView,
 } from '../../../shared/intake';
 import { Dialog } from '../components/Dialog';
-import { Button, Segmented } from '../components/ui';
+import { AutoGrowTextarea, Button, Segmented } from '../components/ui';
 import { titleCase } from '../lib/format';
 import { ImportPanel, type ImportChoice } from './ImportPanel';
 import { useIntakeJob, type JobState } from './useIntakeJob';
@@ -196,33 +196,36 @@ export function NewProblemDialog({
       {mode === 'generate' ? (
         <div role="tabpanel" id="np-panel" aria-label="Generate">
           {suggestion && <p className="intake-suggestion">{suggestion.reason}</p>}
-          <label className="field">
-            Topic
-            <select value={topic} onChange={(e) => setTopic(e.target.value)}>
-              {topics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            Difficulty
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-            >
-              {DIFFICULTIES.map((d) => (
-                <option key={d} value={d}>
-                  {titleCase(d)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="intake-row">
+            <label className="field">
+              Topic
+              <select value={topic} onChange={(e) => setTopic(e.target.value)}>
+                {topics.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
+              Difficulty
+              <select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+              >
+                {DIFFICULTIES.map((d) => (
+                  <option key={d} value={d}>
+                    {titleCase(d)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <label className="field">
             Idea (optional)
-            <textarea
+            <AutoGrowTextarea
               rows={3}
+              maxHeight={200}
               maxLength={MAX_IDEA_CHARS}
               value={idea}
               onChange={(e) => setIdea(e.target.value)}
@@ -239,8 +242,9 @@ export function NewProblemDialog({
           </p>
           <label className="field">
             Problem statement
-            <textarea
-              rows={10}
+            <AutoGrowTextarea
+              rows={8}
+              maxHeight={360}
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={MAX_PASTE_CHARS}

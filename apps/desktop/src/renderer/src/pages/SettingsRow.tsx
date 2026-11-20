@@ -4,6 +4,7 @@
  * label on the left and its value or control on the right.
  */
 import type { ReactNode } from 'react';
+import './settings.css';
 
 /** ok: working; off: not set up or not running; warn: works with a caveat; error: failed. */
 export type StatusTone = 'ok' | 'off' | 'warn' | 'error' | 'pending';

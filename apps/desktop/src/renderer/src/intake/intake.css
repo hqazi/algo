@@ -1,5 +1,6 @@
+/* The New problem dialog (T33: Dialog, segmented mode tabs). */
 .intake-modes {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-3);
 }
 .intake-row {
   display: flex;
@@ -47,6 +48,7 @@
 .import-licence {
   border-left: 3px solid var(--border);
   padding-left: 0.6rem;
+  color: var(--muted);
 }
 .import-entries {
   list-style: none;
@@ -62,16 +64,44 @@
 }
 .import-entry {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-3);
   align-items: flex-start;
-  padding: 0.4rem 0.6rem;
+  padding: var(--space-2) var(--space-3);
   cursor: pointer;
 }
-.import-entry.selected {
-  background: var(--bg);
+.import-entry:hover {
+  background: var(--surface-2);
 }
-.import-entry input {
-  margin-top: 0.2rem;
+.import-entry.selected {
+  background: var(--accent-subtle);
+}
+/* The radio drawn as a ring, as on the onboarding choice cards. */
+.import-entry input[type='radio'] {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-content: center;
+}
+.import-entry input[type='radio']::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-text);
+  transform: scale(0);
+}
+.import-entry input[type='radio']:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.import-entry input[type='radio']:checked::before {
+  transform: scale(1);
 }
 .import-blurb {
   display: block;
