@@ -2041,7 +2041,7 @@ looks cleaner before any page is reworked.
   (classes, names, menu keyboard and focus return, outside click and Tab,
   segmented selection and arrow keys, textarea growth to the cap).
   CodeMirror chrome from the tokens in both themes (`Editor.tsx`, theme
-  only). `styles.test.ts`: WCAG ratios of 33 text/background pairs per
+  only). `styles.test.ts`: WCAG ratios of 34 text/background pairs per
   theme (body 16:1, muted ≥ 5.3:1 on every surface, white on accent 6.3:1,
   links ≥ 7.9:1, statuses on their tints ≥ 4.5:1), every colour token has a
   dark value, reduced motion present.
