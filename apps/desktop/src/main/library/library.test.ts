@@ -19,7 +19,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_NOTE_BYTES } from '@algorithm-tutor/core';
 import clipped from '../../../../../packages/core/src/library/fixtures/clipped-default.md?raw';
 import { STREAM_CANCEL, STREAM_START, type IpcResult } from '../../shared/ipc';
@@ -49,7 +49,7 @@ const write = (rel: string, text: string): void => {
 beforeEach(() => {
   // The real path: the library stores folders resolved (macOS /var → /private/var,
   // Windows 8.3 short names expanded).
-  base = realpathSync(mkdtempSync(join(tmpdir(), 'tutor-library-')));
+  base = realpathSync.native(mkdtempSync(join(tmpdir(), 'tutor-library-')));
   vault = join(base, 'Vault');
   outside = join(base, 'Elsewhere');
   mkdirSync(vault);
@@ -293,7 +293,6 @@ describe('IPC', () => {
     failures.push(onError);
     return { close: () => void (closed += 1) };
   };
-  const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 
   async function call<T>(channel: string, payload?: unknown): Promise<T> {
     const r = (await ipc.invoke(page().event, channel, payload)) as IpcResult<T>;
@@ -340,28 +339,27 @@ describe('IPC', () => {
       channel: 'library:watch',
       request: undefined,
     });
-    await tick();
+    // Wait for each rescan instead of a fixed delay: CI runners can be slow.
+    const until = (check: () => void) => vi.waitFor(check, { timeout: 5_000, interval: 10 });
     const titles = () =>
       (
         p.events().at(-1) as { event: { folders: { root: { articles: { title: string }[] } }[] } }
       ).event.folders[0]!.root.articles.map((a) => a.title);
-    expect(p.events()).toHaveLength(1);
+    await until(() => expect(p.events()).toHaveLength(1));
     expect(titles()).toEqual(['a']);
 
     write('b.md', 'B');
     changes[0]!();
     changes[0]!();
     changes[0]!();
-    await tick();
-    expect(p.events()).toHaveLength(2);
+    await until(() => expect(p.events()).toHaveLength(2));
     expect(titles()).toEqual(['a', 'b']);
 
     write('c.md', 'C');
     failures[0]!(new Error('watch broke'));
-    await tick();
-    expect(titles()).toEqual(['a', 'b', 'c']);
+    await until(() => expect(titles()).toEqual(['a', 'b', 'c']));
     // Watched again after the retry delay.
-    expect(changes).toHaveLength(2);
+    await until(() => expect(changes).toHaveLength(2));
 
     // A new folder is watched too.
     const second = join(base, 'Second');

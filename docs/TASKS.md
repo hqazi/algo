@@ -1944,7 +1944,10 @@ project, covering v3.
   CI on `main` was red on macOS and Windows since the T26 merge:
   `library.test.ts` compared the stored folder with the temp path, but the
   library stores the real path (`/private/var/...`, Windows long names);
-  the test now resolves its temp folder first (test-only change).
+  the test now resolves its temp folder first (`realpathSync.native`, which
+  also expands Windows 8.3 names), and its watch test waits for each
+  rescan (`vi.waitFor`) instead of a fixed 30 ms that the slow Windows
+  runner missed (test-only changes).
 - **Wiring outside Owns.** `code-execution.ts` (`GUIDE_URL`),
   `install-help.test.ts`, comments in `settings.ts`, `ipc.ts`,
   `SettingsCodeExecution.tsx`, `code-execution.test.ts`, `library.test.ts`;
