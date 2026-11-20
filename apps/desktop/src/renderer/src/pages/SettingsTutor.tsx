@@ -171,6 +171,17 @@ export function KeyForm({ status, onStatus, onConnected }: KeyFormProps) {
   );
 }
 
+/**
+ * The tutor's "off" reason as read on this page: main writes it for every
+ * page ("… in Settings …"), but here the controls are right below.
+ */
+export function reasonHere(reason: string): string {
+  return reason
+    .replace(/ in Settings → Tutor\b/g, ' below')
+    .replace(/^The tutor is turned off in Settings\.$/, 'The backend below is set to Off.')
+    .replace(/ in Settings\b/g, ' below');
+}
+
 function claudeCodeText(info: ClaudeCodeInfoView): string {
   if (info.usable) return `Found: ${info.path ?? ''} (version ${info.version ?? '?'})`;
   return info.reason ?? 'Not available.';
@@ -331,7 +342,7 @@ export function TutorSection() {
           ) : (
             <StatusText tone="off">
               Off
-              {tutor.reason ? <span className="muted">: {tutor.reason}</span> : null}
+              {tutor.reason ? <span className="muted">: {reasonHere(tutor.reason)}</span> : null}
             </StatusText>
           )
         ) : (

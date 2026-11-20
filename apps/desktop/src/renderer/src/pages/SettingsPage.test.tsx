@@ -12,6 +12,7 @@ import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
 import { baseHandlers, KEY_NONE, PROFILE, TUTOR_ON } from '../test/fixtures';
 import { SettingsPage } from './SettingsPage';
+import { reasonHere } from './SettingsTutor';
 
 const FAKE_KEY = 'sk-ant-test-0000000000000000000000-WXYZ';
 
@@ -134,6 +135,25 @@ describe('SettingsPage', () => {
     const line = screen.getByTestId('tutor-status-line').textContent;
     expect(line).toMatch(/^StatusOn: Anthropic API/);
     expect(line).not.toMatch(/ · /);
+  });
+
+  it('says where to add the key in words that fit this page', async () => {
+    renderPage(
+      bridgeWith().on('tutor:status', () => ({
+        ...TUTOR_ON,
+        available: false,
+        reason: 'No tutor is set up. Add an Anthropic API key in Settings to use the tutor.',
+      })),
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('tutor-status-line').textContent).toBe(
+        'StatusOff: No tutor is set up. Add an Anthropic API key below to use the tutor.',
+      ),
+    );
+    expect(reasonHere('The tutor is turned off in Settings.')).toBe(
+      'The backend below is set to Off.',
+    );
+    expect(reasonHere('Add the key in Settings → Tutor.')).toBe('Add the key below.');
   });
 
   it('sends the key once, clears the field, shows only the last four characters', async () => {
