@@ -1,10 +1,7 @@
 // WCAG 2.x contrast of the design tokens in styles.css (T28, docs/design.md:
 // 4.5:1 for text, 3:1 for large text and UI parts), in both themes.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-
-const css = readFileSync(join(import.meta.dirname, 'styles.css'), 'utf8');
+import css from './styles.css?raw';
 
 /** The hex colour tokens declared directly in a block. */
 function tokens(block: string): Record<string, string> {
