@@ -72,7 +72,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T19 | Runner image in CI | v2 | 2d | T13, T15 | done |
 | T20 | README: optional container sandbox and toolchains | v2 | 1d | T18 | done |
 | T21 | Library folders and index | v3 | 3d | T05, T09 | done |
-| T22 | Reader with local images | v3 | 3d | T21 | in-progress |
+| T22 | Reader with local images | v3 | 3d | T21 | done |
 | T23 | Linked images: safe download and cache | v3 | 3d | T22 | todo |
 | T24 | Chats tied to passages | v3 | 4d | T22, T10, T11 | todo |
 | T25 | Tutor-written articles and problems from passages | v3 | 2d | T24, T12 | todo |
@@ -1548,12 +1548,59 @@ safely.
 - External links open in the system browser through a main-process handler that allows only `https:`, `http:`, `mailto:`.
 
 **Acceptance.**
-- [ ] Asset route tests: `../` paths, absolute paths, a symlink and a hard-to-spot path (`%2e%2e`, Windows `\`) out of the folder, a non-image renamed `.png`, an SVG, an unknown token: all refused; a real PNG/JPEG/GIF/WebP served with the right type.
-- [ ] Sanitiser tests: `<script>`, `<img onerror>`, `javascript:` links, an `img` with a remote or `file:` URL → removed or placeholder; wikilinks and callouts render.
-- [ ] Reading works with no key and the network unavailable (test with the fake tutor and no fetch).
-- [ ] The window's CSP and request filter are unchanged (existing security tests still pass, unmodified).
+- [x] Asset route tests: `../` paths, absolute paths, a symlink and a hard-to-spot path (`%2e%2e`, Windows `\`) out of the folder, a non-image renamed `.png`, an SVG, an unknown token: all refused; a real PNG/JPEG/GIF/WebP served with the right type.
+- [x] Sanitiser tests: `<script>`, `<img onerror>`, `javascript:` links, an `img` with a remote or `file:` URL → removed or placeholder; wikilinks and callouts render.
+- [x] Reading works with no key and the network unavailable (test with the fake tutor and no fetch).
+- [x] The window's CSP and request filter are unchanged (existing security tests still pass, unmodified).
 
 **Notes.**
+
+- Built: `main/library/assets.ts`: `extractRefs` (images and wikilinks
+  from the file, code skipped), `FolderResolver` (relative to the note,
+  then the root, then a unique name, shortest path; `%`-decoding and `\`
+  as `/` before the inside check), `checkImageFile` (real path inside,
+  regular file, 25 MB, PNG/JPEG/GIF/WebP magic, SVG refused),
+  `AssetRegistry` (random session tokens; every request re-checked, type
+  from the bytes served, `nosniff`; a removed folder's tokens stop),
+  `resolveLink`, `readArticle`, `externalUrl`, `registerReaderHandlers`.
+  Renderer: `library/article-markdown.ts` (own DOMPurify instance, chat
+  allowlist + `img` with asset `src` only; `![[x.png|300]]`, `![a](p)`,
+  wikilinks, note embeds as links, callouts; raw HTML dropped),
+  `library/Reader.tsx` (header from frontmatter, "file missing" banner,
+  links: `#/library/<id>` in the app, web/mail through main),
+  `library/LibraryTree.tsx` (filter by title and tag), `pages/LibraryPage.tsx`
+  (tree + Refresh, reader, chat placeholder for T24; subscribes to
+  `library:watch` while open; the reader reloads after each scan).
+- IPC: `library:article` (header, body, `images` per reference key: asset
+  URL or reason; `links` per wikilink target: article id or `null`; never a
+  path) and `library:open-link` (refused `scheme` unless `https:`,
+  `http:`, `mailto:`).
+- Decisions: D-40 (raw HTML dropped; reference keys, tokens, resolution,
+  links). SPEC §14 and §15.2 updated.
+- Wiring outside **Owns**: `shared/{library,ipc,channels}.ts` (schemas,
+  `refKey`, `wikiTarget`, `IMAGE_FILE`, two channels);
+  `main/library/service.ts` (`article(id)`); `main/window.ts`
+  (`UiOptions.libraryAssets`: the UI protocol handler sends
+  `/library-asset/` to the route; CSP and request filter untouched);
+  `main/setup.ts` (registry, handlers, `shell.openExternal`);
+  `renderer/.../lib/router.ts` (+test: `/library`, `/library/<id>`),
+  `App.tsx` (nav link, route), `components/Panes.tsx` (`storageKey`,
+  `initialSizes`), `lib/markdown.ts` (exports its allowlists),
+  `styles.css`.
+- Checks: typecheck, lint, format, `npm test` (67 files, 878 passed);
+  `check:security` and `npm run e2e` built and run under xvfb with
+  `--no-sandbox`: all pass; `window.test.ts` and `security-check.ts`
+  unmodified.
+- Not done / not tested: the asset route is tested with `Request`s in
+  Vitest, not through Chromium (an image actually drawn in the window is
+  for T26's end-to-end test); in `npm run dev` the page comes from Vite's
+  origin, so `img-src 'self'` will not load asset URLs there (packaged and
+  `electron-vite preview` builds are fine). Linked (`https:`) and `data:`
+  images show a placeholder only (T23 adds **Load images** / **Retry**).
+  Margin markers and the chat pane are T24. Hard links out of the folder
+  cannot be told apart from files inside and are served (as Obsidian
+  would show them). Not tried on macOS or Windows (Windows `\` handling is
+  unit-tested only).
 
 ### T23 — Linked images: safe download and cache
 

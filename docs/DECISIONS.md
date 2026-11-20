@@ -1356,3 +1356,46 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   twice). Dot-files are skipped like dot-folders.
 - Fixture: `packages/core/src/library/fixtures/clipped-default.md`, written
   by hand in that shape, no third-party text.
+
+**D-40 Raw HTML in notes: dropped; how the reader resolves and serves**
+(2026-11-20, T22)
+
+- DECISION resolved (SPEC §14, §15.2): raw HTML in a note is **dropped**,
+  the default. `marked` renders every HTML block and inline tag as nothing,
+  as chat does, and DOMPurify (its own instance, chat allowlist plus `img`)
+  runs after. Evidence: the Web Clipper writes Markdown (Defuddle, D-39),
+  so clipped notes rarely hold HTML; what does appear (`<sup>`, `<kbd>`,
+  `<details>`, embedded `<iframe>`) is formatting or remote content the
+  window must not load anyway. Lost: an HTML block (a paragraph that
+  starts with a tag) with its text; an inline tag's formatting (its text
+  stays).
+  Rejected: **an HTML allowlist through DOMPurify** (a second, wider
+  allowlist to keep safe for little gain; can be revisited with real
+  notes).
+- Images: an `img` is emitted only for an `asset` reference from main and
+  survives sanitising only if its `src` matches
+  `tutor-app://app/library-asset/<token>`; anything else is a placeholder
+  (alt text, host, reason). `width` is kept only as digits
+  (`![[x.png|300]]`).
+- References are found in main from the file itself (`extractRefs`, fenced
+  and inline code skipped) and keyed by the text as written (`refKey`:
+  trimmed, `<…>` removed), so the renderer cannot ask main to resolve a
+  path; main answers per key with a token or a reason (`remote`,
+  `insecure`, `data`, `scheme`, `outside`, `not_found`, `not_image`,
+  `svg`, `too_large`). Percent-encoding is decoded and `\` treated as `/`
+  before the inside-the-folder check. The unique-name fallback lists the
+  folder once per open (dot-entries skipped, at most 100,000 files),
+  shortest path first, then alphabetical; name match ignores case.
+- Tokens: 24 random bytes (base64url) per file per session, in memory;
+  checked again on every request (real path inside, regular file opened
+  with `O_NOFOLLOW` where the OS has it, 25 MB, magic bytes of the bytes
+  served); a removed folder's tokens stop working. Responses carry the
+  sniffed type, `nosniff`, `no-store` and `default-src 'none'`. The UI
+  protocol handler dispatches `/library-asset/` to this route; the CSP and
+  the request filter are unchanged.
+- Wikilinks resolve in main to an article id in the same library folder:
+  relative to the note, then the folder root, then by file name (shortest
+  path), ignoring case. Unresolved links are plain text. Links in the body
+  never navigate the window: `#/library/<id>` changes the route; `https:`,
+  `http:`, `mailto:` go to `library:open-link`, which checks the scheme
+  again in main before `shell.openExternal`.

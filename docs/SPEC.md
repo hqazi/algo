@@ -683,7 +683,7 @@ needs.
 | ~~**VERIFY** Claude Code CLI flags, Agent SDK, terms for using a user's login~~ | 7.3, T11 | Resolved: API key only, bare mode, no Agent SDK (D-25) |
 | ~~**VERIFY** Pyodide can be fully network-blocked and package loading disabled~~ | 6.2, T07 | Resolved: yes, with `connect-src 'self'` for workers (D-14) |
 | ~~**VERIFY** Obsidian Web Clipper's default frontmatter keys and image syntax~~ | 15.1, T21 | Resolved: the seven keys in 15.1; remote images as `![alt](https://…)` (D-39) |
-| **DECISION** raw HTML in notes | 15.2, T22 | Dropped |
+| ~~**DECISION** raw HTML in notes~~ | 15.2, T22 | Resolved: dropped (D-40) |
 
 ## 15. Library (v3)
 
@@ -728,8 +728,8 @@ Untrusted Markdown, rendered in the UI window with the existing two layers
 (`marked` with raw HTML dropped, then DOMPurify; `lib/markdown.ts`) and an
 article allowlist that adds `img` only.
 
-- Raw HTML in notes is dropped (**DECISION**, default: drop; some clipped
-  formatting is lost).
+- Raw HTML in notes is dropped (resolved, D-40; some clipped formatting is
+  lost).
 - Obsidian syntax: `![[file.png]]`, `![[file.png|300]]` (width) and
   `![alt](path)` images; `[[note]]` / `[[note|label]]` / `[[note#heading]]`
   links open that note in the reader if it is in the library, else show as
