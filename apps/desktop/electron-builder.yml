@@ -19,7 +19,8 @@ files:
   - package.json
   - out/**
   # Development checks, not part of the app.
-  - '!out/main/{exec-check,security-check,storage-check}.js'
+  - '!out/main/{exec-check,security-check,storage-check,e2e-main}.js'
+  - '!out/main/chunks/standin-*.js'
   - '!**/*.map'
 
 asar: true

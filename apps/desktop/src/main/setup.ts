@@ -34,6 +34,7 @@ import {
   registerReaderHandlers,
 } from './library/assets';
 import { registerImageHandlers } from './library/images/handlers';
+import type { Downloaded } from './library/images/download';
 import { LinkedImages } from './library/images/linked';
 import { articleWriter, GeneratedArticles, registerGeneratedHandlers } from './library/generated';
 import { contentDir, openPractice, type AppPractice } from './practice';
@@ -54,11 +55,28 @@ export interface SetupHooks {
   onBlocked?: (what: string, url: string) => void;
 }
 
+/**
+ * Test-only replacements, set by the development checks' own entries
+ * (`security-check.ts`, `e2e-main.ts`; neither ships) before start-up. The
+ * app's entry never sets them.
+ */
+export interface TestHooks {
+  /** Replaces the linked-image downloader (a local stand-in host). */
+  imageDownload?: (url: string, signal?: AbortSignal) => Promise<Downloaded>;
+  /** Called with the real path of every file the library asset route serves. */
+  onAssetServed?: (path: string) => void;
+}
+let testHooks: TestHooks = {};
+export function setTestHooks(hooks: TestHooks): void {
+  testHooks = hooks;
+}
+
 /** The library's folder ids, once the Library is open. */
 let libraryFolders: () => string[] = () => [];
 /** Library images by session token (T22), served by the UI's protocol. */
 const libraryAssets = new AssetRegistry({
   isLibraryFolder: (id) => libraryFolders().includes(id),
+  onServe: (path) => testHooks.onAssetServed?.(path),
 });
 
 /** Before `app.whenReady()`. */
@@ -283,6 +301,7 @@ export async function startPractice(
     cacheDir: join(storage.paths.cache, 'article-images'),
     assets: libraryAssets,
     mode: () => storage.settings.get().library.images,
+    ...(testHooks.imageDownload ? { download: testHooks.imageDownload } : {}),
   });
   registerImageHandlers(router, library, { assets: libraryAssets, linked: linkedImages });
   registerReaderHandlers(router, library, {

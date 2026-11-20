@@ -65,6 +65,8 @@ export default defineConfig({
           'security-check': src('main/security-check.ts'),
           // `npm run check:storage`: SQLite storage under Electron's Node.
           'storage-check': src('main/storage/check.ts'),
+          // `npm run e2e` (library.e2e.ts): the app with a local image-host stand-in.
+          'e2e-main': src('main/e2e-main.ts'),
         },
       },
     },

@@ -109,6 +109,8 @@ export class AssetRegistry {
       newToken?: () => string;
       /** Is this folder still in the library? Tokens of a removed folder stop working. */
       isLibraryFolder?: (folderId: string) => boolean;
+      /** Called with the real path of every file served (the security check's log). */
+      onServe?: (path: string) => void;
     } = {},
   ) {}
 
@@ -159,6 +161,7 @@ export class AssetRegistry {
       () => null,
     );
     if (!handle) return notFound();
+    this.options.onServe?.(checked.path);
     let bytes: Buffer;
     try {
       const st = await handle.stat();
