@@ -70,7 +70,7 @@ export function ImportPanel({ value, onChange, topics }: ImportPanelProps) {
   );
 
   return (
-    <div role="tabpanel" aria-label="Import">
+    <div role="tabpanel" id="np-panel" aria-label="Import">
       <p className="muted small" data-testid="import-note">
         {IMPORT_NOTE}
       </p>

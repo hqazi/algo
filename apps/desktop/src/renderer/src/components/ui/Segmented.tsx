@@ -4,6 +4,10 @@
  * it keeps the role and name a plain button has (tests and the guide find it
  * by name). Arrow keys, Home and End move the selection like a radio group;
  * only the selected option is in the tab order.
+ *
+ * With `tabs` the same control is a WAI-ARIA tablist instead (`tab` options
+ * with `aria-selected`), for options that switch a panel, such as the New
+ * problem dialog's Generate / Paste / Import (T33).
  */
 import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
@@ -20,6 +24,10 @@ export interface SegmentedProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   className?: string | undefined;
+  /** Render as a tablist of tabs (each may name its panel in `controls`). */
+  tabs?: boolean | undefined;
+  /** With `tabs`: the id of the panel each option shows, by value. */
+  controls?: Partial<Record<T, string>> | undefined;
 }
 
 export function Segmented<T extends string>({
@@ -27,6 +35,8 @@ export function Segmented<T extends string>({
   value,
   onChange,
   className,
+  tabs,
+  controls,
   'aria-label': label,
 }: SegmentedProps<T>) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -51,7 +61,7 @@ export function Segmented<T extends string>({
 
   return (
     <div
-      role="group"
+      role={tabs ? 'tablist' : 'group'}
       aria-label={label}
       className={['ui-segmented', className ?? ''].filter(Boolean).join(' ')}
     >
@@ -62,7 +72,9 @@ export function Segmented<T extends string>({
             refs.current[i] = el;
           }}
           type="button"
-          aria-pressed={o.value === value}
+          {...(tabs
+            ? { role: 'tab', 'aria-selected': o.value === value, 'aria-controls': controls?.[o.value] }
+            : { 'aria-pressed': o.value === value })}
           tabIndex={i === tabStop ? 0 : -1}
           title={o.title}
           disabled={o.disabled}

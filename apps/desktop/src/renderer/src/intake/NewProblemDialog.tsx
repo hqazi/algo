@@ -13,6 +13,9 @@ import {
   MIN_PASTE_CHARS,
   type IntakeRequestView,
 } from '../../../shared/intake';
+import { Dialog } from '../components/Dialog';
+import { Button, Segmented } from '../components/ui';
+import { titleCase } from '../lib/format';
 import { ImportPanel, type ImportChoice } from './ImportPanel';
 import { useIntakeJob, type JobState } from './useIntakeJob';
 import './intake.css';
@@ -37,6 +40,7 @@ const MODE_LABELS: Record<Mode, string> = {
   paste: 'Paste',
   import: 'Import',
 };
+const MODES: Mode[] = ['generate', 'paste', 'import'];
 const DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
 export const PASTE_NOTE =
   'Paste your own copy of a problem, for personal practice: the text stays on this computer and is ' +
@@ -179,23 +183,18 @@ export function NewProblemDialog({
   }
 
   const form = (
-    <form onSubmit={submit}>
-      <div className="tabs intake-modes" role="tablist" aria-label="How to make the problem">
-        {(['generate', 'paste', 'import'] as Mode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            role="tab"
-            aria-selected={mode === m}
-            className={mode === m ? 'tab active' : 'tab'}
-            onClick={() => setMode(m)}
-          >
-            {MODE_LABELS[m]}
-          </button>
-        ))}
-      </div>
+    <>
+      <Segmented
+        tabs
+        className="intake-modes"
+        aria-label="How to make the problem"
+        value={mode}
+        onChange={setMode}
+        controls={{ generate: 'np-panel', paste: 'np-panel', import: 'np-panel' }}
+        options={MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
+      />
       {mode === 'generate' ? (
-        <div role="tabpanel" aria-label="Generate">
+        <div role="tabpanel" id="np-panel" aria-label="Generate">
           {suggestion && <p className="intake-suggestion">{suggestion.reason}</p>}
           <label className="field">
             Topic
@@ -215,7 +214,7 @@ export function NewProblemDialog({
             >
               {DIFFICULTIES.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {titleCase(d)}
                 </option>
               ))}
             </select>
@@ -234,7 +233,7 @@ export function NewProblemDialog({
       ) : mode === 'import' ? (
         <ImportPanel value={choice} onChange={setChoice} topics={topics} />
       ) : (
-        <div role="tabpanel" aria-label="Paste">
+        <div role="tabpanel" id="np-panel" aria-label="Paste">
           <p className="muted small" data-testid="paste-note">
             {PASTE_NOTE}
           </p>
@@ -271,7 +270,7 @@ export function NewProblemDialog({
                 <option value="">Let the tutor judge</option>
                 {DIFFICULTIES.map((d) => (
                   <option key={d} value={d}>
-                    {d}
+                    {titleCase(d)}
                   </option>
                 ))}
               </select>
@@ -285,49 +284,52 @@ export function NewProblemDialog({
         </p>
       )}
       {state.phase === 'failed' && <Failure state={state} />}
-      <div className="actions">
-        <button type="button" onClick={close}>
-          Cancel
-        </button>
-        <button type="submit" className="primary" disabled={!valid || Boolean(tutorOff)}>
-          {state.phase === 'failed'
-            ? 'Try again'
-            : mode === 'generate'
-              ? 'Generate'
-              : mode === 'paste'
-                ? 'Convert'
-                : 'Import'}
-        </button>
-      </div>
-    </form>
+    </>
   );
 
-  return (
-    <div className="modal-backdrop" onClick={busy ? undefined : close}>
-      <div
-        className="modal wide"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="np-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="np-title">New problem</h2>
-        {busy ? (
-          <>
-            <Progress state={state} />
-            <div className="actions">
-              <button type="button" onClick={() => void stop()}>
-                Stop
-              </button>
-              <button type="button" onClick={onClose}>
-                Close (keeps working)
-              </button>
-            </div>
-          </>
-        ) : (
-          form
-        )}
-      </div>
-    </div>
+  const formFooter = (
+    <>
+      <Button onClick={close}>Cancel</Button>
+      <Button type="submit" variant="primary" disabled={!valid || Boolean(tutorOff)}>
+        {state.phase === 'failed'
+          ? 'Try again'
+          : mode === 'generate'
+            ? 'Generate'
+            : mode === 'paste'
+              ? 'Convert'
+              : 'Import'}
+      </Button>
+    </>
+  );
+
+  return busy ? (
+    <Dialog
+      titleId="np-title"
+      title="New problem"
+      wide
+      backdropCloses={false}
+      onClose={onClose}
+      footer={
+        <>
+          <Button onClick={() => void stop()}>Stop</Button>
+          <Button variant="primary" onClick={onClose}>
+            Close (keeps working)
+          </Button>
+        </>
+      }
+    >
+      <Progress state={state} />
+    </Dialog>
+  ) : (
+    <Dialog
+      titleId="np-title"
+      title="New problem"
+      wide
+      onClose={close}
+      onSubmit={submit}
+      footer={formFooter}
+    >
+      {form}
+    </Dialog>
   );
 }

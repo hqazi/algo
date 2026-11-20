@@ -188,6 +188,24 @@ describe('NewProblemDialog', () => {
     await waitFor(() => expect(created[0]?.slug).toBe('shelf-search'));
   });
 
+  it('has mode tabs, capitalised difficulties, and closes by its icon or Escape', () => {
+    const onClose = vi.fn();
+    setup({ onClose });
+    const tabs = screen.getByRole('tablist', { name: 'How to make the problem' });
+    expect(tabs.className).toContain('ui-segmented');
+    expect(screen.getByRole('tab', { name: 'Generate' }).getAttribute('aria-selected')).toBe('true');
+    const options = [...(screen.getByLabelText('Difficulty') as HTMLSelectElement).options];
+    expect(options.map((o) => [o.value, o.textContent])).toEqual([
+      ['easy', 'Easy'],
+      ['medium', 'Medium'],
+      ['hard', 'Hard'],
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'New problem' }), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it('needs the tutor, and shows refusals', async () => {
     const { unmount } = setup({ tutorOff: 'No tutor is set up.' });
     expect((screen.getByRole('button', { name: 'Generate' }) as HTMLButtonElement).disabled).toBe(

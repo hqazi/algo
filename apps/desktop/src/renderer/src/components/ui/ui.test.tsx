@@ -112,6 +112,32 @@ describe('Segmented', () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
+  it('can be a tablist of tabs that name their panels', () => {
+    const onChange = vi.fn();
+    render(
+      <Segmented
+        tabs
+        aria-label="Mode"
+        value="a"
+        onChange={onChange}
+        controls={{ a: 'panel-a' }}
+        options={[
+          { value: 'a', label: 'Alpha' },
+          { value: 'b', label: 'Beta' },
+        ]}
+      />,
+    );
+    expect(screen.getByRole('tablist', { name: 'Mode' })).toBeTruthy();
+    const a = screen.getByRole('tab', { name: 'Alpha' });
+    const b = screen.getByRole('tab', { name: 'Beta' });
+    expect(a.getAttribute('aria-selected')).toBe('true');
+    expect(a.getAttribute('aria-controls')).toBe('panel-a');
+    expect(b.getAttribute('aria-selected')).toBe('false');
+    expect(a.hasAttribute('aria-pressed')).toBe(false);
+    fireEvent.keyDown(a, { key: 'ArrowRight' });
+    expect(onChange).toHaveBeenCalledWith('b');
+  });
+
   it('moves the selection with arrow keys, skipping disabled options, and keeps one tab stop', () => {
     render(<Seg />);
     const problem = screen.getByRole('button', { name: 'This problem' });

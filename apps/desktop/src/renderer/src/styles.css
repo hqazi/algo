@@ -509,13 +509,15 @@ legend {
   background: transparent;
   color: var(--text);
 }
-.ui-segmented > button[aria-pressed='true'] {
+.ui-segmented > button[aria-pressed='true'],
+.ui-segmented > button[aria-selected='true'] {
   background: var(--surface);
   color: var(--text);
   box-shadow: var(--shadow-sm);
 }
 @media (prefers-color-scheme: dark) {
-  .ui-segmented > button[aria-pressed='true'] {
+  .ui-segmented > button[aria-pressed='true'],
+  .ui-segmented > button[aria-selected='true'] {
     background: var(--surface-3);
   }
 }
@@ -1212,69 +1214,161 @@ legend {
 }
 
 /* ---------------------------------------------------------------- overlays */
+/* Dialogs and toasts (T33, docs/design.md → Dialogs, Toasts).
+   `components/Dialog.tsx` gives `.modal.dialog` a header (title + close icon
+   button), a scrolling body and a footer with the actions on the right.
+   Older dialogs (a bare `.modal` with an h2 and `.actions`) get the same
+   look through the rules for their children. */
 .modal-backdrop {
   position: fixed;
   inset: 0;
   background: var(--backdrop);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding: var(--space-6);
   z-index: 10;
+  animation: dialog-fade var(--duration) var(--ease);
 }
 .modal {
   background: var(--surface);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 1rem 1.25rem;
+  padding: var(--space-5) var(--space-6);
   width: min(32rem, 100%);
-  max-height: 90vh;
+  max-height: min(90vh, 100%);
   overflow: auto;
+  animation: dialog-in 160ms var(--ease);
+}
+.modal:focus {
+  outline: none;
 }
 .modal.wide {
   width: min(56rem, 100%);
 }
-.modal h2 {
-  margin-top: 0;
+.modal > h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
-.toasts {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
+.modal > .actions {
+  margin-top: var(--space-5);
+}
+@keyframes dialog-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.modal.dialog {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  padding: 0;
+  overflow: hidden;
+}
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-2) var(--space-6);
+  flex: none;
+}
+.dialog-header h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.dialog-body {
+  padding: var(--space-2) var(--space-6) var(--space-5);
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+.dialog-body > :first-child {
+  margin-top: 0;
+}
+.dialog-body > :last-child {
+  margin-bottom: 0;
+}
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  flex: none;
+}
+
+.toasts {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
   z-index: 20;
-  max-width: min(28rem, calc(100% - 2rem));
+  max-width: min(26rem, calc(100% - 2 * var(--space-4)));
 }
 .toast {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: flex-start;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
   box-shadow: var(--shadow);
+  font-size: var(--text-base);
+  animation: toast-in 160ms var(--ease);
 }
-.toast span {
+.toast-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent-fg);
+}
+.toast-success .toast-icon {
+  color: var(--pass);
+}
+.toast-error .toast-icon {
+  color: var(--fail);
+}
+.toast-text {
   flex: 1;
+  min-width: 0;
+  padding-top: 0;
+  line-height: 20px;
+  overflow-wrap: anywhere;
 }
-.toast button {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  padding: 0 0.25rem;
-  font-size: 1.1rem;
-  line-height: 1;
+.toast .btn-icon {
+  margin: -4px 0 -4px 0;
 }
-.toast-success {
-  border-left-color: var(--pass);
-}
-.toast-error {
-  border-left-color: var(--danger);
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 @media (max-width: 899px) {
