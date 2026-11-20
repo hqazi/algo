@@ -67,6 +67,11 @@ export interface TutorToolContext extends RunOptions {
   renderExplanation?: (content: Record<string, unknown>) => Promise<ToolOutput>;
 }
 
+export const GET_PROFILE_DESCRIPTION =
+  'Read the learner profile: goal (interview/general), interview_date, experience, comfort per ' +
+  'topic group (none/some/solid), hint_preference (early/struggle), focus_topic and language. profile ' +
+  'is null and onboarded false before onboarding.';
+
 type Args = Record<string, unknown>;
 type T = Tool<TutorToolContext>;
 
@@ -533,10 +538,7 @@ export function tutorTools(ctx: TutorToolContext): T[] {
       name: 'get_profile',
       title: 'Get profile',
       startSummary: 'Reading your profile',
-      description:
-        'Read the learner profile: goal (interview/general), interview_date, experience, comfort per ' +
-        'topic group (none/some/solid), hint_preference (early/struggle), focus_topic and language. profile ' +
-        'is null and onboarded false before onboarding.',
+      description: GET_PROFILE_DESCRIPTION,
       inputSchema: obj(),
       handler: (c) => c.teaching.getProfile(),
       summarize: (o) => (o.onboarded ? 'Profile loaded' : 'Not onboarded yet'),

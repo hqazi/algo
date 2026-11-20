@@ -161,6 +161,36 @@ describe('openDatabase', () => {
     expect(tables(bak)).not.toContain('articles');
   });
 
+  it('applies 0003-article-threads to a v2 database with threads, after a backup (T24)', () => {
+    const { db: v2 } = openDatabase(dbPath, { migrations: MIGRATIONS.slice(0, 2) });
+    const add = v2.prepare(
+      "INSERT INTO threads (id, backend, backend_state, created_at) VALUES (?, 'fake', '{}', 't')",
+    );
+    for (const id of ['home', 'home~1', 'two-sum', 'two-sum~1']) add.run(id);
+    v2.prepare(
+      "INSERT INTO messages (thread_id, seq, role, content, created_at) VALUES ('two-sum', 1, 'user', '{}', 't')",
+    ).run();
+    v2.close();
+    const r = openDatabase(dbPath);
+    track(r.db);
+    expect(r).toMatchObject({ from: 2, to: 3, backupPath: `${dbPath}.bak-2` });
+    expect(
+      r.db.prepare('SELECT id, kind, article_id, anchor, title FROM threads ORDER BY id').all(),
+    ).toEqual([
+      { id: 'home', kind: 'home', article_id: null, anchor: null, title: null },
+      { id: 'home~1', kind: 'home', article_id: null, anchor: null, title: null },
+      { id: 'two-sum', kind: 'problem', article_id: null, anchor: null, title: null },
+      { id: 'two-sum~1', kind: 'problem', article_id: null, anchor: null, title: null },
+    ]);
+    expect(r.db.prepare('SELECT COUNT(*) AS n FROM messages').get()).toEqual({ n: 1 });
+    expect(() => r.db.prepare("UPDATE threads SET kind = 'other' WHERE id = 'home'").run()).toThrow(
+      /CHECK/,
+    );
+    expect(() =>
+      r.db.prepare("UPDATE threads SET anchor = 'not json' WHERE id = 'home'").run(),
+    ).toThrow(/CHECK/);
+  });
+
   it('does not overwrite an earlier backup of the same version', () => {
     seedV1();
     // A leftover from an earlier upgrade that was rolled back.

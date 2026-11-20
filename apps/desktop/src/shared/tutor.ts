@@ -6,14 +6,15 @@
  * as every other report does).
  */
 import { z } from 'zod';
+import { articleThreadId } from './article-chat';
 import { reportView } from './practice';
 
 const slug = z
   .string()
   .max(80)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'invalid slug');
-/** `home` or a problem slug. */
-export const threadId = z.union([z.literal('home'), slug]);
+/** `home`, a problem slug, or an article thread (`article:<uuid>`, v3). */
+export const threadId = z.union([z.literal('home'), slug, articleThreadId]);
 export const chatAction = z.enum(['hint', 'review', 'explain']);
 const errorKind = z.enum([
   'auth',

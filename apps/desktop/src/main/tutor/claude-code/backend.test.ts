@@ -4,7 +4,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { mkdtemp } from 'node:fs/promises';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ChatEvent, Turn } from '@algorithm-tutor/core';
+import {
+  anchorFromRange,
+  articleTurnContext,
+  buildArticleRegistry,
+  buildArticleSystemPrompt,
+  markdownDoc,
+  type ChatEvent,
+  type Turn,
+} from '@algorithm-tutor/core';
 import { buildArgs, TOOL_PREFIX } from './command';
 import { recap } from './backend';
 import { fakeTools, rig, turn, type Rig } from './fixtures/harness';
@@ -223,6 +231,56 @@ describe('a turn against the recorded stream', () => {
     );
     expect(events.at(-1)).toMatchObject({ type: 'error', kind: 'auth' });
     expect(events.filter((e) => e.type === 'error' || e.type === 'done')).toHaveLength(1);
+  });
+});
+
+describe('article mode (T24)', () => {
+  // `article-turn.jsonl` is the recorded `turn.jsonl` with the tool call
+  // rewritten to `read_article_section` by hand (not a new recording).
+  it('runs one article turn: only the three tools, the call served from the open article', async () => {
+    const { r, dump } = await fakeRig('replay', 'article-turn.jsonl');
+    const body =
+      '# Heaps\n\nA heap keeps the smallest on top.\n\n# Tries\n\nA trie stores strings by prefix.\n';
+    const at = body.indexOf('A heap');
+    const tools = buildArticleRegistry({
+      body,
+      getProfile: () => ({ ok: true, onboarded: false }),
+    });
+    const t = turn(tools, {
+      threadId: 'article:12345678-1234-4234-8234-123456789abc',
+      systemPrompt: buildArticleSystemPrompt(tools.anthropicTools()),
+      userText: 'What is a heap?',
+      context: {
+        article: articleTurnContext(
+          { title: 'DS', source: null, body },
+          anchorFromRange(markdownDoc(body), at, at + 12),
+        ),
+      },
+    });
+    const events = await collect(r.backend.runTurn(t, new AbortController().signal));
+    expect(events.map((e) => e.type)).toEqual([
+      'text_delta',
+      'text_delta',
+      'tool_start',
+      'tool_end',
+      'text_delta',
+      'text_delta',
+      'done',
+    ]);
+    expect(events[2]).toMatchObject({
+      name: 'read_article_section',
+      summary: 'Reading the article',
+    });
+    expect(events[3]).toMatchObject({ ok: true, summary: 'Read “Tries”' });
+    const d = await readDump(dump);
+    const allowed = d.argv[d.argv.indexOf('--allowedTools') + 1]!.split(',');
+    expect(allowed).toEqual([
+      `${TOOL_PREFIX}read_article_section`,
+      `${TOOL_PREFIX}search_article`,
+      `${TOOL_PREFIX}get_profile`,
+    ]);
+    expect(d.prompt).toContain('<article_quote>\nA heap keeps\n</article_quote>');
+    expect(d.prompt).not.toContain('A trie stores');
   });
 });
 

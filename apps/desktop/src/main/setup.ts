@@ -21,12 +21,18 @@ import { DataService, type DataUi } from './data';
 import { registerPracticeHandlers } from './ipc/handlers/practice';
 import { registerCodeExecutionHandlers } from './ipc/handlers/code-execution';
 import { followTheme, registerSettingsHandlers } from './ipc/handlers/settings';
+import { registerArticleChatHandlers } from './ipc/handlers/article-chat';
 import { registerTutorHandlers } from './ipc/handlers/tutor';
 import { registerIntakeHandlers } from './ipc/handlers/intake';
 import { chatCreateProblem, openIntake, openSets, problemFactory, type AppIntake } from './intake';
 import { IpcRouter } from './ipc/router';
 import { openLibrary, registerLibraryHandlers } from './library';
-import { AssetRegistry, isLibraryAssetRequest, registerReaderHandlers } from './library/assets';
+import {
+  AssetRegistry,
+  isLibraryAssetRequest,
+  readArticleText,
+  registerReaderHandlers,
+} from './library/assets';
 import { contentDir, openPractice, type AppPractice } from './practice';
 import { SecretStore } from './secrets';
 import { electronCrypto } from './secrets/electron-crypto';
@@ -186,6 +192,8 @@ export async function startPractice(
     appVersion: app.getVersion(),
     env: process.env,
     now: isoNow,
+    // T24: chats on passages read the article as the reader does (the library opens below).
+    readArticle: (id) => readArticleText(library, id),
   });
   registerTutorHandlers(router, { tutor, practice: practice.practice });
   const { sets } = await openSets({
@@ -238,6 +246,19 @@ export async function startPractice(
   });
   registerLibraryHandlers(router, library, { log: (m) => console.warn(m) });
   libraryFolders = () => library.paths().map((f) => f.id);
+  registerArticleChatHandlers(router, {
+    tutor,
+    storage: storage.storage,
+    hasArticle: (id) => {
+      try {
+        library.article(id);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    newId: randomUUID,
+  });
   registerReaderHandlers(router, library, {
     assets: libraryAssets,
     // Only after `externalUrl` allowed the scheme (https, http, mailto).

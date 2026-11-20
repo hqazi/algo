@@ -20,6 +20,7 @@ import type {
   ThreadRecord,
   TopicProgressRecord,
 } from '../storage';
+import { threadKindOf } from '../storage';
 
 interface State {
   meta: Map<string, string>;
@@ -181,6 +182,8 @@ export class MemoryStorage implements Storage {
           .filter(
             (t) => filter.archived === undefined || (t.archivedAt !== null) === filter.archived,
           )
+          .filter((t) => filter.articleId === undefined || t.articleId === filter.articleId)
+          .sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
           .map(copy),
       listMessages: (threadId, filter = {}) =>
         s()
@@ -223,7 +226,16 @@ export class MemoryStorage implements Storage {
         if (!attempt(h.attemptId)) throw new Error(`no attempt with id ${h.attemptId}`);
         s().hints.push(copy(h));
       },
-      saveThread: (t) => void s().threads.set(t.id, copy(t)),
+      saveThread: (t) => {
+        const old = s().threads.get(t.id);
+        s().threads.set(t.id, {
+          ...copy(t),
+          kind: t.kind ?? old?.kind ?? threadKindOf(t.id),
+          articleId: t.articleId !== undefined ? t.articleId : (old?.articleId ?? null),
+          anchor: t.anchor !== undefined ? copy(t.anchor) : (old?.anchor ?? null),
+          title: t.title !== undefined ? t.title : (old?.title ?? null),
+        });
+      },
       appendMessage: (m) => {
         if (!s().threads.has(m.threadId)) throw new Error(`no thread ${m.threadId}`);
         const seq = s().messages.filter((x) => x.threadId === m.threadId).length + 1;

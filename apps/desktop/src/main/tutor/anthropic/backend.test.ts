@@ -6,6 +6,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  anchorFromRange,
+  articleTurnContext,
+  buildArticleRegistry,
+  buildArticleSystemPrompt,
+  markdownDoc,
   buildTutorRegistry,
   MemoryStorage,
   SlugGuard,
@@ -533,5 +538,44 @@ describe('no hidden test data in any request built for the API (threat T6)', () 
     await run(t2);
     const sent = stringifyJson(client.requests);
     for (const n of needles) expect(sent.includes(n), `hidden data in a request: ${n}`).toBe(false);
+  });
+});
+
+describe('article mode (T24)', () => {
+  it('runs one article turn with the three tools and the passage as delimited data', async () => {
+    const body = '# Heaps\n\nA heap keeps the smallest on top.\n\n# Tries\n\nFAR_AWAY trie text.\n';
+    const at = body.indexOf('A heap');
+    const anchor = anchorFromRange(markdownDoc(body), at, at + 'A heap keeps'.length);
+    const tools = buildArticleRegistry({ body, getProfile: () => ctx.teaching.getProfile() });
+    script([
+      {
+        content: [toolUse('tu_1', 'read_article_section', { heading: 'Tries' })],
+        stop: 'tool_use',
+      },
+      { content: [text('Tries are trees of prefixes.')], stop: 'end_turn' },
+    ]);
+    const t: Turn = {
+      threadId: 'article:12345678-1234-4234-8234-123456789abc',
+      systemPrompt: buildArticleSystemPrompt(tools.anthropicTools()),
+      history: [],
+      userText: 'What is this?',
+      context: { article: articleTurnContext({ title: 'DS', source: null, body }, anchor) },
+      tools,
+      backendState: {},
+    };
+    const events = await run(t);
+    expect(kinds(events)).toEqual(['tool_start', 'tool_end', 'text_delta', 'done']);
+    const [first, second] = client.requests;
+    expect(first!.tools!.map((x) => (x as { name: string }).name)).toEqual([
+      'read_article_section',
+      'search_article',
+      'get_profile',
+    ]);
+    const user = JSON.stringify(first!.messages[0]);
+    expect(user).toContain('<article_quote>');
+    expect(user).toContain('A heap keeps');
+    expect(user).not.toContain('FAR_AWAY');
+    // The section came back through the tool, as a tool result.
+    expect(JSON.stringify(second!.messages)).toContain('FAR_AWAY trie text.');
   });
 });

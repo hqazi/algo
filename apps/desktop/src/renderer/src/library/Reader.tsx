@@ -5,7 +5,7 @@
  * images. Links never navigate the window: library links change the route,
  * web and mail links go to main, which opens them in the system browser.
  */
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import type { ArticleView } from '../../../shared/library';
 import { invoke } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
@@ -14,9 +14,19 @@ import { renderArticle } from './article-markdown';
 
 const WEB = /^(?:https?:|mailto:)/i;
 
-export function Reader({ id, version = 0 }: { id: string; version?: number }) {
+export interface ReaderProps {
+  id: string;
+  version?: number;
+  /** T24: drawn over the reader (margin markers), given the rendered body. */
+  layer?: (body: HTMLElement | null, html: string) => ReactNode;
+  /** T24: the article as loaded (`null` while loading or on error). */
+  onArticle?: (article: ArticleView | null) => void;
+}
+
+export function Reader({ id, version = 0, layer, onArticle }: ReaderProps) {
   const app = useApp();
   const [article, setArticle] = useState<ArticleView | null>(null);
+  const [body, setBody] = useState<HTMLDivElement | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +49,10 @@ export function Reader({ id, version = 0 }: { id: string; version?: number }) {
   }, [id, version]);
 
   const html = useMemo(() => (article ? renderArticle(article.body, article) : ''), [article]);
+  useEffect(
+    () => onArticle?.(article && article.id === id ? article : null),
+    [article, id, onArticle],
+  );
 
   function openLink(href: string): void {
     void invoke('library:open-link', { url: href }).catch((e: unknown) =>
@@ -115,7 +129,8 @@ export function Reader({ id, version = 0 }: { id: string; version?: number }) {
           </details>
         )}
       </header>
-      <div className="md article-body" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="md article-body" ref={setBody} dangerouslySetInnerHTML={{ __html: html }} />
+      {layer?.(body, html)}
     </article>
   );
 }

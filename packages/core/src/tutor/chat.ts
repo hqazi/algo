@@ -17,6 +17,12 @@
  * The per-turn context (problem, language, code, last redacted report) comes
  * from the injected `context` function in the main process, never from the
  * UI, except the editor's code, which is the user's own.
+ *
+ * v3 (SPEC §15.5): article threads (`article:<uuid>`) are created for a
+ * passage (`createArticleThread`) and keep their article, anchor and title
+ * through turns and resets. Their turns get context, tools and system
+ * prompt from the injected `article` function (article mode), never the
+ * practice tools.
  */
 import type { Storage } from '../storage';
 import type { JsonValue } from '../types/json';
@@ -30,9 +36,13 @@ import type {
   TurnTools,
   TutorBackend,
 } from './backend';
+import type { Anchor } from '../library/anchors';
 import { chatError, type ChatEvent } from './chat-events';
 
 export const HOME_THREAD = 'home';
+export const ARTICLE_THREAD_RE =
+  /^article:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const MAX_THREAD_TITLE = 200;
 export const MAX_USER_TEXT = 20_000;
 export const ACTION_TEXT: Record<ChatAction, string> = {
   hint: 'Give me the next hint for this problem.',
@@ -43,7 +53,7 @@ export const ACTION_TEXT: Record<ChatAction, string> = {
 /** Thrown when a message is refused before a turn starts. */
 export class ChatRefusal extends Error {
   constructor(
-    readonly reason: 'busy' | 'unavailable' | 'invalid_thread' | 'empty' | 'too_long',
+    readonly reason: 'busy' | 'unavailable' | 'invalid_thread' | 'not_found' | 'empty' | 'too_long',
     message: string,
   ) {
     super(message);
@@ -80,15 +90,56 @@ export interface ChatDeps {
   now: () => string;
   /** Turn failures (logged without message text or code). */
   log?: (message: string, error?: unknown) => void;
+  /**
+   * v3: an article thread's turn (context from the open article, its tools
+   * and system prompt). Without it article threads cannot send.
+   */
+  article?: (thread: ArticleThread) => Promise<ArticleTurn>;
+}
+
+export interface ArticleThread {
+  id: string;
+  articleId: string;
+  anchor: JsonValue;
+}
+
+export interface ArticleTurn {
+  context: TurnContext;
+  tools: TurnTools;
+  systemPrompt: string;
+}
+
+/** An article thread as the chat pane lists it. */
+export interface ArticleThreadInfo {
+  id: string;
+  title: string | null;
+  anchor: JsonValue;
+  createdAt: string;
+  /** The last message's time, or `null` before the first. */
+  lastAt: string | null;
+  messages: number;
+}
+
+export function isArticleThread(id: string): boolean {
+  return ARTICLE_THREAD_RE.test(id);
+}
+
+/** A thread title from the first question: its first line, cut to 80 characters. */
+export function titleFrom(text: string): string {
+  const line = text.trim().split('\n', 1)[0]!.replace(/\s+/g, ' ').trim();
+  return line.length <= 80 ? line : `${line.slice(0, 79)}…`;
 }
 
 export function isThreadId(id: string): boolean {
-  return id === HOME_THREAD || (id.length <= 80 && SLUG_RE.test(id));
+  return id === HOME_THREAD || isArticleThread(id) || (id.length <= 80 && SLUG_RE.test(id));
 }
 
 function checkThread(id: string): void {
   if (!isThreadId(id))
-    throw new ChatRefusal('invalid_thread', `thread must be "${HOME_THREAD}" or a problem slug`);
+    throw new ChatRefusal(
+      'invalid_thread',
+      `thread must be "${HOME_THREAD}", a problem slug or an article thread`,
+    );
 }
 
 const isObj = (v: unknown): v is Record<string, JsonValue> =>
@@ -133,6 +184,60 @@ export class ChatService {
     return this.running.has(thread);
   }
 
+  /** v3: a new, empty thread about a passage of an article. `id` is `article:<uuid>`. */
+  async createArticleThread(id: string, articleId: string, anchor: Anchor): Promise<void> {
+    if (!isArticleThread(id)) throw new ChatRefusal('invalid_thread', 'not an article thread id');
+    const now = this.deps.now();
+    await this.deps.storage.write((db) => {
+      if (db.getThread(id)) throw new ChatRefusal('invalid_thread', 'that chat already exists');
+      db.saveThread({
+        id,
+        backend: this.deps.backend().id,
+        backendState: {},
+        createdAt: now,
+        archivedAt: null,
+        kind: 'article',
+        articleId,
+        anchor: { ...anchor, heading: [...anchor.heading] },
+        title: null,
+      });
+    });
+  }
+
+  /** v3: an article's current threads, oldest first. */
+  articleThreads(articleId: string): ArticleThreadInfo[] {
+    return this.deps.storage.read((db) =>
+      db
+        .listThreads({ archived: false, articleId })
+        .filter((t) => t.kind === 'article')
+        .map((t) => {
+          const messages = db.listMessages(t.id);
+          return {
+            id: t.id,
+            title: t.title ?? null,
+            anchor: t.anchor ?? null,
+            createdAt: t.createdAt,
+            lastAt: messages.at(-1)?.createdAt ?? null,
+            messages: messages.length,
+          };
+        }),
+    );
+  }
+
+  /** v3: rename an article thread. */
+  async renameThread(id: string, title: string): Promise<{ title: string }> {
+    if (!isArticleThread(id))
+      throw new ChatRefusal('invalid_thread', 'only article chats have titles');
+    const clean = title.replace(/\s+/g, ' ').trim().slice(0, MAX_THREAD_TITLE);
+    if (!clean) throw new ChatRefusal('empty', 'a title cannot be empty');
+    return this.deps.storage.write((db) => {
+      const t = db.getThread(id);
+      if (!t || t.archivedAt) throw new ChatRefusal('not_found', 'that chat does not exist');
+      db.saveThread({ ...t, title: clean });
+      return { title: clean };
+    });
+  }
+
   /** The current (not archived) transcript of a thread. */
   transcript(thread: string): StoredMessage[] {
     checkThread(thread);
@@ -161,6 +266,19 @@ export class ChatService {
         .filter((x) => x.id.startsWith(`${thread}~`)).length;
       while (db.getThread(`${thread}~${n + 1}`)) n++;
       db.archiveThread(thread, `${thread}~${n + 1}`, now);
+      // An article thread stays listed at its passage, empty (SPEC §15.5).
+      if (t.kind === 'article')
+        db.saveThread({
+          id: thread,
+          backend: t.backend,
+          backendState: {},
+          createdAt: now,
+          archivedAt: null,
+          kind: 'article',
+          articleId: t.articleId ?? null,
+          anchor: t.anchor ?? null,
+          title: t.title ?? null,
+        });
       return { archived: true };
     });
   }
@@ -189,11 +307,28 @@ export class ChatService {
     let release!: () => void;
     this.running.set(req.thread, new Promise<void>((r) => (release = r)));
     try {
+      let mode: ArticleTurn | null = null;
+      if (isArticleThread(req.thread)) {
+        const t = this.deps.storage.read((db) => db.getThread(req.thread));
+        if (!t || t.kind !== 'article' || !t.articleId)
+          throw new ChatRefusal('not_found', 'that chat does not exist');
+        if (!this.deps.article)
+          throw new ChatRefusal('unavailable', 'chats about articles are not available');
+        const status = await backend.status();
+        if (!status.available)
+          throw new ChatRefusal('unavailable', status.reason ?? 'the tutor is not available');
+        mode = await this.deps.article({
+          id: t.id,
+          articleId: t.articleId,
+          anchor: t.anchor ?? null,
+        });
+        return await this.runTurn(req, text, mode.context, backend, signal, emit, mode);
+      }
       const status = await backend.status();
       if (!status.available)
         throw new ChatRefusal('unavailable', status.reason ?? 'the tutor is not available');
       const context = await this.deps.context(req.thread, req.code);
-      return await this.runTurn(req, text, context, backend, signal, emit);
+      return await this.runTurn(req, text, context, backend, signal, emit, mode);
     } finally {
       this.running.delete(req.thread);
       release();
@@ -207,6 +342,7 @@ export class ChatService {
     backend: TutorBackend,
     signal: SignalLike,
     emit: (event: ChatEvent) => void,
+    mode: ArticleTurn | null,
   ): Promise<SendResult> {
     const { storage, now } = this.deps;
     const thread = req.thread;
@@ -231,6 +367,8 @@ export class ChatService {
         backendState: states,
         createdAt: t?.createdAt ?? now(),
         archivedAt: null,
+        // The first question names an article thread until the user renames it.
+        ...(t?.kind === 'article' && !t.title ? { title: titleFrom(text) } : {}),
       });
       db.appendMessage({
         threadId: thread,
@@ -292,11 +430,11 @@ export class ChatService {
     try {
       const turn = {
         threadId: thread,
-        systemPrompt: this.deps.systemPrompt,
+        systemPrompt: mode ? mode.systemPrompt : this.deps.systemPrompt,
         history,
         userText: text,
         context,
-        tools: this.deps.tools,
+        tools: mode ? mode.tools : this.deps.tools,
         backendState,
       };
       for await (const event of backend.runTurn(turn, signal)) {

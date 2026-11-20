@@ -19,6 +19,8 @@ import {
   type StorageReader,
   type StorageWriter,
   type TestRunRecord,
+  threadKindOf,
+  type ThreadKind,
   type ThreadRecord,
   type TopicProgressRecord,
 } from '@algorithm-tutor/core';
@@ -92,6 +94,10 @@ const toThread = (r: Row): ThreadRecord => ({
   backendState: json(r.backend_state),
   createdAt: str(r.created_at),
   archivedAt: strOrNull(r.archived_at),
+  kind: (str(r.kind) || threadKindOf(str(r.id))) as ThreadKind,
+  articleId: strOrNull(r.article_id),
+  anchor: r.anchor === null || r.anchor === undefined ? null : json(r.anchor),
+  title: strOrNull(r.title),
 });
 
 const toMessage = (r: Row): MessageRecord => ({
@@ -311,8 +317,8 @@ export class SqliteStorage implements Storage {
         const archived = filter.archived === undefined ? null : filter.archived ? 1 : 0;
         return this.all(
           'SELECT * FROM threads WHERE (@archived IS NULL OR (archived_at IS NOT NULL) = @archived) ' +
-            'ORDER BY created_at, id',
-          { archived },
+            'AND (@articleId IS NULL OR article_id = @articleId) ORDER BY created_at, id',
+          { archived, articleId: filter.articleId ?? null },
         ).map(toThread);
       },
       listMessages: (threadId, filter = {}) =>
@@ -415,13 +421,30 @@ export class SqliteStorage implements Storage {
         ]);
       },
       saveThread: (t) => {
+        // v3 fields left out keep their stored values (`ThreadRecord`).
+        const keep = (col: string, given: boolean): string =>
+          `${col} = ${given ? `excluded.${col}` : `threads.${col}`}`;
         this.run(
-          'INSERT INTO threads (id, backend, backend_state, created_at, archived_at) ' +
-            'VALUES (@id, @backend, @backendState, @createdAt, @archivedAt) ' +
+          'INSERT INTO threads ' +
+            '(id, backend, backend_state, created_at, archived_at, kind, article_id, anchor, title) ' +
+            'VALUES (@id, @backend, @backendState, @createdAt, @archivedAt, @kind, @articleId, ' +
+            '@anchor, @title) ' +
             'ON CONFLICT (id) DO UPDATE SET backend = excluded.backend, ' +
             'backend_state = excluded.backend_state, created_at = excluded.created_at, ' +
-            'archived_at = excluded.archived_at',
-          { ...t, backendState: stringifyJson(t.backendState) },
+            `archived_at = excluded.archived_at, ${keep('kind', t.kind !== undefined)}, ` +
+            `${keep('article_id', t.articleId !== undefined)}, ` +
+            `${keep('anchor', t.anchor !== undefined)}, ${keep('title', t.title !== undefined)}`,
+          {
+            id: t.id,
+            backend: t.backend,
+            backendState: stringifyJson(t.backendState),
+            createdAt: t.createdAt,
+            archivedAt: t.archivedAt,
+            kind: t.kind ?? threadKindOf(t.id),
+            articleId: t.articleId ?? null,
+            anchor: t.anchor === undefined || t.anchor === null ? null : stringifyJson(t.anchor),
+            title: t.title ?? null,
+          },
         );
       },
       appendMessage: (m) => {
@@ -445,8 +468,10 @@ export class SqliteStorage implements Storage {
           throw new Error(`no thread ${id}`);
         // The new row first, so the messages' foreign key always has a parent.
         this.run(
-          'INSERT INTO threads (id, backend, backend_state, created_at, archived_at) ' +
-            'SELECT ?, backend, backend_state, created_at, ? FROM threads WHERE id = ?',
+          'INSERT INTO threads ' +
+            '(id, backend, backend_state, created_at, archived_at, kind, article_id, anchor, title) ' +
+            'SELECT ?, backend, backend_state, created_at, ?, kind, article_id, anchor, title ' +
+            'FROM threads WHERE id = ?',
           [archivedId, archivedAt, id],
         );
         this.run('UPDATE messages SET thread_id = ? WHERE thread_id = ?', [archivedId, id]);

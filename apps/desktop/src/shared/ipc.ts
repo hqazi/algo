@@ -23,6 +23,7 @@ import * as T from './tutor';
 import * as I from './intake';
 import * as U from './updates';
 import * as L from './library';
+import * as A from './article-chat';
 
 export {
   INVOKE_CHANNELS,
@@ -184,6 +185,16 @@ export const invokeChannels = {
     request: L.openLinkRequest,
     response: z.strictObject({ opened: z.boolean() }),
   },
+
+  // ---- chats on passages (T24); turns and transcripts use `chat:*` with an `article:<uuid>` id
+  /** An article's current threads, oldest first. */
+  'library:threads': { request: A.threadsRequest, response: A.threadsResponse },
+  /** A new, empty thread about a passage. Refused: `not_found` (no such article). */
+  'library:thread-create': { request: A.createThreadRequest, response: A.createThreadResponse },
+  /** Renames a thread. Refused: `not_found`, `empty`. */
+  'library:thread-rename': { request: A.renameRequest, response: A.renameResponse },
+  /** Whether the one-time "passages go to the provider" notice was seen; `ack` records it. */
+  'library:chat-notice': { request: A.noticeRequest, response: A.noticeResponse },
 
   // ---- updates (T13)
   /** Where the updater is (`unsupported` in development builds). */

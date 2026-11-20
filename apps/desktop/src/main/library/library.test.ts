@@ -226,7 +226,29 @@ describe('folders', () => {
     }
     await library.openFolder('id-1');
     expect(opened).toEqual([vault]);
+    // T24: the folder's article chats (and their archived copies) go with it; others stay.
+    const articleId = rows()[0]!.id;
+    const chat = (id: string, article: string | null) => ({
+      id,
+      backend: 'fake',
+      backendState: {},
+      createdAt: 't',
+      archivedAt: null,
+      kind: article ? ('article' as const) : ('home' as const),
+      articleId: article,
+      anchor: null,
+      title: null,
+    });
+    const A = 'article:12345678-1234-4234-8234-123456789abc';
+    await storage.write((db) => {
+      db.saveThread(chat(A, articleId));
+      db.appendMessage({ threadId: A, role: 'user', content: { text: 'q' }, createdAt: 't' });
+      db.saveThread(chat(`${A}~1`, articleId));
+      db.saveThread(chat('home', null));
+    });
     await library.removeFolder('id-1');
+    expect(storage.read((db) => db.listThreads().map((t) => t.id))).toEqual(['home']);
+    expect(storage.read((db) => db.listMessages(A))).toEqual([]);
     expect(settings.get().library.folders).toEqual([]);
     expect(rows()).toEqual([]);
     expect(readFileSync(join(vault, 'a.md'), 'utf8')).toBe('A');

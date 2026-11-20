@@ -88,7 +88,9 @@ function setup(article: string | null, extra?: (b: FakeBridge) => FakeBridge) {
         return { ...ARTICLE, id: 'a2', title: 'Graph basics', missing: true, body: '' };
       throw new Refused('not_found', 'That article is not in the library.');
     })
-    .on('library:open-link', () => ({ opened: true }));
+    .on('library:open-link', () => ({ opened: true }))
+    .on('library:threads', ({ article }) => ({ article, threads: [] }))
+    .on('library:chat-notice', () => ({ seen: false }));
   if (extra) bridge = extra(bridge);
   installBridge(bridge);
   const view = render(
@@ -153,7 +155,7 @@ describe('LibraryPage', () => {
     expect(view.container.querySelector('.callout-tip .callout-title')!.textContent).toBe(
       'Remember',
     );
-    expect(screen.getByTestId('chats-placeholder')).toBeTruthy();
+    expect(await screen.findByTestId('no-chats')).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(bridge.channels()).not.toContain('chat:send');
   });

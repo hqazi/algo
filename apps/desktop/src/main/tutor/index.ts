@@ -20,15 +20,23 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import {
+  articleTurnContext,
+  buildArticleRegistry,
+  buildArticleSystemPrompt,
+  parseAnchor,
   buildSystemPrompt,
   buildTutorRegistry,
+  ChatRefusal,
   ChatService,
   FakeBackend,
   HOME_THREAD,
   parseFakeScript,
   renderExplanationPage,
   UnavailableBackend,
+  type ArticleThread,
+  type ArticleTurn,
   type BackendStatus,
+  type OpenArticle,
   type Settings,
   type Sleep,
   type ToolOutput,
@@ -74,6 +82,11 @@ export interface TutorDeps {
   log?: (message: string, error?: unknown) => void;
   /** T12: validate, self-check and save a problem; without it `create_problem` is not offered. */
   createProblem?: TutorToolContext['createProblem'];
+  /**
+   * T24: reads a library article for a chat turn (title, source, body; body
+   * `null` when the file is missing). Without it article threads cannot send.
+   */
+  readArticle?: (articleId: string) => Promise<OpenArticle>;
 }
 
 export interface AppTutor {
@@ -81,6 +94,8 @@ export interface AppTutor {
   tools: ToolRegistry<TutorToolContext>;
   explanations: ExplanationStore;
   systemPrompt: string;
+  /** The system prompt of article threads (SPEC §15.5). */
+  articlePrompt: string;
   /** `content/references/*.md` by name. */
   references: Record<string, string>;
   /** The Anthropic backend, also when another is chosen (Settings' connection test). */
@@ -233,7 +248,38 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     return out;
   };
 
+  // Article mode (T24): three tools bound to the open article, its own prompt.
+  const getProfile = () => teaching.getProfile();
+  const articlePrompt = buildArticleSystemPrompt(
+    buildArticleRegistry({ body: null, getProfile }).anthropicTools(),
+  );
+  const readArticle = deps.readArticle;
+  const article = readArticle
+    ? async (t: ArticleThread): Promise<ArticleTurn> => {
+        const anchor = parseAnchor(t.anchor) ?? {
+          kind: 'heading' as const,
+          heading: [],
+          quote: '',
+          prefix: '',
+          suffix: '',
+        };
+        let open: OpenArticle;
+        try {
+          open = await readArticle(t.articleId);
+        } catch (e) {
+          log('reading an article for a chat failed', e);
+          throw new ChatRefusal('not_found', 'That article is no longer in the library.');
+        }
+        return {
+          context: { article: articleTurnContext(open, anchor) },
+          tools: buildArticleRegistry({ body: open.body, getProfile }, (m, e) => log(m, e)),
+          systemPrompt: articlePrompt,
+        };
+      }
+    : undefined;
+
   const chat = new ChatService({
+    ...(article ? { article } : {}),
     storage: ctx.storage,
     backend,
     tools,
@@ -248,6 +294,7 @@ export async function openTutor(deps: TutorDeps): Promise<AppTutor> {
     tools,
     explanations,
     systemPrompt,
+    articlePrompt,
     references,
     anthropic,
     claudeCode,

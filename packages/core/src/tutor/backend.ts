@@ -5,6 +5,7 @@
  * same tools over MCP. Either way the UI sees the same events.
  */
 import type { JsonValue } from '../types/json';
+import type { ArticleTurnContext } from '../tools/article';
 import type { AnthropicToolDefinition, McpToolDefinition, ToolResult } from '../tools/registry';
 import type { ChatEvent } from './chat-events';
 
@@ -64,6 +65,8 @@ export interface TurnContext {
   code?: string;
   /** The last test report for the open attempt: already redacted. */
   lastReport?: JsonValue;
+  /** v3: an article thread's passage, section and outline (SPEC §15.5). */
+  article?: ArticleTurnContext;
 }
 
 /** The part of a `ToolRegistry` a backend uses. */

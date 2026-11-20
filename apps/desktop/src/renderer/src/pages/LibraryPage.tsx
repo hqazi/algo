@@ -1,16 +1,20 @@
 /**
  * The Library page (T22, SPEC §15.6): folder tree with filter and Refresh,
- * the reader, and the chat pane (a placeholder until T24), in the practice
+ * the reader with its margin chats, and the chat pane (T24), in the practice
  * view's resizable panes. While the page is open, main rescans on file
  * changes (`library:watch`) and sends the tree after each scan.
  */
-import { useEffect, useState } from 'react';
-import type { TreeView } from '../../../shared/library';
+import { useCallback, useEffect, useState } from 'react';
+import type { AnchorView } from '../../../shared/article-chat';
+import type { ArticleView, TreeView } from '../../../shared/library';
 import { Link } from '../components/Link';
 import { Panes } from '../components/Panes';
 import { invoke, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { LibraryTree } from '../library/LibraryTree';
+import { ArticleChatPane } from '../library/chat/ArticleChatPane';
+import { PassageLayer } from '../library/chat/PassageLayer';
+import { useArticleChats } from '../library/chat/useArticleChats';
 import { Reader } from '../library/Reader';
 
 export function LibraryPage({ article }: { article: string | null }) {
@@ -20,6 +24,17 @@ export function LibraryPage({ article }: { article: string | null }) {
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState(article ? 'reader' : 'articles');
+  const chats = useArticleChats(article);
+  const [missing, setMissing] = useState(false);
+  const onArticle = useCallback((a: ArticleView | null) => setMissing(!!a?.missing), []);
+  const { ask } = chats;
+  const onAsk = useCallback(
+    (anchor: AnchorView) => {
+      ask(anchor);
+      setTab('chats');
+    },
+    [ask],
+  );
 
   useEffect(() => {
     let live = true;
@@ -88,18 +103,20 @@ export function LibraryPage({ article }: { article: string | null }) {
   );
 
   const middle = article ? (
-    <Reader id={article} version={version} />
+    <Reader
+      id={article}
+      version={version}
+      onArticle={onArticle}
+      layer={(body, html) => <PassageLayer body={body} html={html} chats={chats} onAsk={onAsk} />}
+    />
   ) : (
     <p className="muted reader-pad">Choose an article to read.</p>
   );
 
-  const right = (
-    <div className="reader-pad">
-      <h2 className="small">Chats</h2>
-      <p className="muted small" data-testid="chats-placeholder">
-        Chats about passages of this article will appear here.
-      </p>
-    </div>
+  const right = article ? (
+    <ArticleChatPane chats={chats} missing={missing} />
+  ) : (
+    <p className="muted reader-pad">Open an article to see its chats.</p>
   );
 
   return (

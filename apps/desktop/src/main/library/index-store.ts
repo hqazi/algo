@@ -111,5 +111,9 @@ export function applyScan(
 }
 
 export function deleteFolderRows(db: Db, folderId: string): number {
+  // T24: the folder's article chats go too (messages cascade).
+  db.prepare(
+    'DELETE FROM threads WHERE article_id IN (SELECT id FROM articles WHERE folder_id = ?)',
+  ).run(folderId);
   return Number(db.prepare('DELETE FROM articles WHERE folder_id = ?').run(folderId).changes);
 }

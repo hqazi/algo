@@ -418,6 +418,23 @@ export async function readArticle(
   };
 }
 
+/**
+ * An article's title, source and Markdown body for a chat turn (T24): the
+ * file read as the reader reads it, without resolving images or links.
+ * `body` is `null` when the file is missing.
+ */
+export async function readArticleText(
+  library: LibraryService,
+  id: string,
+): Promise<{ title: string; source: string | null; body: string | null }> {
+  const { folderPath, row } = library.article(id);
+  const root = await realpath(folderPath).catch(() => null);
+  const content = root && row.missingSince === null ? await readNote(root, row.relPath) : null;
+  const parsed = content === null ? null : parseNote(content, row.relPath);
+  const meta = parsed?.meta ?? articleMeta(row.frontmatter, row.relPath);
+  return { title: meta.title, source: meta.source, body: parsed?.body ?? null };
+}
+
 /** The URL to give the system browser, or `null`: `https:`, `http:` and `mailto:` only. */
 export function externalUrl(url: string): string | null {
   let u: URL;

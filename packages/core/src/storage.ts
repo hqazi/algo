@@ -87,14 +87,34 @@ export interface HintRecord {
   givenAt: string;
 }
 
+export const THREAD_KINDS = ['home', 'problem', 'article'] as const;
+export type ThreadKind = (typeof THREAD_KINDS)[number];
+
+/** The kind a thread id implies: `home`, `article:<uuid>` (also archived `~<n>`), else a problem slug. */
+export function threadKindOf(id: string): ThreadKind {
+  if (id === 'home' || id.startsWith('home~')) return 'home';
+  return id.startsWith('article:') ? 'article' : 'problem';
+}
+
 export interface ThreadRecord {
-  /** `home`, or the slug of the problem the thread is about. */
+  /** `home`, the slug of the problem the thread is about, or `article:<uuid>` (v3). */
   id: string;
   backend: string;
   /** Whatever the backend needs to resume (e.g. a session id). */
   backendState: JsonValue;
   createdAt: string;
   archivedAt: string | null;
+  /**
+   * v3 (SPEC §15.5). Reads always fill these. On `saveThread`, a field left
+   * out keeps its stored value (a new row: `kind` from the id, the rest null).
+   */
+  kind?: ThreadKind;
+  /** The article an `article` thread is about. */
+  articleId?: string | null;
+  /** The passage (core `Anchor`), as JSON. */
+  anchor?: JsonValue | null;
+  /** The first question, editable. */
+  title?: string | null;
 }
 
 export interface MessageRecord {
@@ -135,7 +155,7 @@ export interface StorageReader {
   listHints(attemptId: number): HintRecord[];
 
   getThread(id: string): ThreadRecord | null;
-  listThreads(filter?: { archived?: boolean }): ThreadRecord[];
+  listThreads(filter?: { archived?: boolean; articleId?: string }): ThreadRecord[];
   /** In order of `seq`; with `afterSeq`, only later ones. */
   listMessages(threadId: string, filter?: { afterSeq?: number }): MessageRecord[];
 
@@ -158,7 +178,7 @@ export interface StorageWriter extends StorageReader {
 
   addHint(hint: HintRecord): void;
 
-  /** Insert or replace by id (replacing keeps its messages). */
+  /** Insert or replace by id (replacing keeps its messages; see `ThreadRecord` for the v3 fields). */
   saveThread(thread: ThreadRecord): void;
   /** Appends at the next `seq` and returns the stored message. */
   appendMessage(message: Omit<MessageRecord, 'seq'>): MessageRecord;
@@ -166,7 +186,8 @@ export interface StorageWriter extends StorageReader {
   deleteThread(id: string): void;
   /**
    * Moves thread `id` and its messages to the new id `archivedId` with
-   * `archivedAt` set ("Reset chat"); `id` is then free for a new thread.
+   * `archivedAt` set ("Reset chat"); `id` is then free for a new thread. The
+   * v3 fields go with it.
    * Throws if `id` does not exist or `archivedId` does.
    */
   archiveThread(id: string, archivedId: string, archivedAt: string): void;

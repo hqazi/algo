@@ -39,7 +39,7 @@ afterEach(async () => {
 
 describe('records round-trip', () => {
   it('meta', async () => {
-    expect(s.read((db) => db.getMeta('schema_version'))).toBe('2');
+    expect(s.read((db) => db.getMeta('schema_version'))).toBe('3');
     expect(s.read((db) => db.getMeta('install_id'))).toMatch(/^[0-9a-f-]{36}$/);
     await s.write((db) => db.setMeta('k', 'v1'));
     await s.write((db) => db.setMeta('k', 'v2'));
@@ -262,6 +262,54 @@ describe('records round-trip', () => {
     ]);
     expect(s.read((db) => db.listThreads()).length).toBe(2);
 
+    // v3 (T24): article threads keep their passage when re-saved without it, and archive with it.
+    const ID = 'article:12345678-1234-4234-8234-123456789abc';
+    const anchor = { kind: 'quote', heading: ['A'], quote: 'q', prefix: '', suffix: '' };
+    await s.write((db) =>
+      db.saveThread({
+        id: ID,
+        backend: 'fake',
+        backendState: {},
+        createdAt: T(5),
+        archivedAt: null,
+        kind: 'article',
+        articleId: 'art',
+        anchor,
+        title: null,
+      }),
+    );
+    await s.write((db) =>
+      db.saveThread({
+        id: ID,
+        backend: 'fake',
+        backendState: { n: 1 },
+        createdAt: T(5),
+        archivedAt: null,
+        title: 'Q?',
+      }),
+    );
+    expect(s.read((db) => db.getThread(ID))).toMatchObject({
+      kind: 'article',
+      articleId: 'art',
+      anchor,
+      title: 'Q?',
+    });
+    expect(s.read((db) => db.getThread('two-sum'))).toMatchObject({
+      kind: 'problem',
+      articleId: null,
+      anchor: null,
+      title: null,
+    });
+    expect(s.read((db) => db.listThreads({ articleId: 'art' })).map((t) => t.id)).toEqual([ID]);
+    await s.write((db) => db.archiveThread(ID, `${ID}~1`, T(6)));
+    expect(s.read((db) => db.getThread(`${ID}~1`))).toMatchObject({
+      kind: 'article',
+      articleId: 'art',
+      anchor,
+      title: 'Q?',
+      archivedAt: T(6),
+    });
+
     await s.write((db) => db.deleteThread('home'));
     expect(s.read((db) => db.getThread('home'))).toBeNull();
     expect(s.read((db) => db.listMessages('home'))).toEqual([]);
@@ -299,6 +347,10 @@ describe('writes', () => {
       backendState: { n: 1 },
       createdAt: T(1),
       archivedAt: T(4),
+      kind: 'home',
+      articleId: null,
+      anchor: null,
+      title: null,
     });
     expect(s.read((db) => db.listMessages('home~1')).map((m) => m.seq)).toEqual([1, 2]);
     expect(s.read((db) => db.listMessages('home'))).toEqual([]);

@@ -1,0 +1,106 @@
+/* Chats on passages (T24): margin buttons and markers in the reader, the chat pane. */
+.reader {
+  position: relative;
+}
+.passage-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.passage-layer > button {
+  position: absolute;
+  pointer-events: auto;
+}
+.ask-selection {
+  right: 0.5rem;
+  transform: translateY(-110%);
+  z-index: 2;
+}
+.ask-heading {
+  right: 0;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2);
+  color: var(--muted);
+  opacity: 0.35;
+}
+.reader:hover .ask-heading,
+.ask-heading:focus-visible {
+  opacity: 1;
+}
+.passage-marker {
+  left: 0.25rem;
+  width: 0.6rem;
+  height: 1.3rem;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: var(--accent);
+  opacity: 0.55;
+  cursor: pointer;
+}
+.passage-marker.at-heading {
+  opacity: 0.3;
+}
+.passage-marker.active,
+.passage-marker:hover {
+  opacity: 1;
+}
+.article-chats {
+  overflow: auto;
+}
+.article-threads {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem;
+}
+.article-threads li.active .thread-item {
+  background: var(--surface-2);
+}
+.thread-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  gap: 0.1rem;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.thread-item:hover {
+  background: var(--surface-2);
+}
+.thread-title {
+  font-weight: 600;
+}
+.thread-snippet {
+  overflow-wrap: anywhere;
+}
+.article-thread {
+  display: flex;
+  flex-direction: column;
+  min-height: 16rem;
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
+.passage-quote {
+  margin: 0.4rem 0.75rem;
+  padding-left: 0.6rem;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+  max-height: 6rem;
+  overflow: auto;
+}
+.provider-notice {
+  margin: 0.4rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+}

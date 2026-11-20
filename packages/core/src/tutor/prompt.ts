@@ -11,6 +11,7 @@
  * references, so it is built once.
  */
 import { stringifyJson, type JsonValue } from '../types/json';
+import { renderArticleContext } from '../tools/article-prompt';
 import type { TurnContext } from './backend';
 import { intents, PREAMBLE, RULES, START, STYLE } from './rules';
 
@@ -146,6 +147,10 @@ export function compactReport(report: JsonValue): Record<string, JsonValue> {
 
 export function renderContext(context: TurnContext): string {
   const lines = ['<context>'];
+  if (context.article) {
+    lines.push(...renderArticleContext(context.article), '</context>');
+    return lines.join('\n');
+  }
   if (context.slug) {
     const title = context.title ? ` — ${context.title}` : '';
     lines.push(`Open problem: ${context.slug}${title}`);

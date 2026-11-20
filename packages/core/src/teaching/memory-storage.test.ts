@@ -31,6 +31,10 @@ describe('MemoryStorage', () => {
       backendState: { n: 1 },
       createdAt: T(1),
       archivedAt: T(4),
+      kind: 'home',
+      articleId: null,
+      anchor: null,
+      title: null,
     });
     expect(s.read((db) => db.listMessages('home~1')).map((m) => m.seq)).toEqual([1, 2]);
     expect(s.read((db) => db.listMessages('home'))).toEqual([]);
