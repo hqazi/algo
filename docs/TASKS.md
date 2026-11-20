@@ -43,6 +43,10 @@ Status lives only in the **Progress** table below; edit it by hand.
   recorded real AI responses.
 - Model-written code runs only in the Pyodide executor; hidden test data never
   leaves the main process unredacted.
+- Dependencies: every npm version locked must be at least 14 days old (D-45,
+  D-48). Pin exact versions that old, install with
+  `npm install --before=<date 14 days ago> --ignore-scripts`, and run
+  `npm run check:deps` whenever `package.json` or `package-lock.json` changes.
 - Report honestly: list anything not done or not tested.
 
 ## Progress

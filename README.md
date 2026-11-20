@@ -133,12 +133,14 @@ whether a solution works.
 You need Node.js 22. Then:
 
 ```bash
-npm ci
+npm start
 ```
 
-```bash
-npm run dev
-```
+This installs the dependencies when they are missing or out of date
+(`npm ci`) and opens the app in development mode. On Linux it uses X11
+(XWayland), because under Wayland the window may never appear; set
+`ALGO_OZONE_PLATFORM=wayland` to try Wayland. `npm run dev` starts the app
+without those steps.
 
 The app is Electron + React + TypeScript, with the tutor's logic in a pure
 `packages/core` and Python running in Pyodide. Start with

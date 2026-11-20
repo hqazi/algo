@@ -1596,3 +1596,22 @@ so nothing has to stay compatible with installed builds.
   `ALGOTUTOR_*` from the toolchain environment; it stripped
   `ALGORITHM_TUTOR_*`, a prefix nothing used.
 
+
+**D-48 `npm run check:deps` enforces the 14-day cooldown** (2026-11-20; extends D-45)
+
+D-45 set the rule but nothing checked it, so a later `npm install` could lock
+a release that is only hours old. This is a guard against supply-chain
+attacks: a hijacked release is usually found and pulled within days.
+- `scripts/check-dep-age.ts` (`npm run check:deps`) reads the publish time of
+  every registry version in `package-lock.json` and fails if any is younger
+  than 14 days, or if a time cannot be read. CI runs it once, on Linux.
+- A lock only ages, so the check cannot start failing by itself; a failure
+  means a dependency was added or moved.
+- Every change to `package.json` or `package-lock.json` runs it before
+  merging. To add or move a dependency: pick its newest version at least 14
+  days old, pin it exactly, run
+  `npm install --before=<date 14 days ago> --ignore-scripts`, then
+  `npm run check:deps`. Never `npm update`, or `npm install <pkg>` without a
+  version.
+- First run (2026-11-20): 564 versions of 523 packages, none younger than
+  14 days.
