@@ -15,6 +15,8 @@ export const EXECUTION_RUNTIMES = ['local', 'podman', 'docker'] as const;
 export const EDITOR_KEYMAPS = ['default', 'vim', 'emacs'] as const;
 export const UI_THEMES = ['system', 'light', 'dark'] as const;
 export const UPDATE_CHANNELS = ['stable', 'beta'] as const;
+/** When images an article links to are downloaded (SPEC §15.4). */
+export const LIBRARY_IMAGE_MODES = ['on-open', 'ask'] as const;
 export const MIN_FONT_SIZE = 8;
 export const MAX_FONT_SIZE = 40;
 /** At most this many Library folders (SPEC §15.1). */
@@ -58,6 +60,7 @@ const FIELDS = {
       .array(libraryFolderSchema)
       .max(MAX_LIBRARY_FOLDERS)
       .refine((fs) => new Set(fs.map((f) => f.id)).size === fs.length, 'folder ids must differ'),
+    images: z.enum(LIBRARY_IMAGE_MODES),
   },
 } as const;
 
@@ -73,7 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editor: { fontSize: 14, keymap: 'default' },
   ui: { theme: 'system' },
   updates: { channel: 'stable', auto: true },
-  library: { folders: [] },
+  library: { folders: [], images: 'on-open' },
 };
 
 export interface SettingsIssue {

@@ -25,6 +25,7 @@ import {
   type ImageView,
 } from '../../shared/library';
 import { IpcRefusal, type IpcRouter } from '../ipc/router';
+import type { LinkedImages } from './images/linked';
 import type { ArticleRow } from './index-store';
 import { LibraryError, type LibraryService } from './service';
 
@@ -91,7 +92,10 @@ export async function checkImageFile(root: string, path: string): Promise<Checke
 
 /** Library images by token, for this session only. */
 export class AssetRegistry {
-  private readonly tokens = new Map<string, { folderId: string; root: string; path: string }>();
+  private readonly tokens = new Map<
+    string,
+    { folderId: string | null; root: string; path: string }
+  >();
   private readonly byPath = new Map<string, string>();
 
   constructor(
@@ -102,8 +106,12 @@ export class AssetRegistry {
     } = {},
   ) {}
 
-  /** The asset URL for a checked file (the same token for the same file). */
-  url(folderId: string, root: string, path: string): string {
+  /**
+   * The asset URL for a checked file (the same token for the same file).
+   * `folderId` `null`: a file in the linked-image cache (T23), whose real
+   * `root` is the cache folder.
+   */
+  url(folderId: string | null, root: string, path: string): string {
     const key = `${folderId}\0${path}`;
     let token = this.byPath.get(key);
     if (!token) {
@@ -132,7 +140,11 @@ export class AssetRegistry {
     const token = u.pathname.slice(ASSET_PATH.length);
     const entry = TOKEN.test(token) ? this.tokens.get(token) : undefined;
     if (!entry) return notFound();
-    if (this.options.isLibraryFolder && !this.options.isLibraryFolder(entry.folderId))
+    if (
+      entry.folderId !== null &&
+      this.options.isLibraryFolder &&
+      !this.options.isLibraryFolder(entry.folderId)
+    )
       return notFound();
     // Checked again: the file may have changed since the article was opened.
     const checked = await checkImageFile(entry.root, entry.path);
@@ -221,7 +233,9 @@ export function extractRefs(body: string): NoteRefs {
   const images = new Set<string>();
   const links = new Set<string>();
   const add = (set: Set<string>, key: string) => {
-    if (key && key.length <= 4096 && images.size + links.size < MAX_REFS) set.add(key);
+    // A `data:` image may be long (2 MB as base64, T23); other keys are short.
+    const max = key.startsWith('data:') ? 3_000_000 : 4096;
+    if (key && key.length <= max && images.size + links.size < MAX_REFS) set.add(key);
   };
   const rest = text.replace(/!\[\[([^[\]\n]+)\]\]/g, (_m, inner: string) => {
     const { target } = wikiTarget(inner);
@@ -371,11 +385,16 @@ async function readNote(root: string, relPath: string): Promise<string | null> {
 
 const clip = (s: string | null, n: number): string | null => (s === null ? null : s.slice(0, n));
 
-/** Reads an article for the reader: header, body, image tokens, wikilinks. */
+/**
+ * Reads an article for the reader: header, body, image tokens, wikilinks.
+ * With `linked` (T23), a linked image shows from the cache (or its recent
+ * failure) and a `data:` image is stored and served; nothing downloads here.
+ */
 export async function readArticle(
   library: LibraryService,
   assets: AssetRegistry,
   id: string,
+  linked?: LinkedImages,
 ): Promise<ArticleView> {
   const { folderPath, row, siblings } = library.article(id);
   const root = await realpath(folderPath).catch(() => null);
@@ -392,7 +411,11 @@ export async function readArticle(
       images[ref] =
         'path' in r
           ? { kind: 'asset', url: assets.url(row.folderId, root, r.path) }
-          : { kind: 'blocked', reason: r.reason, host: clip(r.host ?? null, 300) };
+          : linked && r.reason === 'remote'
+            ? await linked.view(ref)
+            : linked && r.reason === 'data'
+              ? await linked.dataImage(ref)
+              : { kind: 'blocked', reason: r.reason, host: clip(r.host ?? null, 300) };
     }
     for (const target of refs.links) links[target] = resolveLink(siblings, row.relPath, target);
   }
@@ -434,11 +457,15 @@ export function externalUrl(url: string): string | null {
 export function registerReaderHandlers(
   router: IpcRouter,
   library: LibraryService,
-  options: { assets: AssetRegistry; openExternal: (url: string) => Promise<boolean> },
+  options: {
+    assets: AssetRegistry;
+    openExternal: (url: string) => Promise<boolean>;
+    linked?: LinkedImages;
+  },
 ): void {
   router.handle('library:article', async ({ id }) => {
     try {
-      return await readArticle(library, options.assets, id);
+      return await readArticle(library, options.assets, id, options.linked);
     } catch (e) {
       if (e instanceof LibraryError) throw new IpcRefusal(e.reason, e.message);
       throw e;

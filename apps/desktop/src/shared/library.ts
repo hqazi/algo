@@ -67,11 +67,11 @@ export const LIBRARY_ASSET_PREFIX = 'tutor-app://app/library-asset/';
 
 /** Why an image reference is not shown (the placeholder says so). */
 export const imageReason = z.enum([
-  /** A link to a website: not downloaded by the reader (linked images: T23). */
+  /** A link to a website, not downloaded yet (`ask` mode, or loading). */
   'remote',
   /** An `http:` link: never loaded. */
   'insecure',
-  /** A `data:` URL: not shown inline. */
+  /** A `data:` URL that is not a base64 PNG, JPEG, GIF or WebP. */
   'data',
   /** Any other scheme (`file:`, `javascript:`…). */
   'scheme',
@@ -84,6 +84,25 @@ export const imageReason = z.enum([
   'svg',
   /** Over 25 MB. */
   'too_large',
+  // Linked images (T23, §15.4): why a download was refused or failed.
+  /** The host is or resolves to this machine or the local network. */
+  'local_address',
+  /** Not port 443. */
+  'port',
+  /** More than 3 redirects. */
+  'redirects',
+  /** Over 10 MB (2 MB for a `data:` image). */
+  'oversize',
+  /** Over 15 s. */
+  'timeout',
+  /** Width × height over 100 megapixels. */
+  'pixels',
+  /** The site answered with an error. */
+  'http',
+  /** The site could not be reached. */
+  'network',
+  /** Over 200 images or 100 MB for this article. */
+  'limit',
 ]);
 
 export const imageView = z.discriminatedUnion('kind', [
@@ -96,7 +115,8 @@ export const imageView = z.discriminatedUnion('kind', [
   }),
 ]);
 
-const refKeyString = z.string().max(4096);
+/** Keys are short, except a `data:` image (up to 2 MB as base64). */
+const refKeyString = z.string().max(3_000_000);
 
 export const articleResponse = z.strictObject({
   id,
@@ -117,6 +137,41 @@ export const articleResponse = z.strictObject({
   images: z.record(refKeyString, imageView),
   /** Per wikilink target (`refKey`): the library article it opens, or `null`. */
   links: z.record(refKeyString, id.nullable()),
+});
+
+/** Load an article's linked images (T23): `force` even in `ask` mode, `retry` forgets failures. */
+export const loadImagesRequest = z.strictObject({
+  id,
+  force: z.boolean(),
+  retry: z.boolean(),
+});
+
+export const imagesMode = z.enum(['on-open', 'ask']);
+
+export const loadImagesResponse = z.strictObject({
+  /** `library.images`: in `ask` mode nothing downloads unless `force`. */
+  mode: imagesMode,
+  /** The linked references (`refKey`) and what each shows now. */
+  images: z.record(refKeyString, imageView),
+});
+
+export const imageCacheResponse = z.strictObject({
+  images: z.int().min(0),
+  bytes: z.int().min(0),
+});
+
+/** "Make available offline" progress: articles done of total, images that failed. */
+export const offlineProgress = z.strictObject({
+  done: z.int().min(0),
+  total: z.int().min(0),
+  failed: z.int().min(0),
+});
+
+export const offlineResult = z.strictObject({
+  done: z.int().min(0),
+  total: z.int().min(0),
+  failed: z.int().min(0),
+  cancelled: z.boolean(),
 });
 
 export const openLinkRequest = z.strictObject({ url: z.string().min(1).max(8192) });
@@ -154,3 +209,6 @@ export const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|tiff?|ico|heic)$/i
 export type ImageReason = z.output<typeof imageReason>;
 export type ImageView = z.output<typeof imageView>;
 export type ArticleView = z.output<typeof articleResponse>;
+export type ImagesMode = z.output<typeof imagesMode>;
+export type LoadImagesView = z.output<typeof loadImagesResponse>;
+export type OfflineProgress = z.output<typeof offlineProgress>;

@@ -179,6 +179,16 @@ export const invokeChannels = {
    * shown. Reads the file only; no network. Refused: `not_found`.
    */
   'library:article': { request: L.folderRequest, response: L.articleResponse },
+  /**
+   * Linked images of an article (T23, §15.4): main finds the references in
+   * the file itself and downloads them (unless `ask` mode without `force`).
+   * Refused: `not_found`.
+   */
+  'library:load-images': { request: L.loadImagesRequest, response: L.loadImagesResponse },
+  /** The linked-image cache's size (Settings → Library). */
+  'library:image-cache': { request: z.undefined(), response: L.imageCacheResponse },
+  /** Clears the linked-image cache; then its size. */
+  'library:clear-image-cache': { request: z.undefined(), response: L.imageCacheResponse },
   /** Opens an article's link in the system browser: `https:`, `http:`, `mailto:` only. Refused: `scheme`. */
   'library:open-link': {
     request: L.openLinkRequest,
@@ -245,6 +255,16 @@ export const streamChannels = {
     request: z.undefined(),
     event: L.treeResponse,
     result: z.strictObject({ closed: z.literal(true) }),
+  },
+  /**
+   * "Make available offline" (T23): downloads every article's linked images
+   * in a folder, in the background; progress per article. Cancel stops it.
+   * Refused: `not_found`.
+   */
+  'library:offline': {
+    request: L.folderRequest,
+    event: L.offlineProgress,
+    result: L.offlineResult,
   },
   /** Pull / Update the runner image in a runtime (T18): its output lines, then the outcome. */
   'exec:pull': { request: S.runtimeRequest, event: S.pullEvent, result: S.pullResult },

@@ -144,6 +144,7 @@ describe('SettingsPage', () => {
         editor: { fontSize: 14, keymap: 'default' },
         ui: { theme: 'system' },
         updates: { channel: 'stable', auto: true },
+        library: { images: 'on-open' },
       },
       issues: [{ key: 'ui.theme', message: '"neon" is not valid; using "system"' }],
       default_model: 'claude-opus-5-5',

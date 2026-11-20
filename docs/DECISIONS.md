@@ -1399,3 +1399,31 @@ natively per arch, the tested image is the one pushed** (2026-11-20, T19)
   never navigate the window: `#/library/<id>` changes the route; `https:`,
   `http:`, `mailto:` go to `library:open-link`, which checks the scheme
   again in main before `shell.openExternal`.
+
+**D-41 Linked images: own pinned transport, wider address list, how loading works**
+(2026-11-20, T23)
+
+- Transport: `node:https.request` with a `lookup` that answers only the
+  address already checked, `agent: false` (no shared sockets, no cookie
+  jar), SNI and `Host` from the URL. Not `fetch`: Node's `fetch` cannot pin
+  the address without the separate `undici` package. The open-set fetcher
+  (`intake/fetch.ts`) keeps `fetch`: it only reaches a fixed host list.
+- Refused addresses go beyond §15.4's list: documentation and benchmarking
+  ranges, `240/4`, IPv6 other than global unicast, NAT64 and 6to4 judged by
+  their IPv4 address, Teredo, zone ids; names without a dot and
+  `*.localhost`, `*.local`, `*.internal`, `*.lan`, `*.home.arpa`. Every
+  address a name has must pass; the first is used.
+- Loading: `library:article` never downloads (cached images and recent
+  failures show at once; `data:` images are decoded and cached there, no
+  network). The reader then calls `library:load-images` with the article id
+  only; main re-reads the file, finds the `https:` references itself and
+  downloads them (in `ask` mode only with `force`). **Load images** and
+  **Retry** are one bar above the article, not buttons inside each
+  placeholder (placeholders are sanitised HTML).
+- Failure memory is in memory (1 hour, cleared by Retry or Clear): a
+  restart tries again. The cache itself lasts.
+- "Make available offline" is a stream (`library:offline`): it runs while
+  Settings is open; Cancel or leaving Settings stops it (images already
+  downloaded stay).
+- Per-article caps count references in file order: the first 200; bytes
+  include images already cached.

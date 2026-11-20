@@ -75,9 +75,9 @@ export function registerSettingsHandlers(router: IpcRouter, deps: SettingsHandle
   // Library folders (paths) are not in the view: Settings → Library has its
   // own channels, which give the renderer ids and names only (T21).
   const view = () => {
-    const { tutor, execution, editor, ui, updates } = settings.get();
+    const { tutor, execution, editor, ui, updates, library } = settings.get();
     return {
-      settings: { tutor, execution, editor, ui, updates },
+      settings: { tutor, execution, editor, ui, updates, library: { images: library.images } },
       issues: settings.issues.map((i) => ({ key: i.key, message: i.message })),
       default_model: deps.defaultModel,
     };

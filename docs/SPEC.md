@@ -797,6 +797,13 @@ contacts the website.
   retried on every open; **Retry** on the placeholder clears that.
 - The model can never cause a download: only image references found in the
   article file are downloaded. Chat messages render no images at all (15.5).
+- IPC (T23, D-41): `library:article` downloads nothing; `library:load-images`
+  (article id, `force`, `retry`) downloads that article's references;
+  `library:offline` (folder id, stream) for **Make available offline**;
+  `library:image-cache` / `library:clear-image-cache` for Settings. A
+  placeholder states why (local network address, not port 443, too many
+  redirects, too large, took too long, too many pixels, site error,
+  unreachable, over the article's limits).
 
 ### 15.5 Chats on passages
 
