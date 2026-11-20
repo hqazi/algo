@@ -21,7 +21,16 @@ import { ExplanationList } from '../explanation/ExplanationList';
 import { Markdown } from '../components/Markdown';
 import { Panes } from '../components/Panes';
 import { ResultsPanel } from '../components/ResultsPanel';
-import { Badge, Button, Menu, Select, type BadgeTone, type MenuItem } from '../components/ui';
+import { Dialog } from '../components/Dialog';
+import {
+  AutoGrowTextarea,
+  Badge,
+  Button,
+  Menu,
+  Select,
+  type BadgeTone,
+  type MenuItem,
+} from '../components/ui';
 import { invoke, isRefusal, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { args, PROBLEM_STATUS_LABEL, titleCase } from '../lib/format';
@@ -606,66 +615,54 @@ export function PracticePage({ slug }: { slug: string }) {
       />
 
       {giveUpOpen && (
-        <div className="modal-backdrop" onClick={() => setGiveUpOpen(false)}>
-          <div
-            className="modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="gu-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="gu-title">Give up on this one?</h2>
-            <p>
-              Before you do: a hint or the full explanation from the tutor often unblocks it.
-              {tutor?.available
-                ? ' Ask for one in the Tutor pane.'
-                : ' The tutor is not set up, so that is not available right now.'}
-            </p>
-            <p className="muted small">
-              Giving up runs the tests one last time, records the attempt, and opens the reference
-              solution.
-            </p>
-            <label className="field">
-              Notes for later (optional)
-              <textarea
-                value={notes}
-                maxLength={600}
-                rows={3}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </label>
-            <div className="actions">
-              <button type="button" onClick={() => setGiveUpOpen(false)} autoFocus>
+        <Dialog
+          titleId="gu-title"
+          title="Give up on this one?"
+          onClose={() => setGiveUpOpen(false)}
+          footer={
+            <>
+              <Button onClick={() => setGiveUpOpen(false)} autoFocus>
                 Keep trying
-              </button>
-              <button type="button" className="danger" onClick={() => void giveUp()}>
+              </Button>
+              <Button variant="danger" onClick={() => void giveUp()}>
                 Give up and record
-              </button>
-            </div>
-          </div>
-        </div>
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Before you do: a hint or the full explanation from the tutor often unblocks it.
+            {tutor?.available
+              ? ' Ask for one in the Tutor pane.'
+              : ' The tutor is not set up, so that is not available right now.'}
+          </p>
+          <p className="muted small">
+            Giving up runs the tests one last time, records the attempt, and opens the reference
+            solution.
+          </p>
+          <label className="field">
+            Notes for later (optional)
+            <AutoGrowTextarea
+              value={notes}
+              maxLength={600}
+              rows={3}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </label>
+        </Dialog>
       )}
 
       {reference !== null && (
-        <div className="modal-backdrop" onClick={() => setReference(null)}>
-          <div
-            className="modal wide"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ref-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 id="ref-title">Reference solution</h2>
-            <pre className="code-block">
-              <code>{reference}</code>
-            </pre>
-            <div className="actions">
-              <button type="button" className="primary" onClick={() => setReference(null)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <Dialog
+          titleId="ref-title"
+          title="Reference solution"
+          onClose={() => setReference(null)}
+          wide
+        >
+          <pre className="code-block">
+            <code>{reference}</code>
+          </pre>
+        </Dialog>
       )}
     </main>
   );

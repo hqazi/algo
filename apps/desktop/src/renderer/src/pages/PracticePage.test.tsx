@@ -3,7 +3,7 @@
  * The practice view against a fake bridge: run, submit, autosave, the
  * keyboard shortcuts, and edits made to the solution file in another editor.
  */
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { EditorView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ChatStore, ChatStoreContext } from '../chat/store';
@@ -115,7 +115,11 @@ describe('PracticePage', () => {
       await waitFor(() => expect(editorText()).toBe(WORKSPACE.starter));
       fireEvent.click(screen.getByRole('button', { name: 'More' }));
       fireEvent.click(screen.getByRole('menuitem', { name: 'Give up' }));
-      expect(screen.getByRole('dialog', { name: 'Give up on this one?' })).toBeTruthy();
+      const dialog = screen.getByRole('dialog', { name: 'Give up on this one?' });
+      // The shared Dialog: a Close icon in the header; Keep trying has the focus.
+      expect(document.activeElement?.textContent).toBe('Keep trying');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      expect(screen.queryByRole('dialog')).toBeNull();
     } finally {
       window.confirm = confirm;
     }
@@ -188,6 +192,9 @@ describe('PracticePage', () => {
     expect(screen.queryByRole('menuitem', { name: 'Give up' })).toBeNull();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Reference' }));
     expect(await screen.findByText('def ref(): ...')).toBeTruthy();
+    const ref = screen.getByRole('dialog', { name: 'Reference solution' });
+    fireEvent.keyDown(ref, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('a submit that does not pass keeps the attempt open', async () => {
