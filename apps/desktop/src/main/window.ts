@@ -49,13 +49,17 @@ export const UI_CSP = [
   "frame-ancestors 'none'",
 ].join('; ');
 
-/** Development only: Vite injects an inline preamble and talks over a WebSocket. */
+/**
+ * Development only: Vite injects an inline preamble and talks over a
+ * WebSocket. The page comes from the dev server, so `'self'` is not
+ * `tutor-app://app`: Library images (`tutor-app://app/library-asset/…`)
+ * need that origin named, or the reader shows them broken.
+ */
 export function devCsp(devServerUrl: string): string {
   const { host } = new URL(devServerUrl);
-  return UI_CSP.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'").replace(
-    "connect-src 'none'",
-    `connect-src 'self' ws://${host}`,
-  );
+  return UI_CSP.replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
+    .replace("connect-src 'none'", `connect-src 'self' ws://${host}`)
+    .replace("img-src 'self' data:", `img-src 'self' data: ${APP_ORIGIN}`);
 }
 
 /** Paths under the renderer build the protocol serves. */

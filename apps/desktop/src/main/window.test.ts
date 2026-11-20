@@ -67,6 +67,8 @@ describe('CSP', () => {
     const csp = devCsp(DEV);
     expect(csp).toContain("script-src 'self' 'unsafe-inline';");
     expect(csp).toContain("connect-src 'self' ws://localhost:5173");
+    // Library images are served by the app, not the dev server.
+    expect(csp).toContain("img-src 'self' data: tutor-app://app;");
     expect(csp).not.toContain('unsafe-eval');
   });
 });
