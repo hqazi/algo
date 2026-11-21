@@ -96,6 +96,8 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T39 | Read aloud: CPU by default, GPU as a setting | v3 | 0.5d | T38 | done |
 | T40 | Read aloud: download eSpeak NG instead of shipping it | v3 | 0.5d | T39 | done |
 | T41 | Read aloud: buffer chunks ahead | v3 | 0.25d | T40 | done |
+| T42 | Library: new folder, move and delete in the tree | v3 | 2d | T32 | in-progress |
+| T43 | Write articles: a brief, a destination, and series | v3 | 2d | T42, T25 | todo |
 
 ## Order
 
@@ -2838,3 +2840,47 @@ always waited for the engine. Buffer like a video player.
   run). A request already sent is not cancelled on a skip, so a skip still
   waits behind at most one chunk (as before); cancelling queued requests in
   the engine would need an IPC change. The bar shows no buffered indicator.
+
+### T42 — Library: new folder, move and delete in the tree
+
+- Milestone: v3
+- Spec: §15.1, §15.6, §15.7 (changed: the app now writes to library folders, on request)
+- Size: 2d
+- Depends on: T32
+- Owns: `main/library/files.ts`, `main/library/service.ts`, `main/library/index-store.ts`, `main/library/scanner.ts`, `renderer/src/library/LibraryTree.tsx`, `packages/core/src/library/tree.ts`, `packages/core/src/library/files.ts`, migration `0004`
+
+**Goal.** The Articles pane can create folders, move articles and folders
+(drag and drop, and a **Move to…** menu item), and delete them (to the OS
+trash), in every library folder and the tutor's folder. The maintainer
+asked for this, which ends "the app never writes to the vault" (D-62).
+
+**Acceptance.**
+- [ ] **New folder** in any folder (root or subfolder); empty folders show in the tree.
+- [ ] **Move** an article or folder by drag and drop, or **Move to…** from the row menu; across library folders too. Chats follow.
+- [ ] **Delete** an article or folder (confirmed) moves it to the OS trash; articles with chats stay as "file missing", others leave the index. A missing article can be deleted from the tree (its chats go).
+- [ ] The renderer sends ids and paths inside a folder only; main refuses `..`, absolute paths, dot names, symlinks out, overwriting, and moving a folder into itself. Root folders cannot be moved or deleted.
+- [ ] AI-written is kept per article (not by folder), so a tutor article moved into a vault stays labelled.
+- [ ] Tests: path checks (core), file operations on a temp folder, the index after each, the tree UI.
+
+**Notes.**
+
+### T43 — Write articles: a brief, a destination, and series
+
+- Milestone: v3
+- Spec: §15.1 (Write an article)
+- Size: 2d
+- Depends on: T42, T25
+- Owns: `packages/core/src/library/generate.ts`, `main/library/generated/`, `renderer/src/library/WriteArticle.tsx`
+
+**Goal.** **Write an article** takes a detailed brief (what to cover) and
+where to save it, and can write a **series**: the tutor plans the parts,
+then writes them one by one into a folder of their own, linked in order.
+
+**Acceptance.**
+- [ ] A brief of up to 4,000 characters, level, length, and a destination folder (any library folder or the tutor's folder).
+- [ ] Series: 2–12 parts; the tutor plans titles and summaries (`plan_series`), then writes each part with the plan and the earlier parts' titles; saved as `01 Title.md`… in a new folder named after the series, with `series` and `part` in the frontmatter and links to the previous and next part.
+- [ ] Progress per part in the dialog; Stop keeps the parts already written.
+- [ ] Every file the tutor writes is labelled AI-written wherever it is saved; still no images.
+- [ ] Tests: the planner and series writer with a fake backend, file names, the dialog.
+
+**Notes.**
