@@ -97,7 +97,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T40 | Read aloud: download eSpeak NG instead of shipping it | v3 | 0.5d | T39 | done |
 | T41 | Read aloud: buffer chunks ahead | v3 | 0.25d | T40 | done |
 | T42 | Library: new folder, move and delete in the tree | v3 | 2d | T32 | done |
-| T43 | Write articles: a brief, a destination, and series | v3 | 2d | T42, T25 | todo |
+| T43 | Write articles: a brief, a destination, and series | v3 | 2d | T42, T25 | in-progress |
 
 ## Order
 
