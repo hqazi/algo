@@ -12,7 +12,7 @@ import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
 import { baseHandlers, KEY_NONE, PROFILE, TUTOR_ON } from '../test/fixtures';
 import { SettingsPage } from './SettingsPage';
-import { reasonHere } from './SettingsTutor';
+import { reasonHere } from './settings-text';
 
 const FAKE_KEY = 'sk-ant-test-0000000000000000000000-WXYZ';
 

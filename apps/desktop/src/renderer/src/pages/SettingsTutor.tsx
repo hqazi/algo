@@ -14,6 +14,7 @@ import { errorText, useApp } from '../lib/app-context';
 import { backendName } from '../components/app-frame';
 import { SettingRow, StatusText } from './SettingsRow';
 import { keyText, useKeyStatus } from './SettingsShared';
+import { reasonHere } from './settings-text';
 
 const BACKENDS = [
   { id: 'auto', label: 'Automatic (Anthropic API when a key is set)' },
@@ -169,17 +170,6 @@ export function KeyForm({ status, onStatus, onConnected }: KeyFormProps) {
       </p>
     </div>
   );
-}
-
-/**
- * The tutor's "off" reason as read on this page: main writes it for every
- * page ("… in Settings …"), but here the controls are right below.
- */
-export function reasonHere(reason: string): string {
-  return reason
-    .replace(/ in Settings → Tutor\b/g, ' below')
-    .replace(/^The tutor is turned off in Settings\.$/, 'The backend below is set to Off.')
-    .replace(/ in Settings\b/g, ' below');
 }
 
 function claudeCodeText(info: ClaudeCodeInfoView): string {
