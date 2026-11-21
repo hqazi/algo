@@ -32,7 +32,7 @@ describe('LibrarySection', () => {
     renderSection(baseHandlers(new FakeBridge()));
     expect(await screen.findByTestId('library-empty')).toBeTruthy();
     expect(screen.getByTestId('library-read-only').textContent).toBe(
-      'The app reads these folders and never changes them.',
+      'The app changes these folders only when you ask, from the Library tree.',
     );
   });
 

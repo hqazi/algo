@@ -261,7 +261,7 @@ export function LibrarySection() {
     <section className="card settings-section" aria-labelledby="settings-library">
       <h2 id="settings-library">Library</h2>
       <p className="small muted" data-testid="library-read-only">
-        The app reads these folders and never changes them.
+        The app changes these folders only when you ask, from the Library tree.
       </p>
       {folders !== null && folders.length === 0 && (
         <p className="muted" data-testid="library-empty">

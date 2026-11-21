@@ -25,9 +25,11 @@ const TREE: TreeView = {
       error: null,
       root: {
         name: '',
+        path: '',
         folders: [
           {
             name: 'Clippings',
+            path: 'Clippings',
             folders: [],
             articles: [
               { id: 'a1', title: 'Binary search', tags: ['algorithms'], missing: false },
@@ -248,5 +250,114 @@ describe('LibraryPage', () => {
     expect((await screen.findByRole('alert')).textContent).toBe(
       'That article is not in the library.',
     );
+  });
+
+  describe('changing the folders from the tree (T42)', () => {
+    const menu = (name: string) => {
+      fireEvent.click(screen.getByRole('button', { name: `Actions for ${name}` }));
+    };
+
+    it('makes a folder from a folder row menu', async () => {
+      const { bridge } = setup(null, (b) => b.on('library:create-folder', () => TREE));
+      await screen.findByRole('list', { name: 'Library folders' });
+      menu('Clippings');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'New folder' }));
+      const dialog = screen.getByRole('dialog', { name: 'New folder' });
+      const input = within(dialog).getByRole('textbox', { name: 'Name' });
+      fireEvent.change(input, { target: { value: '.hidden' } });
+      expect(within(dialog).getByRole('alert').textContent).toMatch(/dot/);
+      expect(within(dialog).getByRole('button', { name: 'Create' }).hasAttribute('disabled')).toBe(
+        true,
+      );
+      fireEvent.change(input, { target: { value: 'Graphs' } });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(bridge.calls.find((c) => c.channel === 'library:create-folder')?.request).toEqual({
+        at: { folderId: 'f1', path: 'Clippings' },
+        name: 'Graphs',
+      });
+    });
+
+    it('a library folder itself can only get a new folder', async () => {
+      setup(null);
+      await screen.findByRole('list', { name: 'Library folders' });
+      menu('Vault');
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['New folder']);
+    });
+
+    it('moves an article with Move to…, offering only other folders', async () => {
+      const { bridge } = setup(null, (b) => b.on('library:move', () => TREE));
+      await screen.findByRole('list', { name: 'Library folders' });
+      menu('Binary search');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Move to…' }));
+      const dialog = screen.getByRole('dialog', { name: 'Move “Binary search”' });
+      // It is in Clippings: only the vault's root is offered.
+      expect(within(dialog).getAllByRole('radio')).toHaveLength(1);
+      fireEvent.click(within(dialog).getByRole('radio', { name: 'Vault' }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Move' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(bridge.calls.find((c) => c.channel === 'library:move')?.request).toEqual({
+        item: { kind: 'article', id: 'a1' },
+        to: { folderId: 'f1', path: '' },
+      });
+    });
+
+    it('moves by drag and drop, never into itself', async () => {
+      const { bridge } = setup(null, (b) => b.on('library:move', () => TREE));
+      const tree = await screen.findByRole('list', { name: 'Library folders' });
+      const dt = { setData: vi.fn(), effectAllowed: '', dropEffect: '' };
+      const reading = within(tree).getByRole('link', { name: 'Reading list' });
+      const clippings = within(tree).getByRole('button', { name: 'Clippings' });
+      fireEvent.dragStart(reading, { dataTransfer: dt });
+      fireEvent.dragOver(clippings, { dataTransfer: dt });
+      expect(clippings.closest('li')!.classList.contains('lib-drop')).toBe(true);
+      fireEvent.drop(clippings, { dataTransfer: dt });
+      await waitFor(() => expect(bridge.channels()).toContain('library:move'));
+      expect(bridge.calls.find((c) => c.channel === 'library:move')?.request).toEqual({
+        item: { kind: 'article', id: 'a3' },
+        to: { folderId: 'f1', path: 'Clippings' },
+      });
+      // A folder dropped on itself: nothing happens.
+      fireEvent.dragStart(clippings, { dataTransfer: dt });
+      fireEvent.drop(clippings, { dataTransfer: dt });
+      fireEvent.dragEnd(clippings, { dataTransfer: dt });
+      expect(bridge.channels().filter((c) => c === 'library:move')).toHaveLength(1);
+    });
+
+    it('deletes to the trash after a confirm, and shows a refusal', async () => {
+      const { bridge } = setup('a3', (b) =>
+        b.on('library:delete', ({ item }) => {
+          if (item.kind === 'folder') throw new Refused('unavailable', 'It could not be moved.');
+          return {
+            folders: [{ ...TREE.folders[0]!, root: { ...TREE.folders[0]!.root, articles: [] } }],
+          };
+        }),
+      );
+      await screen.findByRole('list', { name: 'Library folders' });
+      menu('Reading list');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+      const dialog = screen.getByRole('dialog', { name: 'Delete “Reading list”?' });
+      expect(dialog.textContent).toMatch(/trash/);
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Move to trash' }));
+      await waitFor(() => expect(window.location.hash).toBe('#/library'));
+      expect(screen.queryByText('Reading list')).toBeNull();
+
+      menu('Clippings');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Move to trash' }));
+      expect(await screen.findByText('It could not be moved.')).toBeTruthy();
+      expect(bridge.channels().filter((c) => c === 'library:delete')).toHaveLength(2);
+    });
+
+    it('offers to delete the chats of a missing article', async () => {
+      setup(null);
+      await screen.findByRole('list', { name: 'Library folders' });
+      menu('Graph basics');
+      expect(screen.getByRole('menuitem', { name: 'Move to…' }).hasAttribute('disabled')).toBe(
+        true,
+      );
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+      expect(screen.getByRole('button', { name: 'Delete chats' })).toBeTruthy();
+    });
   });
 });

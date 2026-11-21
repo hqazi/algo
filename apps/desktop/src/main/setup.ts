@@ -255,7 +255,7 @@ export async function startPractice(
   });
   const generatedArticles = new GeneratedArticles(storage.paths.generatedArticles);
   await generatedArticles.ensure();
-  // The Library (T21): scanned at start; folders are only ever read.
+  // The Library (T21): scanned at start; changed only on the user's request (T42).
   const library = openLibrary({
     settings: storage.settings,
     storage: storage.storage,
@@ -272,6 +272,8 @@ export async function startPractice(
     },
     openPath: async (path) => (await shell.openPath(path)) === '',
     generatedDir: generatedArticles.dir,
+    // T42: Delete in the tree sends to the OS trash, never deletes outright.
+    trash: (path) => shell.trashItem(path),
     log: (m) => console.warn(m),
   });
   registerLibraryHandlers(router, library, { log: (m) => console.warn(m) });

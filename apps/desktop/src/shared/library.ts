@@ -34,10 +34,14 @@ export const treeArticle = z.strictObject({
   tags: z.array(z.string().max(500)).max(500),
   /** The file is gone; the article (and its chats) stay until deleted. */
   missing: z.boolean(),
+  /** T42: written by the tutor, outside the tutor's own folder. */
+  generated: z.literal(true).optional(),
 });
 
 export interface TreeFolderView {
   name: string;
+  /** T42: the folder's path inside its library folder (`''` for the root). */
+  path: string;
   folders: TreeFolderView[];
   articles: z.output<typeof treeArticle>[];
 }
@@ -45,6 +49,7 @@ export interface TreeFolderView {
 export const treeFolder: z.ZodType<TreeFolderView> = z.lazy(() =>
   z.strictObject({
     name,
+    path: z.string().max(4096),
     folders: z.array(treeFolder),
     articles: z.array(treeArticle),
   }),
@@ -66,6 +71,32 @@ export const treeResponse = z.strictObject({
 export type FolderView = z.output<typeof folderView>;
 export type TreeArticleView = z.output<typeof treeArticle>;
 export type TreeView = z.output<typeof treeResponse>;
+
+// ---- T42: changing the folders from the tree
+
+/** A path inside a library folder, with `/`; main checks every part. */
+const innerPath = z.string().max(4096);
+
+/** A file or folder in the tree: an article by id, a folder by its path. */
+export const libraryItem = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('article'), id }),
+  z.strictObject({ kind: z.literal('folder'), folderId: id, path: innerPath }),
+]);
+
+/** A folder in the tree to put something in (`path` `''`: the library folder itself). */
+export const folderPlace = z.strictObject({ folderId: id, path: innerPath });
+
+export const createFolderRequest = z.strictObject({
+  at: folderPlace,
+  name: z.string().min(1).max(200),
+});
+
+export const moveRequest = z.strictObject({ item: libraryItem, to: folderPlace });
+
+export const deleteRequest = z.strictObject({ item: libraryItem });
+
+export type LibraryItemView = z.output<typeof libraryItem>;
+export type FolderPlace = z.output<typeof folderPlace>;
 
 // ---- the reader (T22, SPEC §15.2–15.3)
 

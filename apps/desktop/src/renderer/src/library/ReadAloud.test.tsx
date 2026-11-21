@@ -25,6 +25,7 @@ const TREE: TreeView = {
       error: null,
       root: {
         name: '',
+        path: '',
         folders: [],
         articles: [
           { id: 'a1', title: 'Binary search', tags: [], missing: false },

@@ -167,4 +167,19 @@ describe('buildTree', () => {
       ['beta', false],
     ]);
   });
+
+  it('shows empty folders the scan found, with their paths', () => {
+    const t = buildTree(
+      [{ id: '1', relPath: 'A/x.md', title: 'X', tags: [], missing: false, generated: true }],
+      '',
+      ['A', 'A/Empty', 'B/C'],
+    );
+    expect(t.folders.map((f) => [f.name, f.path])).toEqual([
+      ['A', 'A'],
+      ['B', 'B'],
+    ]);
+    expect(t.folders[0]!.folders.map((f) => f.path)).toEqual(['A/Empty']);
+    expect(t.folders[1]!.folders.map((f) => f.path)).toEqual(['B/C']);
+    expect(t.folders[0]!.articles[0]).toMatchObject({ id: '1', generated: true });
+  });
 });

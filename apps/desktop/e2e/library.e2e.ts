@@ -17,7 +17,7 @@
  *
  *   npm run e2e [-- --shots <dir>]   (Linux without a display: xvfb-run -a npm run e2e)
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
@@ -73,6 +73,11 @@ const standin = await startStandin(cert);
 const standinRequests = standin.requests;
 let standinUp = true;
 
+/** Files the app sent to the trash (a folder here stands in for the OS trash). */
+const trashed: string[] = [];
+const trashDir = join(base, 'trash');
+mkdirSync(trashDir);
+
 /** Every request a page made, as Chromium saw it. */
 const requests: string[] = [];
 
@@ -92,6 +97,20 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
       NODE_OPTIONS: '',
     },
     colorScheme: null,
+  });
+  // The OS trash may not exist on a CI machine: the app's `shell.trashItem`
+  // moves into a folder instead, and says what it moved.
+  await app.evaluate(({ shell }, dir) => {
+    const s = shell as unknown as Record<string, unknown>;
+    s['trashItem'] = async (p: string) => {
+      const fs = process.getBuiltinModule('node:fs');
+      const path = process.getBuiltinModule('node:path');
+      fs.renameSync(p, path.join(dir, path.basename(p)));
+      console.log(`TRASHED ${p}`);
+    };
+  }, trashDir);
+  app.process().stdout?.on('data', (b: Buffer) => {
+    for (const m of b.toString().matchAll(/TRASHED (.+)/g)) trashed.push(m[1]!);
   });
   const page = await app.firstWindow();
   page.on('request', (r) => requests.push(r.url()));
@@ -284,6 +303,38 @@ try {
     (await page.getByTestId('passage-quote').textContent())?.includes(FIRST) === true,
   );
   await shot(page, '3-reopened');
+
+  // ---- T42: new folder, drag the article into it, delete it to the trash
+  const tree = page.getByRole('list', { name: 'Library folders' });
+  await tree.getByRole('button', { name: 'vault', exact: true }).hover();
+  await page.getByRole('button', { name: 'Actions for vault' }).click();
+  await page.getByRole('menuitem', { name: 'New folder' }).click();
+  await page.getByRole('dialog', { name: 'New folder' }).getByLabel('Name').fill('Read');
+  await page.getByRole('button', { name: 'Create' }).click();
+  const read = tree.getByRole('button', { name: 'Read', exact: true });
+  await read.waitFor();
+  check('a new, empty folder shows in the tree', existsSync(join(vault, 'Read')));
+  await tree.getByRole('link', { name: 'Heaps by hand' }).dragTo(read);
+  const moved = join(vault, 'Read', 'heaps.md');
+  for (let i = 0; i < 50 && !existsSync(moved); i++) await page.waitForTimeout(100);
+  check(
+    'dragging the article onto the folder moves its file',
+    existsSync(moved) && !existsSync(join(vault, 'heaps.md')),
+  );
+  await page.getByRole('link', { name: 'Heaps by hand' }).click();
+  await page.locator('.thread-item').nth(1).waitFor();
+  check('its chats moved with it', (await page.locator('.thread-item').count()) === 2);
+  await shot(page, '4-moved');
+  await tree.getByRole('link', { name: 'Heaps by hand' }).hover();
+  await page.getByRole('button', { name: 'Actions for Heaps by hand' }).click();
+  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Move to trash' }).click();
+  await tree.getByText('(file missing)').waitFor();
+  check(
+    'Delete sends the file to the trash; with chats it stays as file missing',
+    !existsSync(moved) && trashed.length === 1 && trashed[0]!.endsWith('heaps.md'),
+    trashed,
+  );
 
   const others = requests.filter((u) => !u.startsWith('tutor-app://'));
   check(

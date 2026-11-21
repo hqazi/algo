@@ -176,6 +176,23 @@ export const invokeChannels = {
   /** Rescans now (Refresh), then the tree. */
   'library:refresh': { request: z.undefined(), response: L.treeResponse },
   /**
+   * T42: makes a folder in a library folder (or the tutor's); the tree after.
+   * Refused: `invalid` (the name), `exists`, `not_found`, `unavailable`.
+   */
+  'library:create-folder': { request: L.createFolderRequest, response: L.treeResponse },
+  /**
+   * T42: moves an article or folder into another folder, across library
+   * folders too; chats follow. Refused: `invalid` (into itself, a root),
+   * `exists` (never overwrites), `not_found`, `unavailable`.
+   */
+  'library:move': { request: L.moveRequest, response: L.treeResponse },
+  /**
+   * T42: sends an article's file or a folder to the OS trash (confirmed in
+   * the UI); a missing article is deleted with its chats. Refused as for
+   * `library:move`.
+   */
+  'library:delete': { request: L.deleteRequest, response: L.treeResponse },
+  /**
    * Opens an article in the reader (T22): its header, body, and per image
    * reference an asset URL (random token, never a path) or why it is not
    * shown. Reads the file only; no network. Refused: `not_found`.

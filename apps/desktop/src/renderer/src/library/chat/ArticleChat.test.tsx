@@ -28,6 +28,7 @@ const TREE: TreeView = {
       error: null,
       root: {
         name: '',
+        path: '',
         folders: [],
         articles: [{ id: 'a1', title: 'Heaps', tags: [], missing: false }],
       },

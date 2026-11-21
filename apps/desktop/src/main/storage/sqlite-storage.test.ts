@@ -1,6 +1,7 @@
 import type { ProblemRecord, ProfileRecord } from '@algo/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase } from './database';
+import { MIGRATIONS } from './migrations';
 import { SqliteStorage, StorageClosedError } from './sqlite-storage';
 
 const T = (n: number): string => `2026-11-18T10:00:${String(n).padStart(2, '0')}Z`;
@@ -39,7 +40,7 @@ afterEach(async () => {
 
 describe('records round-trip', () => {
   it('meta', async () => {
-    expect(s.read((db) => db.getMeta('schema_version'))).toBe('3');
+    expect(s.read((db) => db.getMeta('schema_version'))).toBe(String(MIGRATIONS.length));
     expect(s.read((db) => db.getMeta('install_id'))).toMatch(/^[0-9a-f-]{36}$/);
     await s.write((db) => db.setMeta('k', 'v1'));
     await s.write((db) => db.setMeta('k', 'v2'));

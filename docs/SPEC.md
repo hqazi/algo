@@ -186,7 +186,7 @@ nested in the file: `tutor.backend` is `{"tutor": {"backend": "auto"}}`.
 | `execution.runtime` | `local` | v2: `local` / `podman` / `docker` for Rust and Go. Python always uses Pyodide. |
 | `execution.timeScale` | `1.0` | Multiplier on per-test time limits (slow machines). |
 | `editor.fontSize`, `editor.keymap` | `14`, `default` | `default` / `vim` / `emacs`. |
-| `library.folders` | `[]` | v3: `{id, path}` per chosen folder; read only, never written (15.1). |
+| `library.folders` | `[]` | v3: `{id, path}` per chosen folder; changed only on request from the tree (15.1). |
 | `library.images` | `on-open` | v3: `on-open` / `ask`, for images an article links to (15.4). |
 | `ui.theme` | `system` | `system` / `light` / `dark`. |
 | `ui.leader` | `ctrl+b` | `ctrl+b` / `ctrl+a` / `ctrl+space` / `off`: the tmux-style leader key for pane actions (D-57). |
@@ -697,9 +697,11 @@ tutor, several chats per article, each tied to a passage. Decisions: D-37
 ### 15.1 Where articles come from
 
 The app **reads** Markdown folders the user chooses, typically an Obsidian
-vault (or part of one) filled by the Obsidian Web Clipper. It **never writes
-to them** and **never fetches a web page**: clipping is the user's browser's
-job. The only network use is downloading images an article links to (15.4)
+vault (or part of one) filled by the Obsidian Web Clipper. It changes them
+**only when the user asks**, from the tree (T42, D-62: new folder, move,
+delete to the OS trash; and from T43 the tutor's articles saved where the
+user chose), never edits a note, and **never fetches a web page**: clipping
+is the user's browser's job. The only network use is downloading images an article links to (15.4)
 and, once and on request, the read-aloud voice model (15.6).
 
 - `library.folders` (4.3) lists the chosen folders, added with the OS folder
@@ -726,6 +728,22 @@ and, once and on request, the read-aloud voice model (15.6).
   the body, so a generated article never causes a download (15.4). Only the
   app's folder makes an article AI-written, not a `generated` key in a
   user's note (D-43).
+- **Changing folders** (T42, D-62): each tree row has a menu, **New folder**
+  (folders and subfolders), **Move to…** and **Delete**; articles and
+  folders can also be dragged onto a folder. Moves work across library
+  folders and the tutor's folder; the index is updated at once, so ids and
+  chats follow. Nothing is overwritten. **Delete** sends the file or folder
+  to the OS trash (`shell.trashItem`, after a confirm); an article with
+  chats stays as "file missing", one without leaves the index; deleting a
+  missing article deletes its chats. The library folders themselves can
+  only get new folders. The renderer names an item by article id or
+  `(folder id, path inside it)`; main checks every part's name
+  (`pathParts`: no empty, `.`, `..`, dot or reserved names) and that the
+  real path is inside the folder's real path. Scans also list folders, so
+  empty ones show. Changes and scans run one at a time.
+- **AI-written** is kept per article (`articles.generated`, migration 0004),
+  set only by the app: new files in its own folder, and files the tutor
+  saves elsewhere (T43). Moved articles keep it.
 - Identity: an article is `(folder id, path inside the folder)` with its
   content hash. A rescan that finds a path gone and a new path with the same
   hash, or the same `source`, moves the article (and its chats) instead of
@@ -859,7 +877,8 @@ thread is "detached" and listed without a position.
 A **Library** page in the main navigation, three resizable panes:
 
 - **Left:** the folder tree (folders, then articles by title), a filter box
-  (title and tags), **Refresh**.
+  (title and tags), **Refresh**; a menu per row and drag and drop (T42,
+  15.1).
 - **Middle:** the reader: title, source link, author and dates, tags, then
   the body; margin markers for threads; image placeholders with **Load
   images** / **Retry**; a "file missing" banner when the file is gone.
@@ -911,11 +930,12 @@ resume), `n`, `b`, `x`.
 
 Settings → **Library**: folders (add, remove, open in file manager), images
 (`on-open` / `ask`), image cache size and **Clear**, and a line saying the app
-reads these folders and never changes them.
+changes these folders only when asked, from the tree.
 
 ### 15.7 Not in v3
 
-Writing to the vault, fetching pages by URL, cloud voices or languages
+Editing notes in the app (T42 only creates folders, moves and trashes),
+renaming, fetching pages by URL, cloud voices or languages
 other than English for read aloud, a browser extension, an
 in-app browser, groups kept by the app, highlights and annotations stored in
 the note, note embeds, SVG, math, and articles counting towards topic levels.

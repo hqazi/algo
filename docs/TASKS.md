@@ -96,7 +96,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T39 | Read aloud: CPU by default, GPU as a setting | v3 | 0.5d | T38 | done |
 | T40 | Read aloud: download eSpeak NG instead of shipping it | v3 | 0.5d | T39 | done |
 | T41 | Read aloud: buffer chunks ahead | v3 | 0.25d | T40 | done |
-| T42 | Library: new folder, move and delete in the tree | v3 | 2d | T32 | in-progress |
+| T42 | Library: new folder, move and delete in the tree | v3 | 2d | T32 | done |
 | T43 | Write articles: a brief, a destination, and series | v3 | 2d | T42, T25 | todo |
 
 ## Order
@@ -2855,14 +2855,47 @@ trash), in every library folder and the tutor's folder. The maintainer
 asked for this, which ends "the app never writes to the vault" (D-62).
 
 **Acceptance.**
-- [ ] **New folder** in any folder (root or subfolder); empty folders show in the tree.
-- [ ] **Move** an article or folder by drag and drop, or **Move to…** from the row menu; across library folders too. Chats follow.
-- [ ] **Delete** an article or folder (confirmed) moves it to the OS trash; articles with chats stay as "file missing", others leave the index. A missing article can be deleted from the tree (its chats go).
-- [ ] The renderer sends ids and paths inside a folder only; main refuses `..`, absolute paths, dot names, symlinks out, overwriting, and moving a folder into itself. Root folders cannot be moved or deleted.
-- [ ] AI-written is kept per article (not by folder), so a tutor article moved into a vault stays labelled.
-- [ ] Tests: path checks (core), file operations on a temp folder, the index after each, the tree UI.
+- [x] **New folder** in any folder (root or subfolder); empty folders show in the tree.
+- [x] **Move** an article or folder by drag and drop, or **Move to…** from the row menu; across library folders too. Chats follow.
+- [x] **Delete** an article or folder (confirmed) moves it to the OS trash; articles with chats stay as "file missing", others leave the index. A missing article can be deleted from the tree (its chats go).
+- [x] The renderer sends ids and paths inside a folder only; main refuses `..`, absolute paths, dot names, symlinks out, overwriting, and moving a folder into itself. Root folders cannot be moved or deleted.
+- [x] AI-written is kept per article (not by folder), so a tutor article moved into a vault stays labelled.
+- [x] Tests: path checks (core), file operations on a temp folder, the index after each, the tree UI.
 
-**Notes.**
+**Notes.** (2026-11-21)
+- **Built.** Core `library/files.ts` (`entryNameProblem`, `pathParts`,
+  `noteFileName` for T43) and folder paths in `buildTree` (empty folders
+  from the scan's new `dirs`). Main `library/files.ts` (make, move, trash,
+  checked by real path; never overwrites; a file is copied then unlinked
+  only across drives, a folder is refused); `LibraryService.createFolder`,
+  `move`, `remove` under one lock shared with scans, updating rows directly
+  so chats follow across folders; `articles.generated` (migration 0004)
+  replaces "is in the generated folder" in the reader and tree. IPC
+  `library:create-folder`, `library:move`, `library:delete` (return the
+  tree). Renderer: a ⋯ menu per row, HTML5 drag and drop onto folders
+  (`tree-moves.ts` for what may drop where), `TreeDialogs.tsx` (New folder,
+  Move to…, Delete). D-62; SPEC §15.1, §15.6, §15.7, the settings table;
+  architecture diagram; guide (Library, Data and privacy).
+- **Wiring outside Owns.** `shared/{library,ipc,channels}.ts`,
+  `main/library/index.ts`, `main/setup.ts` (`shell.trashItem`),
+  `main/library/assets.ts` (the reader's AI-written label from the row),
+  `LibraryPage.tsx` (`onTree`),
+  `library.css`, the Settings line and its test, three test fixtures
+  (`path` on tree folders), `assets.test.ts` (folders without notes now
+  show), two storage tests (schema version from `MIGRATIONS.length`),
+  `e2e/library.e2e.ts` (new folder, real drag, trash).
+- **Checked.** typecheck, lint, prettier, `npm test` (1,235 passed),
+  `validate:content`; new tests: core names/paths/tree, main file
+  operations on temp folders (traversal, symlinks out, overwrite, into
+  itself, roots, chats kept or dropped), the tree UI (menus, dialogs, drag
+  and drop, refusal toast). `xvfb-run` library e2e: all checks pass,
+  including a real Chromium drag; it found the open menu drawn under later
+  rows (fixed).
+- **Not done / not tested.** The real OS trash (`shell.trashItem`) is
+  stubbed in the e2e (a folder stands in); not tried on macOS or Windows.
+  Moving across drives not tested. No rename, no multi-select, no
+  right-click menu (the ⋯ button and keyboard instead). An image linked by
+  a relative path from a moved article may stop resolving.
 
 ### T43 — Write articles: a brief, a destination, and series
 

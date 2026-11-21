@@ -112,7 +112,7 @@ export function LibraryPage({ article }: { article: string | null }) {
           No folders yet. Add one in <Link to="/settings">Settings → Library</Link>.
         </p>
       ) : (
-        <LibraryTree tree={tree} filter={filter} selected={article} />
+        <LibraryTree tree={tree} filter={filter} selected={article} onTree={setTree} />
       )}
     </div>
   );

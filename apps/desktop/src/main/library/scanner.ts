@@ -24,6 +24,8 @@ export interface ScannedFile {
 
 export interface FolderScan {
   files: ScannedFile[];
+  /** T42: every folder found (inside the folder, with `/`), empty ones too. */
+  dirs: string[];
   skipped: { large: number; outside: number; unreadable: number };
 }
 
@@ -51,7 +53,7 @@ export async function scanFolder(folder: string): Promise<FolderScan> {
   } catch (e) {
     throw new FolderUnavailableError(e);
   }
-  const out: FolderScan = { files: [], skipped: { large: 0, outside: 0, unreadable: 0 } };
+  const out: FolderScan = { files: [], dirs: [], skipped: { large: 0, outside: 0, unreadable: 0 } };
   const visited = new Set<string>([root]);
 
   async function addFile(path: string, rel: string, size: number): Promise<void> {
@@ -107,6 +109,7 @@ export async function scanFolder(folder: string): Promise<FolderScan> {
         if (st.isDirectory()) {
           if (visited.has(real)) continue;
           visited.add(real);
+          out.dirs.push(rel.split(sep).join('/'));
           await walk(real, rel);
         } else if (st.isFile() && isNoteFile(e.name)) {
           await addFile(real, rel, st.size);
@@ -121,6 +124,7 @@ export async function scanFolder(folder: string): Promise<FolderScan> {
         }
         if (visited.has(real)) continue;
         visited.add(real);
+        out.dirs.push(rel.split(sep).join('/'));
         await walk(path, rel);
       } else if (e.isFile() && isNoteFile(e.name)) {
         let size: number;

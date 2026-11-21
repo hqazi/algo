@@ -10,9 +10,9 @@ article, each tied to the passage it is about.
 
 The Library reads **Markdown folders you choose**, typically an
 [Obsidian](https://obsidian.md) vault (or part of one) filled by the
-[Obsidian Web Clipper](https://obsidian.md/clipper). The app reads these
-folders and **never writes to them** or fetches web pages: clipping is your
-browser's job.
+[Obsidian Web Clipper](https://obsidian.md/clipper). The app never fetches
+web pages: clipping is your browser's job. It changes your folders only when
+you ask, from the tree (below).
 
 1. Open **Settings → Library** and click **Add folder…**.
 2. Open **Library** in the title bar. The left pane shows your folders and
@@ -27,6 +27,26 @@ over 5 MB are skipped. A file's YAML frontmatter (`title`, `source`,
 **Remove…** next to a folder in Settings removes it from the Library, along
 with the chats on its articles (after a confirm). Its files are never
 touched.
+
+## Organising folders
+
+Every folder and article in the tree has a **⋯** menu (it shows when you
+point at or tab to the row):
+
+- **New folder** makes a folder inside that one. Empty folders show in the
+  tree, as in Obsidian.
+- **Move to…** moves an article or folder to another folder, including into
+  another library folder or the tutor's folder. You can also **drag** a row
+  onto a folder. Its chats move with it. Nothing is ever overwritten: if the
+  name is taken there, the move is refused. An image an article links to by
+  a relative path may not be found from the new place.
+- **Delete** sends the article or folder to your computer's **trash**, where
+  you can restore it. Articles that have chats stay in the tree marked
+  "file missing" so the chats are kept; delete one of those to remove it and
+  its chats for good.
+
+The folders you added (the top rows) can only get new folders: remove them
+in **Settings → Library**.
 
 ## Reading
 

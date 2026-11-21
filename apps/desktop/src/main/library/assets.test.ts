@@ -167,7 +167,7 @@ describe('library:article', () => {
     expect(a.missing).toBe(false);
     expect(a.body.startsWith('# Heading')).toBe(true);
     const ids = Object.fromEntries(library.tree()[0]!.root.articles.map((x) => [x.title, x.id]));
-    const nested = library.tree()[0]!.root.folders[0]!.articles[0]!.id;
+    const nested = library.tree()[0]!.root.folders.find((f) => f.name === 'sub')!.articles[0]!.id;
     expect(a.links).toEqual({
       'Other note': ids['Other note'],
       Nested: nested,

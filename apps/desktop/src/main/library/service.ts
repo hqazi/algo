@@ -1,8 +1,10 @@
 /**
  * The Library index (SPEC §15.1, T21): which articles are in the folders the
- * user chose, kept up to date by rescanning. The folders are never written:
- * scans only list, stat and read, and removing a folder drops its index
- * rows (and, from T24, its chats), never its files.
+ * user chose, kept up to date by rescanning. Scans only list, stat and read,
+ * and removing a folder drops its index rows (and, from T24, its chats),
+ * never its files. T42: the folders change only when the user asks, from
+ * the tree (new folder, move, delete to the trash; `files.ts`), and the
+ * index follows at once, so chats stay with their articles.
  *
  * The renderer gets folder ids and names, article ids and titles; never an
  * absolute path.
@@ -12,6 +14,9 @@ import { basename, isAbsolute, relative } from 'node:path';
 import {
   articleMeta,
   buildTree,
+  entryName,
+  isWithin,
+  joinPath,
   GENERATED_FOLDER_ID,
   GENERATED_GROUP_NAME,
   MAX_LIBRARY_FOLDERS,
@@ -24,11 +29,16 @@ import type { SettingsStore, SqliteStorage } from '../storage';
 import {
   applyScan,
   countArticles,
+  deleteArticleRow,
   deleteFolderRows,
   listArticles,
+  moveRows,
+  rowsUnder,
+  trashedRows,
   type ArticleRow,
   type IndexedNote,
 } from './index-store';
+import { FileOpError, makeFolder, moveEntry, trashEntry } from './files';
 import { FolderUnavailableError, scanFolder } from './scanner';
 
 export interface FolderInfo {
@@ -51,7 +61,14 @@ export interface FolderTree {
 
 export class LibraryError extends Error {
   constructor(
-    readonly reason: 'not_found' | 'duplicate' | 'too_many' | 'unavailable',
+    readonly reason:
+      | 'not_found'
+      | 'duplicate'
+      | 'too_many'
+      | 'unavailable'
+      // T42: changing the folders.
+      | 'invalid'
+      | 'exists',
     message: string,
   ) {
     super(message);
@@ -74,8 +91,14 @@ export interface LibraryDeps {
    * cannot be removed or opened from Settings.
    */
   generatedDir?: string;
+  /** T42: sends a file or folder to the OS trash (`shell.trashItem`). */
+  trash?: (path: string) => Promise<void>;
   log?: (message: string) => void;
 }
+
+/** T42: a file or folder in the tree, as the renderer names it. */
+export type LibraryItem =
+  { kind: 'article'; id: string } | { kind: 'folder'; folderId: string; path: string };
 
 const overlaps = (a: string, b: string): boolean => {
   const rel = relative(a, b);
@@ -86,6 +109,16 @@ export class LibraryService {
   private readonly errors = new Map<string, string>();
   private running: Promise<void> | null = null;
   private again = false;
+  /** T42: folder paths from each folder's last scan (empty folders show). */
+  private readonly dirs = new Map<string, string[]>();
+  /** Scans and changes to the folders run one at a time. */
+  private lock: Promise<unknown> = Promise.resolve();
+
+  private exclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const run = this.lock.then(fn, fn);
+    this.lock = run.catch(() => undefined);
+    return run;
+  }
 
   constructor(private readonly deps: LibraryDeps) {}
 
@@ -130,20 +163,22 @@ export class LibraryService {
           title: r.title,
           tags: articleMeta(r.frontmatter, r.relPath).tags,
           missing: r.missingSince !== null,
+          generated: r.generated && f.id !== GENERATED_FOLDER_ID,
         }));
+      const dirs = this.dirs.get(f.id) ?? [];
       if (f.id === GENERATED_FOLDER_ID)
         return {
           id: f.id,
           name: GENERATED_GROUP_NAME,
           generated: true as const,
           error: this.errors.get(f.id) ?? null,
-          root: buildTree(mine),
+          root: buildTree(mine, '', dirs),
         };
       return {
         id: f.id,
         name: basename(f.path) || f.path,
         error: this.errors.get(f.id) ?? null,
-        root: buildTree(mine),
+        root: buildTree(mine, '', dirs),
       };
     });
   }
@@ -163,7 +198,7 @@ export class LibraryService {
         for (const f of this.all()) await this.scanOne(f);
       } while (this.again);
     };
-    this.running = run().finally(() => {
+    this.running = this.exclusive(run).finally(() => {
       this.running = null;
     });
     return this.running;
@@ -172,7 +207,9 @@ export class LibraryService {
   private async scanOne(f: LibraryFolder): Promise<void> {
     let files;
     try {
-      ({ files } = await scanFolder(f.path));
+      let dirs;
+      ({ files, dirs } = await scanFolder(f.path));
+      this.dirs.set(f.id, dirs);
     } catch (e) {
       // An unplugged drive or a moved folder: keep the index as it was.
       const why =
@@ -239,6 +276,7 @@ export class LibraryService {
       library: { folders: this.list().filter((f) => f.id !== id) },
     });
     this.errors.delete(id);
+    this.dirs.delete(id);
     await this.deps.storage.writeSql((db) => deleteFolderRows(db, id));
   }
 
@@ -278,5 +316,110 @@ export class LibraryService {
   /** Absolute paths of the folders, for watching (main only). */
   paths(): { id: string; path: string }[] {
     return this.all().map((f) => ({ ...f }));
+  }
+
+  // ---- T42: changing the folders from the tree
+
+  /** A library folder (the user's or the tutor's) by id. */
+  private anyFolder(id: string): LibraryFolder {
+    const f = this.all().find((x) => x.id === id);
+    if (!f) throw new LibraryError('not_found', 'That folder is not in the library.');
+    return f;
+  }
+
+  /** Runs a change to the folders between scans, then rescans. */
+  private async change(fn: () => Promise<void>): Promise<void> {
+    try {
+      await this.exclusive(fn);
+    } catch (e) {
+      if (e instanceof FileOpError) {
+        throw new LibraryError(e.reason === 'not_found' ? 'not_found' : e.reason, e.message);
+      }
+      throw e;
+    }
+    await this.refresh();
+  }
+
+  /** Makes folder `name` inside `parent` (a folder path in library folder `folderId`). */
+  async createFolder(folderId: string, parent: string, name: string): Promise<void> {
+    const f = this.anyFolder(folderId);
+    return this.change(() => makeFolder(f.path, parent, name));
+  }
+
+  /** Moves an article or a folder into folder `to.path` of library folder `to.folderId`. */
+  async move(item: LibraryItem, to: { folderId: string; path: string }): Promise<void> {
+    const dest = this.anyFolder(to.folderId);
+    return this.change(async () => {
+      const src = this.source(item);
+      const name = entryName(src.path);
+      if (src.folderId === to.folderId && src.folder && isWithin(to.path, src.path))
+        throw new LibraryError('invalid', 'A folder cannot be moved into itself.');
+      const targetBase = joinPath(to.path, name);
+      const moves = this.deps.storage
+        .readSql((db) => rowsUnder(db, src.folderId, src.path, src.folder))
+        .map((r) => ({
+          id: r.id,
+          folderId: to.folderId,
+          relPath: targetBase + r.relPath.slice(src.path.length),
+        }));
+      // A missing article listed where these would land keeps the place.
+      const moving = new Set(moves.map((m) => m.id));
+      const there = this.deps.storage
+        .readSql((db) => rowsUnder(db, to.folderId, targetBase, src.folder))
+        .filter((r) => !moving.has(r.id));
+      if (there.length)
+        throw new LibraryError(
+          'exists',
+          'An article whose file is missing is still listed there. Delete it first.',
+        );
+      const moved = await moveEntry(
+        { folder: src.root, path: src.path },
+        { folder: dest.path, dir: to.path },
+      );
+      if (moved) await this.deps.storage.writeSql((db) => moveRows(db, moves));
+    });
+  }
+
+  /**
+   * Sends an article's file, or a folder, to the OS trash. Articles with
+   * chats stay listed as "file missing"; the others leave the index. An
+   * article whose file is already missing is deleted with its chats.
+   */
+  remove(item: LibraryItem): Promise<void> {
+    return this.change(async () => {
+      if (item.kind === 'article') {
+        const { row } = this.article(item.id);
+        if (row.missingSince !== null) {
+          await this.deps.storage.writeSql((db) => deleteArticleRow(db, row.id));
+          return;
+        }
+      }
+      const src = this.source(item);
+      const trash = this.deps.trash;
+      if (!trash) throw new LibraryError('unavailable', 'The trash is not available.');
+      await trashEntry(src.root, src.path, trash);
+      const ids = this.deps.storage
+        .readSql((db) => rowsUnder(db, src.folderId, src.path, src.folder))
+        .map((r) => r.id);
+      await this.deps.storage.writeSql((db) => trashedRows(db, ids, this.deps.now()));
+    });
+  }
+
+  private source(item: LibraryItem): {
+    folderId: string;
+    root: string;
+    path: string;
+    folder: boolean;
+  } {
+    if (item.kind === 'article') {
+      const { folderPath, row } = this.article(item.id);
+      if (row.missingSince !== null)
+        throw new LibraryError('not_found', 'The article’s file is missing.');
+      return { folderId: row.folderId, root: folderPath, path: row.relPath, folder: false };
+    }
+    if (item.path === '')
+      throw new LibraryError('invalid', 'A library folder itself cannot be moved or deleted.');
+    const f = this.anyFolder(item.folderId);
+    return { folderId: f.id, root: f.path, path: item.path, folder: true };
   }
 }

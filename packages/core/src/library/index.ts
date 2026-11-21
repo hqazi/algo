@@ -4,3 +4,4 @@ export * from './scan';
 export * from './tree';
 export * from './anchors';
 export * from './generate';
+export * from './files';

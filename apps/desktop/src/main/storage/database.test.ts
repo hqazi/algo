@@ -173,7 +173,7 @@ describe('openDatabase', () => {
     v2.close();
     const r = openDatabase(dbPath);
     track(r.db);
-    expect(r).toMatchObject({ from: 2, to: 3, backupPath: `${dbPath}.bak-2` });
+    expect(r).toMatchObject({ from: 2, to: MIGRATIONS.length, backupPath: `${dbPath}.bak-2` });
     expect(
       r.db.prepare('SELECT id, kind, article_id, anchor, title FROM threads ORDER BY id').all(),
     ).toEqual([

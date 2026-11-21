@@ -6,7 +6,13 @@ import { IpcRefusal, type IpcRouter } from '../ipc/router';
 import { LibraryError, LibraryService, type LibraryDeps } from './service';
 import { watchFolders, type WatchFn } from './watcher';
 
-export { LibraryError, LibraryService, type FolderInfo, type FolderTree } from './service';
+export {
+  LibraryError,
+  LibraryService,
+  type FolderInfo,
+  type FolderTree,
+  type LibraryItem,
+} from './service';
 export { scanFolder, type FolderScan, type ScannedFile } from './scanner';
 
 async function refusing<T>(fn: () => T | Promise<T>): Promise<T> {
@@ -54,6 +60,25 @@ export function registerLibraryHandlers(
     await library.refresh();
     return tree();
   });
+  // T42: changes the user asks for in the tree.
+  router.handle('library:create-folder', ({ at, name }) =>
+    refusing(async () => {
+      await library.createFolder(at.folderId, at.path, name);
+      return tree();
+    }),
+  );
+  router.handle('library:move', ({ item, to }) =>
+    refusing(async () => {
+      await library.move(item, to);
+      return tree();
+    }),
+  );
+  router.handle('library:delete', ({ item }) =>
+    refusing(async () => {
+      await library.remove(item);
+      return tree();
+    }),
+  );
   router.handleStream('library:watch', async (_req, { signal, emit }) => {
     // Opening the Library rescans.
     await library.refresh();

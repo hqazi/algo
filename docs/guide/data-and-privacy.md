@@ -16,7 +16,9 @@ your solutions (`workspace/<problem>/solution.py`), the problems you made or
 imported, explanation pages and articles the tutor wrote. Updates and
 uninstalling never touch it.
 
-Your Library folders stay where they are; the app only reads them. Images it
+Your Library folders stay where they are; the app changes them only when you
+make a folder, move or delete something in the Library's tree (deletes go
+to the system trash). Images it
 downloads for articles are kept in a cache inside the data folder.
 
 ## Export, import and reset

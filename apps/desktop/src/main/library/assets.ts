@@ -16,7 +16,6 @@ import { open, readdir, realpath, stat } from 'node:fs/promises';
 import { isAbsolute, join, posix, relative, sep } from 'node:path';
 import {
   articleMeta,
-  GENERATED_FOLDER_ID,
   isSkippedName,
   MAX_NOTE_BYTES,
   parseNote,
@@ -410,8 +409,9 @@ export async function readArticle(
   const content = root && row.missingSince === null ? await readNote(root, row.relPath) : null;
   const parsed = content === null ? null : parseNote(content, row.relPath);
   const meta = parsed?.meta ?? articleMeta(row.frontmatter, row.relPath);
-  // T25: only the app's own folder makes an article AI-written, not a key in a note.
-  const generated = row.folderId === GENERATED_FOLDER_ID;
+  // T25, T42: only the app marks an article AI-written (its own folder, or a
+  // file the tutor saved), never a key in a note; the mark moves with it.
+  const generated = row.generated;
   const images: Record<string, ImageView> = {};
   const links: Record<string, string | null> = {};
   if (parsed && root) {

@@ -23,7 +23,7 @@ flowchart LR
   Main -- "HTTPS" --> API[(Anthropic API)]
   Main -. "optional" .-> CC["Claude Code CLI"]
   Main -. "optional" .-> Tool["cargo / go<br/>or Docker / Podman"]
-  Main -- "read only" --> Vault[/"Library folders<br/>(Markdown)"/]
+  Main -- "read; on request: mkdir, move, trash" --> Vault[/"Library folders<br/>(Markdown)"/]
 ```
 
 - **The UI** never touches Node, files or the network. It talks to the main

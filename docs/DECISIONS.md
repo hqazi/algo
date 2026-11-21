@@ -2124,3 +2124,40 @@ left a choice.
   by app code.
 - Considered: a dictionary-based phonemizer (permissive licence, nothing
   GPL at all) — more work and worse on unknown words; left as a follow-up.
+
+**D-62 The app may change library folders, on request** (2026-11-21, T42; changes SPEC §15.1, §15.7)
+
+- **Why.** The maintainer asked for the Articles pane to create, move and
+  delete articles and folders, in their own folders as well as the tutor's.
+  Until now the app promised never to write to a library folder.
+- **What.** Only three changes, each started by the user in the tree: make
+  a folder, move a file or folder (keeping its name; across library folders
+  too), and send one to the OS trash. The app still never edits or creates a
+  note itself, except the tutor's articles (T43) saved where the user
+  chose. No rename (not asked for).
+- **Delete goes to the trash** (`shell.trashItem`), never `rm`, so a mistake
+  can be undone in the file manager. The one outright delete is the source
+  of a file copied to another drive by a move (`rename` fails with
+  `EXDEV`); a folder is not moved across drives.
+- **Paths.** The renderer still never sees an absolute path: items are an
+  article id or `(folder id, path inside the folder)`. Main checks names in
+  core (`pathParts`, `entryNameProblem`: no `.`/`..`, dot names, which the
+  scan would hide, Windows-reserved names or characters Obsidian refuses),
+  then the real paths: every folder it writes in must be inside the library
+  folder's real path; the moved or trashed entry is not followed, so a
+  symlink is moved as a link. Existing targets are refused, never replaced.
+- **Index and chats.** A move updates the rows directly (folder id and
+  path, a folder's rows by prefix), so ids and chats follow even across
+  library folders, where a rescan alone would lose them (identity is per
+  folder). Scans and changes share one lock so a scan in flight cannot
+  undo a move. Trashed articles with chats stay as "file missing" (the
+  SPEC's rule for any file that disappears); those without leave the index.
+- **AI-written per article.** `articles.generated` (migration 0004) replaces
+  "the folder is `generated`", so a tutor article moved into a vault keeps
+  its label. As before (D-43), a note's own `generated:` key never sets it.
+- **Empty folders show**: the scan now lists folders, kept in memory per
+  folder. A folder holding only images (`attachments/`) now shows too, as
+  in Obsidian.
+- The Settings line and the guide say the app changes the folders only when
+  asked.
+
