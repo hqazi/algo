@@ -38,6 +38,10 @@ existing CSS keeps working; add what is missing:
 | `--border`, `--border-strong` | Dividers; input borders and focus-adjacent edges |
 | `--text`, `--muted`, `--faint` | Body; secondary; placeholders and disabled |
 | `--accent`, `--accent-hover`, `--accent-subtle`, `--accent-text` | Primary buttons and selection; their hover; tinted backgrounds (active nav, user bubbles, selected rows); text on accent |
+| `--accent-fg` | The accent as text or an icon on a surface (links, the open Library article); lighter than `--accent` in dark mode so it stays readable |
+| `--accent-disabled` | Fill of a disabled primary button (shown at 55% opacity): the accent in light mode, a brighter indigo in dark mode so it does not turn muddy |
+| `--focus` | The focus ring (2px outline, 2px offset); lighter in dark mode so it keeps 3:1 |
+| `--accent-ring` | The soft 3px ring around a focused input, select or the code editor |
 | `--pass`, `--fail`, `--warn` and `-bg` variants | Test results, statuses, difficulty |
 | `--easy`, `--medium`, `--hard` | Difficulty dots and text |
 
@@ -78,7 +82,8 @@ chat actions) and always have `aria-label` plus `title`.
 - **Buttons:** `primary` (filled accent), `secondary` (surface + border),
   `ghost` (no border, hover fill), `danger`, `icon` (square ghost). Sizes
   `sm` (28px), default (32px), `lg` (40px). Disabled primary keeps its
-  colour at reduced opacity, not a washed-out tint.
+  colour at reduced opacity (`--accent-disabled` at 55%), not a washed-out
+  tint.
 - **Inputs, selects, textareas:** one height (32px), `--radius-sm`,
   `--border-strong` on hover, accent ring on focus. Selects use
   `appearance: none` with a chevron.
@@ -89,7 +94,12 @@ chat actions) and always have `aria-label` plus `title`.
 - **Text boxes** that take messages grow with their content (up to a cap)
   instead of showing a resize grip.
 - **Pills/badges:** small (20px), tinted background, no border.
-- **Menu** (popover) for overflow actions, keyboard accessible.
+- **Menu** (popover) for overflow actions, keyboard accessible; the
+  focused item shows a filled row, not an outline.
+- **Focus.** Every control shows `--focus` as a 2px outline when reached by
+  keyboard; text fields (inputs, selects, the code editor, the chat
+  composer) show `--accent-ring` instead. In the editor, Tab indents;
+  Escape then Tab moves on.
 
 ### Editor
 
@@ -113,6 +123,10 @@ JetBrains Mono.
   `--surface`, separated by 1px dividers that are the resize handles
   (wider hit area, accent on hover/drag). Each pane has a header of one
   height (40–44px) with its title and its actions as ghost or icon buttons.
+- **Narrow windows.** Under 1100px the nav shows icons only (names in the
+  tooltip). Under 900px multi-pane pages show one pane at a time with tabs
+  above; switching layouts keeps each pane's state. The window's minimum
+  size is 800×600 (`MIN_WINDOW_SIZE` in `main/window.ts`).
 
 ## Pages
 
@@ -140,7 +154,7 @@ JetBrains Mono.
 ### Home, Problems, Progress (T31)
 
 - **Home** becomes a dashboard: a "Continue" card for the problem in
-  progress (title, topic, last activity, **Resume**), a "Recommended next"
+  progress (title, topic, when it was started, **Resume**), a "Recommended next"
   card (the next-problem pick with its reason), a compact progress summary
   (topics comfortable / learning / not started, problems solved), and the
   tutor chat as a card below. Empty states have an icon and one line.
@@ -153,7 +167,9 @@ JetBrains Mono.
 - **Progress:** a summary row of stat tiles (comfortable, learning, not
   started, solved). Topic groups as cards in a balanced grid; each topic is
   one compact row: name, level badge, a single segmented bar (unaided /
-  with help / tried), and counts shown only when non-zero.
+  with help / tried), and counts shown only when non-zero. Active problems
+  and recent attempts are tables on cards, by problem title, with relative
+  times.
 
 ### Library (T32)
 
@@ -174,22 +190,30 @@ JetBrains Mono.
 - **Onboarding:** a centred stepper, one question per step, choice cards,
   a step indicator, **Back** / **Continue**, and **Use defaults and start**
   kept as a secondary action on every step.
-- **Settings:** a left section list (Tutor, Code execution, Library,
-  Profile, Data, Updates, About) and one section shown at a time (or a
-  scroll-spy list); form rows aligned (label left or above, control, help
-  text); status lines as a status dot + text, not raw "On · fake ·
-  fake-model".
+- **Onboarding as built:** the last step's button is **Save and continue**
+  (not Continue); **Use defaults and start** is a ghost button.
+- **Settings:** a left section list (Tutor, Code execution, Appearance,
+  Library, Profile, Data, Updates, About) with scroll-spy: every section
+  stays on one page and the list follows the scroll position (under 900px
+  the list wraps above the sections); form rows aligned (label left,
+  control, help text under it); status lines as a status dot + text, not raw
+  "On · fake · fake-model".
 - **Dialogs:** `--radius-lg`, `--shadow-lg`, a header with title and close
   icon, footer actions right-aligned. New problem's Generate / Paste /
   Import as a segmented control; difficulty labels capitalised. The
   explanation dialog shows the problem title, not its slug.
 - **Toasts:** bottom-right, surface with shadow, an icon per kind.
 - **Dates:** relative for recent ("2 min ago", "yesterday"), absolute in a
-  tooltip, one shared formatter.
+  tooltip, one shared formatter (`relativeDate` / `fullDate` in
+  `lib/format.ts`, `components/RelativeTime.tsx`): Home, Progress, the
+  explanation versions, the Library chats and Settings → Updates.
+- **Give up and Reference** on Practice use the shared dialog too (close
+  icon, footer actions on the right).
 
 ## Checking
 
-Each page ticket retakes the affected screenshots (`npm run screenshots`,
-or a scratch copy of the script for pages it does not cover) and looks at
-them in light and dark before calling a ticket done. T34 does a final pass
-across the app and updates the user guide.
+`npm run screenshots` takes practice, explanation, home, problems,
+progress, settings, library and practice-dark at 1440×880. A UI change
+retakes them (or uses a scratch copy of the script for screens it does not
+cover) and looks at the changed screens in light and dark, at 1440×880 and
+at the minimum window size, before it is done.

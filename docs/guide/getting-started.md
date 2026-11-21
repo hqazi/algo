@@ -11,6 +11,14 @@
    one. See [The tutor](tutor.md).
 3. **Practise.** **Next problem** picks one for you.
 
+The navigation sits in the window's title bar: **Home**, **Problems**,
+**Progress**, **Library** and **Settings** on the left (icons only in a
+narrow window), **New problem** and **Next problem** on the right, and the
+tutor's status (a green dot when it is on; hover it for the backend and
+model).
+
+![Home: the problem in progress, the next pick and its reason, a progress summary and the tutor chat](../assets/screenshots/home.png)
+
 ## Practising
 
 ![The practice view: the problem, the editor and results, and the tutor](../assets/screenshots/practice.png)
@@ -21,7 +29,7 @@ under it, and the tutor side by side.
 | Action | What it does |
 |---|---|
 | **Run** (Ctrl+Enter, or Cmd+Enter on macOS) | Runs your solution against the visible tests (the examples). |
-| **Submit** | Runs every test, including hidden ones, and records the attempt. A hidden test shows only its category (for example "repeat inside the window"), never its input. |
+| **Submit** (Ctrl+Shift+Enter, or Shift+Cmd+Enter) | Runs every test, including hidden ones, and records the attempt. A hidden test shows only its category (for example "repeat inside the window"), never its input. |
 | **Hint** | The next hint, one level at a time, from a nudge to a near-solution. |
 | **Review** | The tutor runs the tests and reviews your solution. |
 | **Explain** | A full explanation page: plain words, intuition, brute force to optimal, a trace, complexity, a solution and pitfalls. Opening one counts the attempt as solved with help. |
@@ -30,9 +38,17 @@ under it, and the tutor side by side.
 
 Pass or fail always comes from running the tests, never from the model.
 
-Your solution is a plain file (its path is shown in the practice view). You
-can edit it in your own editor too: the app reloads it when it changes on
-disk.
+Your solution is a plain file (its path is the tooltip of the save state
+beside the language). You can edit it in your own editor too: the app reloads
+it when it changes on disk.
+
+Panes can be resized by dragging the thin lines between them, or by focusing
+a line with Tab and pressing the arrow keys. In a window narrower than 900px
+the three panes become tabs (**Problem**, **Code**, **Tutor**).
+
+**Keyboard.** Everything can be reached with Tab. In the code editor Tab
+indents; press **Escape** and then **Tab** to move on to the results and the
+tutor (or Ctrl+M to switch Tab between indenting and moving focus).
 
 ## What to practise next
 
@@ -44,7 +60,10 @@ reason for it (**Start**), a short progress summary and the tutor chat, which
 can answer "what should I practise next?" when the tutor is on. **Problems**
 lists every problem by topic; search it, filter it by topic, difficulty or
 status (each choice shows how many problems it leaves), and click a row to
-open the problem.
+open the problem. A status icon marks each problem: an empty circle (new), a
+half circle (in progress), a check (solved) or a crossed circle (gave up).
+
+![Problems: search, filters with counts, and every problem by topic](../assets/screenshots/problems.png)
 
 The app ships with 50 curated problems across 15 topics, from arrays and
 hashing to graphs and dynamic programming.
@@ -53,7 +72,8 @@ hashing to graphs and dynamic programming.
 
 ![Progress: a level per topic](../assets/screenshots/progress.png)
 
-**Progress** shows your level per topic and your recent attempts. Each topic
+**Progress** shows your level per topic, the problems in progress and your
+recent attempts (each by title, with when it started or ended). Each topic
 has a bar of the problems you solved unaided, solved with help, and tried
 without solving yet. A topic is
 *new*, *learning* once you have attempted it, and *comfortable* after three
@@ -75,14 +95,18 @@ from a passage you are reading in the [Library](library.md).
 
 ## Settings
 
-Every setting applies without a restart:
+![Settings: the section list on the left and the Tutor section](../assets/screenshots/settings.png)
+
+Every setting applies without a restart. The list on the left jumps to a
+section and follows as you scroll; every section is on one page:
 
 | Section | What is there |
 |---|---|
 | **Tutor** | API key, backend, model and effort. |
 | **Code execution** | Python, Rust and Go runners, container runtimes and the runner image. See [Code execution](code-execution.md). |
 | **Library** | Article folders, image downloads and the image cache. |
-| **Appearance and editor** | Light, dark or system theme; editor font size and keys. |
+| **Appearance** | Light, dark or system theme; editor font size and keys. |
 | **Profile** | Your onboarding answers and focus topic. |
 | **Data** | The data folder, export, import and reset. See [Your data](data-and-privacy.md). |
 | **Updates** | Automatic checks and the update channel. |
+| **About** | Versions, licences and third-party notices. |

@@ -87,6 +87,14 @@ whether a solution works.
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/assets/screenshots/home.png" alt="Home: the problem in progress, the next pick and its reason, and the tutor chat"></td>
+    <td width="50%"><img src="docs/assets/screenshots/problems.png" alt="Problems: search, filters and every problem by topic"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Home</b>: carry on, or take the next pick</td>
+    <td align="center"><b>Problems</b>: 50 curated, more on demand</td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/assets/screenshots/library.png" alt="The Library: a folder tree, an article, and a chat about a passage"></td>
     <td width="50%"><img src="docs/assets/screenshots/explanation.png" alt="An explanation page written by the tutor"></td>
   </tr>
@@ -101,6 +109,14 @@ whether a solution works.
   <tr>
     <td align="center"><b>Progress</b>: a level for every topic</td>
     <td align="center"><b>Dark mode</b>: follows your system</td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/settings.png" alt="Settings: sections on the left, the tutor's status, key and model"></td>
+    <td width="50%"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Settings</b>: every option in one place, applied at once</td>
+    <td></td>
   </tr>
 </table>
 

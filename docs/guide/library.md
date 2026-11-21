@@ -15,7 +15,7 @@ folders and **never writes to them** or fetches web pages: clipping is your
 browser's job.
 
 1. Open **Settings → Library** and click **Add folder…**.
-2. Open **Library** in the top bar. The left pane shows your folders and
+2. Open **Library** in the title bar. The left pane shows your folders and
    articles. Type in the filter box to search by title or tag.
 
 The Library notices new and changed files while it is open; **Refresh** (the
@@ -52,8 +52,9 @@ with size and time limits. The page itself never contacts a website.
 ## Chatting about a passage
 
 Select some text and click **Ask about this**, or use the **Ask** button
-that appears when you point at a heading (it is also in the Tab order). The chat pane on the right opens a new conversation tied to
-that passage, and a marker appears in the margin beside it.
+that appears when you point at a heading (it is also in the Tab order). The
+chat pane on the right opens a new conversation tied to that passage, with
+the cursor in its question box, and a marker appears in the margin beside it.
 
 - Each article can have many chats. The list at the top of the chat pane
   shows them with their passage and how long ago they were last used (point

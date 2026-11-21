@@ -1903,3 +1903,42 @@ left a choice.
   there, not deleted, to stay out of `styles.css` while T31 and T33 run in
   parallel (T34 can delete them). `chat.css` lost `.chat-head`,
   `.small-button` and `.chat-compose`.
+
+**D-55 Design pass: window size, narrow layout, focus, disabled primary, dates** (2026-11-21, T34)
+
+- **Minimum window size 800×600** (`MIN_WINDOW_SIZE`, `minWidth`/`minHeight`
+  in `main/window.ts`). There was none. 800 is below the 900px breakpoint on
+  purpose: the smallest window uses the stacked tabs, which were checked on
+  every page; Home, Problems, Progress, Settings and dialogs fit at 800×600
+  (pages scroll).
+- **Stacked tabs.** `.pane`'s `display: flex` beat the `hidden` attribute, so
+  under 900px all three panes showed at once; a global `[hidden] { display:
+  none !important }` fixes it everywhere. `Panes` now renders one tree for
+  both layouts (tabs and gutters come and go), so crossing 900px no longer
+  remounts the editor, a chat draft or the Library's open thread.
+- **Disabled primary** uses a new `--accent-disabled` fill at 55% opacity:
+  the accent in light, a brighter indigo (`#6655ff`) in dark, where the
+  accent faded over a dark surface looked muddy. Send's own 0.35 is gone.
+  Disabled controls are exempt from WCAG contrast; the token is plain hex
+  like the others so `styles.test.ts` sees it in both themes.
+- **Focus.** The code editor shows `--accent-ring` inside its edges when
+  focused (it is a text box, like inputs); CodeMirror's own Escape-then-Tab
+  (and Ctrl+M) leaves it, so Tab keeps indenting. Onboarding's choice cards
+  use the shared 2px `--focus` outline instead of a faint ring. Menu items
+  keep a filled row as their focus state (the menu pattern). Asking about a
+  passage or heading moves the focus to the question box; the provider
+  notice is an alert dialog whose **Send** takes the focus and hands it back
+  to the box.
+- **Dates.** `when()` and Home's `ago()` are gone: every user-facing date
+  (Home, Progress, explanation versions, Library chats, Settings → Updates)
+  goes through `relativeDate`/`fullDate` (`RelativeTime`). Explanation
+  versions read "Latest · 5 min ago" with the full date as the tooltip.
+- **Progress by title.** Attempts carry only the slug, so Progress loads
+  `problems:list` (no new IPC) for titles and difficulty; slugs show only
+  until it loads. Active problems is a table like Recent attempts. The e2e
+  tests find a problem on Progress by its link target (`a[href="#/p/<slug>"]`).
+- **Next problem's toast** reads "Next problem: <title>. <Reason>." using
+  Home's `reasonText` (capitalised, without the tutor-only tail); the New
+  problem dialog's suggestion uses the same text.
+- **Settings → Tutor status** rewrites main's "… in Settings …" reason to
+  "… below …" on that page only (`reasonHere`); elsewhere it is unchanged.
