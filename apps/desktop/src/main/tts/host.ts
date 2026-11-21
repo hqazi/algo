@@ -1,140 +1,111 @@
 /**
- * Main's side of the read-aloud engine (T38, D-59): starts the utility
- * process (`worker.ts`) on the first chunk, sends it chunks and resolves each
- * with its audio. The process is stopped after `IDLE_MS` without a request
- * (the model takes several hundred megabytes) and started again when needed;
- * if it dies, waiting chunks fail and the next one starts a new process.
- * When the device setting changes, the next chunk starts a new process on it.
+ * Main's side of read aloud (T38, T39, T40, D-59–D-61). Each chunk goes
+ * through two utility processes, both started on the first chunk and
+ * stopped when idle (the model takes several hundred megabytes):
  *
- * `fork` is injected so tests run without Electron.
+ * 1. eSpeak NG (`espeak-worker.ts`) turns the text into phonemes. It is
+ *    GPL-3.0, downloaded with the voice, and kept to its own process.
+ * 2. The engine (`worker.ts`) turns phonemes into audio with Kokoro.
+ *
+ * Normalizing the text and splitting it around punctuation (`text.ts`)
+ * happen here, between the two. When the device setting changes, the next
+ * chunk starts the engine again on it, never during a chunk.
+ *
+ * `fork` and `forkEspeak` are injected so tests run without Electron.
  */
 import type { TtsDevice, VoiceId } from '../../shared/tts';
+import { ChildProcess, type ChildLike } from './child';
 import type { EngineInfo } from './engine';
-import type { WorkerConfig, WorkerReply, WorkerRequest } from './worker';
+import type { EspeakRequest } from './espeak-worker';
+import { toPhonemes } from './text';
+import type { WorkerConfig, WorkerRequest } from './worker';
+
+export type { ChildLike } from './child';
 
 export const IDLE_MS = 5 * 60_000;
 /** The first chunk also loads the model. */
 export const SPEAK_MS = 180_000;
-
-export interface ChildLike {
-  postMessage(message: unknown): void;
-  on(event: 'message', listener: (message: unknown) => void): unknown;
-  on(event: 'exit', listener: (code: number) => void): unknown;
-  kill(): boolean;
-}
+const ESPEAK_MS = 30_000;
 
 export type ForkFn = (config: WorkerConfig) => ChildLike;
 
-interface Waiting {
-  resolve: (audio: Float32Array<ArrayBuffer>) => void;
-  reject: (e: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
-}
-
 export class TtsHost {
-  private child: ChildLike | null = null;
-  private nextId = 1;
-  private readonly waiting = new Map<number, Waiting>();
-  private idle: ReturnType<typeof setTimeout> | undefined;
+  private readonly engineProcess: ChildProcess<WorkerConfig>;
+  private readonly espeak: ChildProcess<string>;
   private info: EngineInfo | null = null;
-  private childDevice: TtsDevice | null = null;
 
   constructor(
     private readonly opts: {
       fork: ForkFn;
+      /** Starts `espeak-worker.ts` with the downloaded module's path. */
+      forkEspeak: (path: string) => ChildLike;
       ortPath: string;
       modelDir: string;
-      /** The device setting, read when the process starts. */
+      /** The downloaded eSpeak module. */
+      espeakPath: string;
+      /** The device setting, read when the engine starts. */
       device: () => TtsDevice;
       log?: (m: string) => void;
     },
-  ) {}
+  ) {
+    const log = opts.log;
+    this.engineProcess = new ChildProcess<WorkerConfig>({
+      name: 'the voice process',
+      fork: opts.fork,
+      idleMs: IDLE_MS,
+      timeoutMs: SPEAK_MS,
+      onOther: (m) => {
+        if (typeof m['log'] === 'string') log?.(m['log']);
+        else if (m['engine']) this.info = m['engine'] as EngineInfo;
+      },
+      ...(log ? { log } : {}),
+    });
+    this.espeak = new ChildProcess<string>({
+      name: 'eSpeak NG',
+      fork: opts.forkEspeak,
+      idleMs: IDLE_MS,
+      timeoutMs: ESPEAK_MS,
+      ...(log ? { log } : {}),
+    });
+  }
 
   /** Where the engine runs, once it has started (kept after an idle stop). */
   get engine(): EngineInfo | null {
     return this.info;
   }
 
-  speak(text: string, voice: VoiceId, speed: number): Promise<Float32Array<ArrayBuffer>> {
-    const child = this.start();
-    const id = this.nextId++;
-    clearTimeout(this.idle);
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.waiting.delete(id);
-        reject(new Error('the voice took too long'));
-        this.armIdle();
-      }, SPEAK_MS);
-      this.waiting.set(id, { resolve, reject, timer });
-      child.postMessage({ id, text, voice, speed } satisfies WorkerRequest);
-    });
-  }
-
-  /** Stops the process (quit, model removed). */
-  stop(): void {
-    clearTimeout(this.idle);
-    const c = this.child;
-    this.child = null;
-    this.failAll('read aloud stopped');
-    c?.kill();
-  }
-
-  private start(): ChildLike {
+  async speak(text: string, voice: VoiceId, speed: number): Promise<Float32Array<ArrayBuffer>> {
+    const phonemes = await toPhonemes(text, voice.startsWith('b') ? 'b' : 'a', (t, language) =>
+      this.espeak
+        .request<{ phonemes: string[] }>(this.opts.espeakPath, {
+          text: t,
+          language,
+        } satisfies Omit<EspeakRequest, 'id'>)
+        .then((r) => r.phonemes),
+    );
     const device = this.opts.device();
+    const running = this.engineProcess.running;
     // The setting changed: start again on the new device, between chunks.
-    if (this.child && this.childDevice !== device && this.waiting.size === 0) {
-      this.stop();
+    if (running && running.device !== device && !this.engineProcess.busy) {
+      this.engineProcess.stop();
       this.info = null;
     }
-    if (this.child) return this.child;
-    const child = this.opts.fork({
+    const config: WorkerConfig = {
       ortPath: this.opts.ortPath,
       modelDir: this.opts.modelDir,
       device,
-    });
-    this.child = child;
-    this.childDevice = device;
-    child.on('message', (m) => this.onMessage(m as WorkerReply));
-    child.on('exit', (code) => {
-      if (this.child !== child) return;
-      this.child = null;
-      clearTimeout(this.idle);
-      if (this.waiting.size > 0) this.opts.log?.(`read aloud: the voice process exited (${code})`);
-      this.failAll('the voice process stopped');
-    });
-    return child;
+    };
+    const reply = await this.engineProcess.request<{ audio: Float32Array<ArrayBuffer> }>(config, {
+      phonemes,
+      voice,
+      speed,
+    } satisfies Omit<WorkerRequest, 'id'>);
+    return reply.audio;
   }
 
-  private onMessage(m: WorkerReply): void {
-    if ('log' in m) {
-      this.opts.log?.(m.log);
-      return;
-    }
-    if ('engine' in m) {
-      this.info = m.engine;
-      return;
-    }
-    const w = this.waiting.get(m.id);
-    if (!w) return;
-    this.waiting.delete(m.id);
-    clearTimeout(w.timer);
-    if ('audio' in m) w.resolve(m.audio);
-    else w.reject(new Error(m.error));
-    this.armIdle();
-  }
-
-  private armIdle(): void {
-    clearTimeout(this.idle);
-    if (this.waiting.size > 0 || !this.child) return;
-    this.idle = setTimeout(() => this.stop(), IDLE_MS);
-    this.idle.unref?.();
-  }
-
-  private failAll(message: string): void {
-    for (const [id, w] of this.waiting) {
-      clearTimeout(w.timer);
-      w.reject(new Error(message));
-      this.waiting.delete(id);
-    }
+  /** Stops both processes (quit, model removed). */
+  stop(): void {
+    this.engineProcess.stop();
+    this.espeak.stop();
   }
 }

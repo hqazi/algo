@@ -1,15 +1,19 @@
 /**
- * The Kokoro model and voices on disk (T38, D-59): downloaded once, on the
- * learner's say-so, from Hugging Face by the main process, into
+ * The Kokoro model and voices, and eSpeak NG, on disk (T38, T40, D-59,
+ * D-61): downloaded once, on the learner's say-so, by the main process, into
  * `<data>/cache/kokoro-v1.0/` (a cache: not exported, removed by "reset
  * everything", downloaded again when needed).
  *
- * - Pinned: one revision of `onnx-community/Kokoro-82M-v1.0-ONNX`, and every
- *   file's size and SHA-256 written here. A file whose hash differs is
- *   deleted and the download fails; nothing unchecked is ever loaded.
- * - `https:` only; redirects followed by hand, at most 5, and only to
- *   `huggingface.co` or a `*.hf.co` host (the CDN the files live on). No
- *   cookies or credentials; a generic user agent.
+ * - Pinned: one revision of `onnx-community/Kokoro-82M-v1.0-ONNX` from
+ *   Hugging Face, and eSpeak NG as the `phonemizer` npm package publishes it
+ *   (one file, from jsDelivr), with every file's size and SHA-256 written
+ *   here. A file whose hash differs is deleted and the download fails;
+ *   nothing unchecked is ever loaded.
+ * - eSpeak NG is GPL-3.0 and the app is Apache-2.0, so the app never ships
+ *   it: it is downloaded here and run in its own process (D-61).
+ * - `https:` only; redirects followed by hand, at most 5. The model's go only
+ *   to `huggingface.co` or a `*.hf.co` host (its CDN); eSpeak's only to the
+ *   host it is fetched from. No cookies or credentials; a generic user agent.
  * - Each file goes to `<name>.part` and is renamed when its hash checks out;
  *   `ready.json` is written last, so a stopped download is never "installed".
  * - One download at a time: a second caller follows the same one, and it is
@@ -32,6 +36,8 @@ export interface ModelFile {
   path: string;
   bytes: number;
   sha256: string;
+  /** Where it comes from, when not the model repo. */
+  url?: string;
 }
 
 /** The full-precision model: on the native runtime it is both faster and better than the quantized ones (D-59). */
@@ -73,6 +79,18 @@ const VOICE_FILES: Record<VoiceId, [number, string]> = {
   bm_lewis: [522240, 'b8f671cef828c30e66fdf0b0756a76bba58f6bb3398cbbf27058642acbcedb97'],
 };
 
+/**
+ * eSpeak NG compiled to WebAssembly, as `phonemizer` 1.2.1 publishes it on
+ * npm (one self-contained module): turns text into the phonemes Kokoro
+ * reads. GPL-3.0, so downloaded, never shipped (D-61).
+ */
+export const ESPEAK_FILE: ModelFile = {
+  path: 'espeak/phonemizer.js',
+  bytes: 1_322_380,
+  sha256: '193481f474f7c1ea81df3195d18b45df8ef7254dbdccb3f193d60215c4897bec',
+  url: 'https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/dist/phonemizer.js',
+};
+
 export const voicePath = (voice: VoiceId): string => `voices/${voice}.bin`;
 
 export const FILES: readonly ModelFile[] = [
@@ -82,17 +100,22 @@ export const FILES: readonly ModelFile[] = [
     bytes,
     sha256,
   })),
+  ESPEAK_FILE,
 ];
 export const TOTAL_BYTES = FILES.reduce((n, f) => n + f.bytes, 0);
 
 export const fileUrl = (path: string): string =>
   `https://huggingface.co/${REPO}/resolve/${REVISION}/${path}`;
 
+/** Where a file is downloaded from. */
+export const urlOf = (f: ModelFile): string => f.url ?? fileUrl(f.path);
+
 export const MAX_REDIRECTS = 5;
 /** No bytes for this long ends the download. */
 export const STALL_MS = 30_000;
 const PROGRESS_STEP = 1024 * 1024;
 
+/** The model repo's hosts. */
 export function isAllowedHost(host: string): boolean {
   const h = host.toLowerCase();
   return h === 'huggingface.co' || (h.endsWith('.hf.co') && h.length > '.hf.co'.length);
@@ -202,7 +225,7 @@ export class ModelStore {
     return mine.promise.finally(() => mine.listeners.delete(onProgress));
   }
 
-  /** Deletes the model and voices (Settings → Library). Refused while downloading. */
+  /** Deletes the model, voices and eSpeak (Settings → Library). Refused while downloading. */
   async remove(): Promise<void> {
     if (this.running) throw new Error('downloading');
     await rm(this.dir, { recursive: true, force: true });
@@ -261,7 +284,9 @@ export class ModelStore {
     };
     arm();
     try {
-      const res = await this.open(fileUrl(f.path), both);
+      const res = await this.open(urlOf(f), both, (host) =>
+        f.url ? host.toLowerCase() === new URL(f.url).hostname : isAllowedHost(host),
+      );
       if (!res.body) throw new DownloadError('http', `no body for ${f.path}`);
       const hash = createHash('sha256');
       const out = createWriteStream(`${dest}.part`);
@@ -302,11 +327,15 @@ export class ModelStore {
   }
 
   /** GET with redirects followed by hand, each target checked. */
-  private async open(url: string, signal: AbortSignal): Promise<Response> {
+  private async open(
+    url: string,
+    signal: AbortSignal,
+    allowed: (host: string) => boolean,
+  ): Promise<Response> {
     let current = url;
     for (let i = 0; i <= MAX_REDIRECTS; i++) {
       const u = new URL(current);
-      if (u.protocol !== 'https:' || u.username || u.password || !isAllowedHost(u.hostname)) {
+      if (u.protocol !== 'https:' || u.username || u.password || !allowed(u.hostname)) {
         throw new DownloadError('redirect', `refused to download from ${u.hostname || current}`);
       }
       const res = await this.fetchFn(current, {
@@ -323,7 +352,7 @@ export class ModelStore {
       }
       if (!res.ok) {
         await res.body?.cancel();
-        throw new DownloadError('http', `Hugging Face answered ${res.status}`);
+        throw new DownloadError('http', `${u.hostname} answered ${res.status}`);
       }
       return res;
     }

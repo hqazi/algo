@@ -16,7 +16,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { SAMPLE_RATE, type TtsDevice, type VoiceId } from '../../shared/tts';
 import { MODEL_FILE, voicePath } from './model';
-import { tokenize, toPhonemes, type Phonemize } from './text';
+import { tokenize } from './text';
 
 export interface OrtTensor {
   readonly data: unknown;
@@ -50,6 +50,8 @@ export interface EngineInfo {
 }
 
 const STYLE = 256;
+/** "Ready." in phonemes: the GPU's check and warm-up run. */
+const READY = 'ɹˈɛdi.';
 
 interface Provider {
   label: string;
@@ -67,7 +69,6 @@ export interface EngineOptions {
   ort: Ort;
   /** The `ModelStore` directory (model and voices). */
   dir: string;
-  phonemize: Phonemize;
   platform?: NodeJS.Platform;
   /** Where to run; `gpu` falls back to the CPU when no GPU provider works. */
   device: TtsDevice;
@@ -92,13 +93,13 @@ export class Engine {
     return this.loading;
   }
 
-  /** Mono samples at `SAMPLE_RATE` for `text`, one request at a time. */
-  speak(text: string, voice: VoiceId, speed: number): Promise<Float32Array<ArrayBuffer>> {
+  /** Mono samples at `SAMPLE_RATE` for `phonemes` (from `text.ts`), one request at a time. */
+  speak(phonemes: string, voice: VoiceId, speed: number): Promise<Float32Array<ArrayBuffer>> {
     const run = this.queue.then(async () => {
       await this.load();
       if (!this.session) throw new Error('the voice model is not loaded');
       const t = performance.now();
-      const audio = await this.synth(this.session, text, voice, speed);
+      const audio = await this.synth(this.session, phonemes, voice, speed);
       const secs = Math.max((performance.now() - t) / 1000, 1e-3);
       if (this.info) this.info = { ...this.info, speed: audio.length / SAMPLE_RATE / secs };
       return audio;
@@ -141,12 +142,11 @@ export class Engine {
 
   private async synth(
     session: OrtSession,
-    text: string,
+    phonemes: string,
     voice: VoiceId,
     speed: number,
   ): Promise<Float32Array<ArrayBuffer>> {
-    const accent = voice.startsWith('b') ? 'b' : 'a';
-    const ids = tokenize(await toPhonemes(text, accent, this.opts.phonemize));
+    const ids = tokenize(phonemes);
     const pack = await this.voice(voice);
     // The voice pack holds one style vector per input length.
     const row = Math.min(Math.max(ids.length - 2, 0), pack.length / STYLE - 1);
@@ -171,7 +171,7 @@ export class Engine {
       try {
         const session = await this.openSession(p.providers);
         try {
-          await this.synth(session, 'Ready.', 'af_heart', 1);
+          await this.synth(session, READY, 'af_heart', 1);
         } catch (e) {
           await session.release();
           throw e;

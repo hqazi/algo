@@ -46,7 +46,7 @@ import type { AppStorage } from './storage';
 import { DEFAULT_MODEL, openTutor, type AppTutor } from './tutor';
 import { openUpdater, registerUpdateHandlers, type UpdateService } from './updater';
 import { ModelStore, registerTtsHandlers, TtsHost } from './tts';
-import type { FetchFn as TtsFetch } from './tts/model';
+import { ESPEAK_FILE, type FetchFn as TtsFetch } from './tts/model';
 import {
   APP_SCHEME_PRIVILEGES,
   guardAllWebContents,
@@ -338,11 +338,19 @@ export async function startPractice(
     ortPath: app.isPackaged
       ? join(process.resourcesPath, 'onnxruntime-node')
       : createRequire(import.meta.url).resolve('onnxruntime-node'),
+    espeakPath: ttsStore.path(ESPEAK_FILE.path),
     device: () => (storage.settings.get().library.readAloudGpu ? 'gpu' : 'cpu'),
     fork: (config) =>
       utilityProcess.fork(join(mainDir, 'tts-worker.js'), [], {
         serviceName: 'Algo read aloud',
         env: { ...process.env, ALGO_TTS_CONFIG: JSON.stringify(config) },
+        stdio: 'inherit',
+      }),
+    // eSpeak NG (GPL-3.0) is downloaded with the model and runs on its own (D-61).
+    forkEspeak: (path) =>
+      utilityProcess.fork(join(mainDir, 'espeak-worker.js'), [], {
+        serviceName: 'Algo eSpeak NG',
+        env: { ...process.env, ALGO_ESPEAK_PATH: path },
         stdio: 'inherit',
       }),
     log: (m) => console.warn(m),

@@ -1,0 +1,20 @@
+Read aloud (Kokoro and eSpeak NG)
+
+The text normalization in src/main/tts/text.ts is ported from kokoro-js
+1.2.1 (Apache License 2.0, by hexgrad and Xenova):
+https://github.com/hexgrad/kokoro/tree/main/kokoro.js
+
+Not shipped with the app; downloaded when you first read aloud, if you
+choose to:
+
+- The Kokoro-82M model and voices (Apache License 2.0,
+  https://huggingface.co/hexgrad/Kokoro-82M), from
+  https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX.
+- eSpeak NG, which turns text into phonemes for Kokoro, compiled to
+  WebAssembly in the `phonemizer` npm package 1.2.1 (by Xenova,
+  https://github.com/xenova/phonemizer.js), from
+  https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/dist/phonemizer.js.
+  eSpeak NG is licensed under the GNU General Public License, version 3 or
+  later (https://www.gnu.org/licenses/gpl-3.0.html); its source code is at
+  https://github.com/espeak-ng/espeak-ng. The app runs it as a separate
+  program, in its own process, and sends it only text.

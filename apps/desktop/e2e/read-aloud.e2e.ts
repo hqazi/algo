@@ -1,26 +1,36 @@
 /**
- * Read aloud end to end (T38, SPEC §15.6), in the built app, with the real
- * Kokoro model: Read aloud → the offer → Download (from a local copy of the
- * Hugging Face files, through the app's own checked download) → the article
- * is spoken by the engine in its utility process and played; pause; the
- * engine's device shown in Settings → Library; Remove.
+ * Read aloud end to end (T38–T40, SPEC §15.6), in the built app, with the
+ * real Kokoro model and eSpeak NG: Read aloud → the offer → Download (from a
+ * local copy of the files, through the app's own checked download) → the
+ * article is phonemized by eSpeak in its process, spoken by the engine in
+ * its own and played; pause; the engine's device shown in Settings →
+ * Library; Remove. Also checks the built app contains no eSpeak code
+ * (GPL-3.0, D-61).
  *
  *   npm run e2e:read-aloud -w apps/desktop [-- --shots <dir>]
  *
  * The model files (340 MB) are read from `ALGOTUTOR_E2E_TTS_SOURCE`
- * (default `~/.cache/algo-e2e/kokoro-v1.0`), laid out like the repo
- * (`onnx/model.onnx`, `voices/*.bin`); missing ones are downloaded there
- * first, from the pinned revision. Not part of `npm run e2e`: it needs
+ * (default `~/.cache/algo-e2e/kokoro-v1.0`), laid out like the download
+ * (`onnx/model.onnx`, `voices/*.bin`, `espeak/phonemizer.js`); missing ones
+ * are downloaded there first, from the pinned sources. Not part of `npm run e2e`: it needs
  * the files and takes a minute or two on a CPU. It runs on the CPU (the
  * default); then, with "Use the GPU" on, reads again and checks the engine
  * restarted on the GPU, or says no GPU could be used.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
-import { FILES, fileUrl } from '../src/main/tts/model';
+import { FILES, urlOf } from '../src/main/tts/model';
 
 const ROOT = join(import.meta.dirname, '..');
 const shotsAt = process.argv.indexOf('--shots');
@@ -41,7 +51,7 @@ for (const f of FILES) {
   const path = join(source, ...f.path.split('/'));
   if (existsSync(path)) continue;
   console.log(`downloading ${f.path} into ${source}`);
-  const res = await fetch(fileUrl(f.path));
+  const res = await fetch(urlOf(f));
   if (!res.ok) throw new Error(`${f.path}: ${res.status}`);
   const body = Buffer.from(await res.arrayBuffer());
   if (createHash('sha256').update(body).digest('hex') !== f.sha256) {
@@ -50,6 +60,19 @@ for (const f of FILES) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, body);
 }
+
+// eSpeak NG is GPL-3.0: it must not be in the app, only downloaded (D-61).
+const bundled = (dir: string): string[] =>
+  readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => {
+    const p = join(dir, f);
+    if (!/\.(c?js|mjs)$/.test(f)) return false;
+    return /synthesize_ipa|espeak-ng-data/.test(readFileSync(p, 'utf8'));
+  });
+check(
+  'the built app contains no eSpeak NG code',
+  bundled(join(ROOT, 'out')).length === 0,
+  bundled(join(ROOT, 'out')),
+);
 
 const ARTICLE = `---
 title: Binary search
@@ -133,7 +156,7 @@ try {
   const before = await pg.getByTestId('read-aloud-voice').textContent();
   check(
     'Settings says the voice is not downloaded',
-    /Not downloaded \(324 MB\)/.test(before ?? ''),
+    /Not downloaded \(326 MB\)/.test(before ?? ''),
     before,
   );
 
@@ -151,7 +174,7 @@ try {
     /Kokoro/.test((await offer.textContent()) ?? ''),
   );
   await shot(pg, '1-offer');
-  await pg.getByRole('button', { name: 'Download (324 MB)' }).click();
+  await pg.getByRole('button', { name: 'Download (326 MB)' }).click();
   await pg
     .getByRole('progressbar', { name: 'Voice download' })
     .waitFor({ timeout: 10_000 })
@@ -160,7 +183,8 @@ try {
   await offer.waitFor({ state: 'detached', timeout: 180_000 });
   check(
     'the model was downloaded into the cache and checked',
-    existsSync(join(dataDir, 'cache', 'kokoro-v1.0', 'ready.json')),
+    existsSync(join(dataDir, 'cache', 'kokoro-v1.0', 'ready.json')) &&
+      existsSync(join(dataDir, 'cache', 'kokoro-v1.0', 'espeak', 'phonemizer.js')),
   );
 
   // ---- reading: the engine starts, audio plays
@@ -210,7 +234,7 @@ try {
   const after = (await pg.getByTestId('read-aloud-voice').textContent()) ?? '';
   check(
     'Settings says it is downloaded and where it runs',
-    /Kokoro is downloaded \(324 MB\)\. Runs on the CPU, [\d.]+× faster than real time/.test(after),
+    /Kokoro is downloaded \(326 MB\)\. Runs on the CPU, [\d.]+× faster than real time/.test(after),
     after,
   );
   const gpuBox = pg.getByRole('checkbox', { name: 'Use the GPU' });
@@ -249,7 +273,7 @@ try {
     gpuText,
   );
   await pg.getByTestId('read-aloud-voice').getByRole('button', { name: 'Remove' }).click();
-  await pg.getByText(/Not downloaded \(324 MB\)/).waitFor();
+  await pg.getByText(/Not downloaded \(326 MB\)/).waitFor();
   check('Remove deletes the model', !existsSync(join(dataDir, 'cache', 'kokoro-v1.0')));
 
   const offsite = requests.filter(

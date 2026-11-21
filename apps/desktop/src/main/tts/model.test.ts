@@ -1,7 +1,8 @@
 /**
- * The Kokoro model download (T38): pinned files checked by hash, redirects
- * only to Hugging Face hosts, a stopped download never "installed", files
- * already there kept, and one download shared by its callers.
+ * The Kokoro model download (T38, T40): pinned files checked by hash,
+ * redirects only to Hugging Face hosts, eSpeak NG only from its own host, a
+ * stopped download never "installed", files already there kept, and one
+ * download shared by its callers.
  */
 import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises';
@@ -10,6 +11,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   DownloadError,
+  ESPEAK_FILE,
   FILES,
   fileUrl,
   isAllowedHost,
@@ -26,9 +28,12 @@ const bytes = (s: string): Uint8Array<ArrayBuffer> => new TextEncoder().encode(s
 
 const A = bytes('model bytes '.repeat(100));
 const B = bytes('voice');
+const E = bytes('export const phonemize = () => [];');
+const ESPEAK_URL = 'https://cdn.example.net/npm/phonemizer@1.2.1/dist/phonemizer.js';
 const FAKE: ModelFile[] = [
   { path: 'onnx/model.onnx', bytes: A.length, sha256: sha(A) },
   { path: 'voices/af_heart.bin', bytes: B.length, sha256: sha(B) },
+  { path: 'espeak/phonemizer.js', bytes: E.length, sha256: sha(E), url: ESPEAK_URL },
 ];
 const BODIES: Record<string, Uint8Array<ArrayBuffer>> = {
   [fileUrl('onnx/model.onnx')]: A,
@@ -52,6 +57,7 @@ function hub(over: Partial<Record<string, () => Response>> = {}) {
     expect(Object.keys(init.headers).map((h) => h.toLowerCase())).not.toContain('cookie');
     const custom = over[url];
     if (custom) return custom();
+    if (url === ESPEAK_URL) return new Response(E);
     if (url.startsWith('https://huggingface.co/')) {
       return new Response(null, {
         status: 302,
@@ -69,12 +75,16 @@ describe('ModelStore', () => {
   it('pins one revision, and every file with a size and hash', () => {
     expect(REVISION).toMatch(/^[0-9a-f]{40}$/);
     expect(FILES[0]).toBe(MODEL_FILE);
-    expect(FILES).toHaveLength(29);
+    expect(FILES).toHaveLength(30);
+    expect(FILES.at(-1)).toBe(ESPEAK_FILE);
     for (const f of FILES) {
       expect(f.sha256).toMatch(/^[0-9a-f]{64}$/);
       expect(f.bytes).toBeGreaterThan(0);
     }
-    expect(TOTAL_BYTES).toBe(340_154_952);
+    expect(TOTAL_BYTES).toBe(341_477_332);
+    expect(ESPEAK_FILE.url).toBe(
+      'https://cdn.jsdelivr.net/npm/phonemizer@1.2.1/dist/phonemizer.js',
+    );
     expect(fileUrl('onnx/model.onnx')).toBe(
       `https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/${REVISION}/onnx/model.onnx`,
     );
@@ -98,6 +108,7 @@ describe('ModelStore', () => {
     await store.download((p) => progress.push(p.received));
     expect(await store.installed()).toBe(true);
     expect(await readFile(store.path('onnx/model.onnx'))).toEqual(Buffer.from(A));
+    expect(await readFile(store.path('espeak/phonemizer.js'))).toEqual(Buffer.from(E));
     expect(progress.at(-1)).toBe(store.bytes);
     const marker = JSON.parse(await readFile(join(store.dir, 'ready.json'), 'utf8'));
     expect(marker.revision).toBe(REVISION);
@@ -125,6 +136,20 @@ describe('ModelStore', () => {
       const err = await store.download(() => undefined).catch((e: unknown) => e);
       expect(err).toBeInstanceOf(DownloadError);
       expect((err as DownloadError).reason).toBe('redirect');
+    }
+  });
+
+  it('fetches eSpeak only from its own host, never from Hugging Face', async () => {
+    const { fetch, seen } = hub();
+    await new ModelStore({ cacheDir: dir, fetch, files: FAKE }).download(() => undefined);
+    expect(seen.filter((u) => u.includes('phonemizer'))).toEqual([ESPEAK_URL]);
+    for (const location of ['https://cdn-lfs.hf.co/phonemizer.js', 'https://example.com/x.js']) {
+      const { fetch: redirecting } = hub({
+        [ESPEAK_URL]: () => new Response(null, { status: 302, headers: { location } }),
+      });
+      const store = new ModelStore({ cacheDir: dir, fetch: redirecting, files: FAKE });
+      await store.remove();
+      await expect(store.download(() => undefined)).rejects.toMatchObject({ reason: 'redirect' });
     }
   });
 
@@ -168,7 +193,7 @@ describe('ModelStore', () => {
     release();
     await Promise.all([first, second]);
     expect(await store.installed()).toBe(true);
-    expect(calls).toBe(4); // two files, a redirect each: one download, not two
+    expect(calls).toBe(5); // two files with a redirect each, and eSpeak: one download, not two
     expect(store.downloading).toBe(false);
 
     // Now both cancel: it stops, and is not installed.

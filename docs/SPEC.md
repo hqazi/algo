@@ -882,19 +882,21 @@ article or leaving the page stops reading. Leader keys `p` (start, pause,
 resume), `n`, `b`, `x`.
 
 - **The model** is not shipped: the first Read aloud offers to download it
-  (324 MB: the full-precision ONNX model and the voices) from one pinned
-  revision of `onnx-community/Kokoro-82M-v1.0-ONNX` on Hugging Face. Only
-  the main process downloads; `https` only, redirects only to
-  `huggingface.co` or `*.hf.co`, every file checked against a SHA-256 written
-  in the app; into `<data>/cache/kokoro-v1.0/` (not exported; "reset
+  (326 MB: the full-precision ONNX model and the voices, from one pinned
+  revision of `onnx-community/Kokoro-82M-v1.0-ONNX` on Hugging Face; and
+  eSpeak NG, `phonemizer` 1.2.1's one file from jsDelivr). Only the main
+  process downloads; `https` only, the model's redirects only to
+  `huggingface.co` or `*.hf.co` and eSpeak's to no other host, every file
+  checked against a SHA-256 written in the app; into `<data>/cache/kokoro-v1.0/` (not exported; "reset
   everything" removes it). Settings → Library shows it and has **Remove**.
-- **The engine** runs in an Electron utility process, started on the first
-  chunk and stopped after 5 idle minutes: eSpeak NG (WebAssembly, the
-  `phonemizer` package) turns text into phonemes, ONNX Runtime
-  (`onnxruntime-node`, shipped native, outside the asar) runs the model. The
-  renderer sends text chunks over IPC (`tts:speak`) and gets mono 24 kHz
-  samples back, which it plays with Web Audio; the next chunk is made while
-  one plays.
+- **The engine** is two Electron utility processes, started on the first
+  chunk and stopped after 5 idle minutes. eSpeak NG (GPL-3.0, so never
+  shipped with the app: the downloaded file, loaded at run time, in a
+  process of its own that gets only text) turns text into phonemes; main
+  passes them to the engine process, where ONNX Runtime (`onnxruntime-node`,
+  shipped native, outside the asar) runs the model. The renderer sends text
+  chunks over IPC (`tts:speak`) and gets mono 24 kHz samples back, which it
+  plays with Web Audio; the next chunk is made while one plays.
 - **CPU or GPU**: the CPU by default. Settings → Library → **Use the GPU**
   (`library.readAloudGpu`, off) runs it on the GPU instead, through ONNX
   Runtime's WebGPU provider (Vulkan, Metal or Direct3D 12; DirectML first

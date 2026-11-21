@@ -94,6 +94,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T37 | Library: read articles aloud | v3 | 1d | T22, T36 | done |
 | T38 | Read aloud with Kokoro (GPU when faster) | v3 | 2d | T37 | done |
 | T39 | Read aloud: CPU by default, GPU as a setting | v3 | 0.5d | T38 | done |
+| T40 | Read aloud: download eSpeak NG instead of shipping it | v3 | 0.5d | T39 | done |
 
 ## Order
 
@@ -2765,3 +2766,42 @@ the learner turn on the GPU in Settings if they have one.
 - **Not done / not tested.** Still no real GPU here (DirectML, Metal and
   real WebGPU speed untested); macOS and Windows not built. The settings
   screenshot in the guide not retaken.
+
+### T40 — Read aloud: download eSpeak NG instead of shipping it
+
+- Milestone: v3
+- Spec: §15.6 (read aloud)
+- Size: 0.5d
+- Depends on: T39
+- Owns: `main/tts/`, `e2e/read-aloud.e2e.ts`, `build/notices/kokoro.txt`, the read-aloud offer in `ReadAloudBar.tsx`, `espeak-worker` in `electron.vite.config.ts`
+
+**Goal.** eSpeak NG is GPL-3.0 and the app Apache-2.0 (D-59's VERIFY).
+Don't ship it: download it with the voice and run it on its own.
+
+**Acceptance.**
+- [x] No eSpeak code in the build or the packaged app; it is a pinned, hashed file of the read-aloud download.
+- [x] It runs in its own utility process that gets only text; the engine gets only phonemes.
+- [x] The offer, the guide and the notices say what is downloaded and why eSpeak is separate.
+- [x] Tests (model, host, engine); the real-model e2e; a packaged build speaks.
+
+**Notes.** (2026-11-21)
+- **Built.** `model.ts`: `ESPEAK_FILE` (jsDelivr, SHA-256 pinned, its own
+  host only) and `urlOf`. New `espeak-worker.ts` (the eSpeak process) and
+  `child.ts` (one request/reply utility process with idle stop, shared by
+  both). `host.ts` runs `toPhonemes` in main with eSpeak's answers and
+  sends phonemes to `worker.ts`; `engine.ts` takes phonemes (its GPU check
+  uses fixed phonemes for "Ready."). `setup.ts` forks `espeak-worker.js`
+  (wiring outside Owns); `e2e-main.ts` serves every download URL from the
+  local folder. Notices: `espeak-ng.txt` → `kokoro.txt`. The offer's stale
+  "uses the graphics card when faster" line (from T38) replaced. D-61.
+- **Checked.** typecheck, lint, `npm test`. `npm run e2e:read-aloud`
+  (real model and eSpeak, xvfb): no eSpeak code in `out/`, eSpeak
+  downloaded and checked, speech identical to before (same length and
+  peak), pause, next paragraph, the GPU setting, Remove, no page request
+  off the app. `npm run package:dir` (Linux): no eSpeak code in the asar or
+  resources; the packaged app speaks with the downloaded file.
+- **Not done / not tested.** macOS and Windows not built (loading a
+  downloaded module from a signed, notarized macOS app untested). An
+  install from T38 (not released) is offered the whole download again,
+  though only eSpeak's 1.3 MB is fetched. Not a lawyer's opinion: if the
+  app is ever sold or relicensed, have one look.

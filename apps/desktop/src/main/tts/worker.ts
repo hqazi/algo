@@ -3,12 +3,12 @@
  * started by `host.ts` when the reader first needs speech. It loads
  * onnxruntime-node from the path main passes (the app ships it outside the
  * asar, `<resources>/onnxruntime-node`) and answers one message per chunk.
+ * It gets phonemes, not text: eSpeak NG runs in its own process (D-61).
  *
- *   main → here:  { id, text, voice, speed }
+ *   main → here:  { id, phonemes, voice, speed }
  *   here → main:  { id, audio } | { id, error }, and { engine } after each chunk
  */
 import { createRequire } from 'node:module';
-import { phonemize } from 'phonemizer';
 import type { TtsDevice, VoiceId } from '../../shared/tts';
 import { Engine, type EngineInfo, type Ort } from './engine';
 
@@ -18,7 +18,7 @@ export interface WorkerConfig {
   device: TtsDevice;
 }
 
-export type WorkerRequest = { id: number; text: string; voice: VoiceId; speed: number };
+export type WorkerRequest = { id: number; phonemes: string; voice: VoiceId; speed: number };
 export type WorkerReply =
   | { id: number; audio: Float32Array<ArrayBuffer> }
   | { id: number; error: string }
@@ -39,13 +39,12 @@ if (port && raw) {
   const engine = new Engine({
     ort,
     dir: config.modelDir,
-    phonemize,
     device: config.device,
     log: (m) => port.postMessage({ log: m } satisfies WorkerReply),
   });
   port.on('message', ({ data }) => {
     const req = data as WorkerRequest;
-    engine.speak(req.text, req.voice, req.speed).then(
+    engine.speak(req.phonemes, req.voice, req.speed).then(
       (audio) => {
         if (engine.current) port.postMessage({ engine: engine.current } satisfies WorkerReply);
         port.postMessage({ id: req.id, audio } satisfies WorkerReply);

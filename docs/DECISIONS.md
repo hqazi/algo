@@ -2065,7 +2065,8 @@ left a choice.
   and main passes its path to the utility process. Checked in a packaged
   Linux build with its fuses on; not built for macOS or Windows here
   (macOS signing of the dylib is untested).
-- **VERIFY eSpeak NG's licence before a release.** `phonemizer` (1.2.1) is
+- **VERIFY eSpeak NG's licence before a release.** (Resolved by D-61: it is
+  downloaded, not shipped.) `phonemizer` (1.2.1) is
   labelled Apache-2.0 but contains eSpeak NG, which is GPL-3.0-or-later, and
   it is bundled into the utility process. Notices are in
   `build/notices/espeak-ng.txt`. Whether shipping it this way is acceptable
@@ -2092,3 +2093,34 @@ left a choice.
   under 1× read "slower than real time", so a learner whose GPU is slow
   can see it and turn the setting off.
 - `device.json` files left by T38 are ignored.
+
+**D-61 eSpeak NG is downloaded with the voice, not shipped** (2026-11-21, T40; resolves D-59's VERIFY)
+
+- **Why.** The app is Apache-2.0 (`LICENSE`, every `package.json`). eSpeak
+  NG, inside `phonemizer` 1.2.1 (whose own label is Apache-2.0), is
+  GPL-3.0-or-later. T38 bundled it into `tts-worker.js`, so every installer
+  carried GPL code combined with the app's, which would put the
+  distributed app under the GPL's terms. The maintainer asked for it to be
+  downloaded by users instead. (Not legal advice; the usual reading of the
+  GPL, which the FSF's FAQ on "aggregates" and separate programs supports.)
+- **What.** eSpeak is one more file of the read-aloud download:
+  `phonemizer@1.2.1/dist/phonemizer.js` (1.3 MB, self-contained, no
+  imports), from jsDelivr, pinned by size and SHA-256 (the same bytes npm
+  publishes; checked against the installed package), redirects refused.
+  The app never contains it: `npm run e2e:read-aloud` checks that no built
+  file holds eSpeak's code, and a packaged Linux build was checked the same
+  way (`tts-worker.js` went from 2.2 MB to 6 KB).
+- **Kept apart.** It runs in its own utility process
+  (`espeak-worker.ts`, ours, 40 lines: loads the downloaded module by path
+  and answers `{text, language}` with phonemes). Main normalizes and splits
+  the text (`text.ts`), asks it for phonemes and sends only phonemes to the
+  engine process. Plain messages between separate programs, not linking.
+- **Notices.** `build/notices/espeak-ng.txt` is replaced by `kokoro.txt`,
+  which says what is downloaded, from where, and eSpeak's licence and
+  source. The download dialog and the guide say eSpeak comes separately
+  because of its licence.
+- `phonemizer` stays a devDependency, for `text.test.ts` (phonemes checked
+  against the real eSpeak) and the e2e's local copy; it is never imported
+  by app code.
+- Considered: a dictionary-based phonemizer (permissive licence, nothing
+  GPL at all) — more work and worse on unknown words; left as a follow-up.

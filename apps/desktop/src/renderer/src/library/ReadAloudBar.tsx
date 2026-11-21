@@ -150,12 +150,13 @@ export function ReadAloudOffer({ speech }: { speech: ReadAloud }) {
     >
       <p>
         Algo reads articles with Kokoro, an open-source voice model that runs on this computer. It
-        is downloaded once from Hugging Face ({size}). After that, reading aloud works offline, and
-        nothing you read leaves the computer.
+        is downloaded once ({size}) from Hugging Face, with eSpeak NG, the open-source program that
+        tells it how words sound. After that, reading aloud works offline, and nothing you read
+        leaves the computer.
       </p>
       <p className="small muted">
-        It uses the graphics card when that is faster than the processor. You can remove the
-        download in Settings → Library.
+        eSpeak NG is under the GPL, so it comes as a separate download rather than with Algo. You
+        can remove both in Settings → Library.
       </p>
       {d && (
         <div className="read-aloud-progress">

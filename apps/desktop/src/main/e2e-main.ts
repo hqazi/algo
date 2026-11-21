@@ -7,7 +7,8 @@
  * - linked images from a local HTTPS stand-in (`testing/standin.ts`): its
  *   port and certificate in `ALGOTUTOR_E2E_IMAGE_PORT` and
  *   `ALGOTUTOR_E2E_IMAGE_CA` (a PEM file);
- * - the read-aloud model from a folder laid out like the Hugging Face repo,
+ * - the read-aloud model and eSpeak NG from a folder laid out like the
+ *   download (`onnx/model.onnx`, `voices/*.bin`, `espeak/phonemizer.js`),
  *   `ALGOTUTOR_E2E_TTS_DIR` (each file still checked against its hash).
  *
  * At least one must be configured. Not shipped (`electron-builder.yml`).
@@ -17,7 +18,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTestHooks, type TestHooks } from './setup';
 import { standinDownload } from './testing/standin';
-import { fileUrl } from './tts/model';
+import { FILES, urlOf } from './tts/model';
 import './index';
 
 const port = Number(process.env['ALGOTUTOR_E2E_IMAGE_PORT']);
@@ -30,11 +31,11 @@ if (port && caFile) {
   hooks.imageDownload = standinDownload({ port, ca: readFileSync(caFile, 'utf8') });
 }
 if (ttsDir) {
-  const prefix = fileUrl('');
   hooks.ttsFetch = async (url) => {
-    if (!url.startsWith(prefix)) return new Response('not the model repo', { status: 404 });
+    const file = FILES.find((f) => urlOf(f) === url);
+    if (!file) return new Response('not a read-aloud file', { status: 404 });
     try {
-      return new Response(await readFile(join(ttsDir, ...url.slice(prefix.length).split('/'))));
+      return new Response(await readFile(join(ttsDir, ...file.path.split('/'))));
     } catch {
       return new Response('missing', { status: 404 });
     }

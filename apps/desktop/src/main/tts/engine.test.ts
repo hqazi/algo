@@ -56,13 +56,6 @@ const ort: Ort = {
   Tensor: Tensor as unknown as Ort['Tensor'],
 };
 
-/** One phoneme per character, `language` recorded. */
-const languages: string[] = [];
-const phonemize = async (text: string, language: string): Promise<string[]> => {
-  languages.push(language);
-  return [text.toLowerCase().replace(/[^a-z ]/g, '')];
-};
-
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'tts-engine-'));
   await mkdir(join(dir, 'voices'));
@@ -79,7 +72,6 @@ beforeEach(async () => {
   opened = [];
   released = [];
   runs = [];
-  languages.length = 0;
 });
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -87,7 +79,7 @@ afterEach(async () => {
 });
 
 const engine = (extra: Partial<ConstructorParameters<typeof Engine>[0]> = {}) =>
-  new Engine({ ort, dir, phonemize, platform: 'linux', device: 'cpu', ...extra });
+  new Engine({ ort, dir, platform: 'linux', device: 'cpu', ...extra });
 
 describe('Engine', () => {
   it('runs on the CPU by default, without touching the GPU', async () => {
@@ -141,12 +133,11 @@ describe('Engine', () => {
     expect(e.current?.speed).toBeCloseTo(0.5);
   });
 
-  it("feeds token ids, the voice's style row for that length, and the speed", async () => {
+  it("feeds the phonemes' token ids, the voice's style row for that length, and the speed", async () => {
     const e = engine();
     await e.load();
     runs = [];
-    languages.length = 0;
-    const audio = await e.speak('Hi you', 'bm_george', 1.5);
+    const audio = await e.speak('hi you', 'bm_george', 1.5);
     const feeds = runs[0]?.feeds;
     const ids = Array.from(feeds?.['input_ids']?.data as BigInt64Array, Number);
     // $ h i ␠ y o u $
@@ -156,11 +147,7 @@ describe('Engine', () => {
     expect(style).toHaveLength(256);
     expect(style[0]).toBe(6);
     expect(Array.from(feeds?.['speed']?.data as Float32Array)).toEqual([1.5]);
-    expect(languages).toEqual(['en']);
     expect(audio).toHaveLength(8 * 2400);
-
-    await e.speak('Hi', 'af_heart', 1);
-    expect(languages.at(-1)).toBe('en-us');
   });
 
   it('speaks one chunk at a time, in order', async () => {

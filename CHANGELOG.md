@@ -43,7 +43,7 @@ First version of the desktop app, the successor to
   both, `h` `l` `o` `1`–`3` to move between panes, `t` `j` `k` `r` `s` for
   the tests, editor, Run and Submit, and `?` for the list.
 - Read aloud in the Library, with Kokoro, an open-source neural voice that
-  runs on your computer (downloaded once, 324 MB, on first use; on the CPU,
-  or the GPU if you turn it on in Settings): the paragraph being read highlighted; pause, skip,
-  speed and 28 English voices (leader `p` `n` `b` `x`). Nothing you read
+  runs on your computer (downloaded once, 326 MB with eSpeak NG, on first
+  use; on the CPU, or the GPU if you turn it on in Settings): the paragraph
+  being read highlighted; pause, skip, speed and 28 English voices (leader `p` `n` `b` `x`). Nothing you read
   leaves the computer.

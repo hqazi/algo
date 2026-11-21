@@ -36,9 +36,11 @@ flowchart LR
 - **The execution host** is a hidden, sandboxed, network-blocked window that
   runs Python in [Pyodide](https://pyodide.org). The user's Python and any
   code the model writes run only here.
-- **The read-aloud process** (`main/tts/`) is an Electron utility process,
-  started on the first chunk the reader asks for and stopped when idle. It
-  runs the Kokoro voice model with onnxruntime-node, on the CPU or, when
+- **The read-aloud processes** (`main/tts/`) are two Electron utility
+  processes, started on the first chunk the reader asks for and stopped
+  when idle. One runs eSpeak NG, which is downloaded with the voice (it is
+  GPL-3.0, so not part of the app) and only turns text into phonemes. The
+  other runs the Kokoro voice model with onnxruntime-node, on the CPU or, when
   Settings turns it on, the GPU, and only turns text into audio samples.
   The model is downloaded once, on request, by the main process.
 - **`packages/core`** is pure TypeScript with no Electron or Node-only

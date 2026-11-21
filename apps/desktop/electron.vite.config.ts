@@ -69,6 +69,7 @@ export default defineConfig({
           'e2e-main': src('main/e2e-main.ts'),
           // Read aloud (T38): the Kokoro engine's utility process.
           'tts-worker': src('main/tts/worker.ts'),
+          'espeak-worker': src('main/tts/espeak-worker.ts'),
         },
       },
     },

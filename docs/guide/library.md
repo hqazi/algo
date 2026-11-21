@@ -57,8 +57,10 @@ your computer. It starts at the top, or at the paragraph you have selected
 text in. The paragraph being read is highlighted and kept in view; code
 blocks and images are skipped.
 
-The first time, the app offers to download the voice: 324 MB, once, from
-Hugging Face. After that, reading aloud works offline and nothing you read
+The first time, the app offers to download the voice: 326 MB, once, from
+Hugging Face, along with eSpeak NG, a small open-source program that tells
+the voice how words are pronounced (it comes as a separate download
+because it has a different licence from Algo's). After that, reading aloud works offline and nothing you read
 leaves your computer. The first paragraph takes a little longer while the
 voice starts. It runs on the processor (CPU). If your computer has a
 graphics card, **Use the GPU** in **Settings → Library** runs it there
