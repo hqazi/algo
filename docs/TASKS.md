@@ -91,6 +91,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | done |
 | T35 | Collapsible panes and pane shortcuts | design | 1d | T34 | done |
 | T36 | Leader key (tmux-style) for pane actions | design | 1d | T35 | done |
+| T37 | Library: read articles aloud | v3 | 1d | T22, T36 | in-progress |
 
 ## Order
 
@@ -2627,3 +2628,24 @@ let go, then one key.
   cancels. Keys are fixed, only the leader is configurable. Library has
   only the pane actions (none of its own). Not looked at in dark mode or
   on the Library page in the built app; the other e2e files not run.
+
+### T37 — Library: read articles aloud
+
+- Milestone: v3
+- Spec: §15.6 (read aloud)
+- Size: 1d
+- Depends on: T22, T36
+- Owns: `library/speech.ts`, `library/useReadAloud.ts`, `library/ReadAloudBar.tsx`, their tests, the read-aloud wiring in `LibraryPage.tsx` and `Reader.tsx`, read-aloud CSS in `library.css`, the Linux speech switch in `main/setup.ts`, `docs/guide/library.md`
+
+**Goal.** Listen to an article: text-to-speech in the reader, with the
+system's own voices, offline, the paragraph being read highlighted.
+
+**Acceptance.**
+- [ ] A **Read aloud** button in the Reader's header starts reading from the top, or from the paragraph holding the selection; a bar at the bottom of the reader has back, play/pause, forward, stop, speed and voice.
+- [ ] The block being read is highlighted and kept in view; headings, paragraphs, list items, quotes and table cells are read, code blocks and image placeholders skipped.
+- [ ] Uses the Web Speech API (system voices; nothing leaves the computer); disabled with a reason when no voice is available. Voice and speed are remembered on this computer.
+- [ ] Stops when the article changes or the page is left; leader `p` play/pause, `x` stop, `n`/`b` next/back paragraph.
+- [ ] Tests; guide, SPEC §15.6, CHANGELOG updated.
+
+**Notes.**
+
