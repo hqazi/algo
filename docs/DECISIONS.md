@@ -2019,7 +2019,7 @@ left a choice.
   next/previous window), `x` (stop; tmux's kill). Only while an article is
   open and a voice exists.
 
-**D-59 Read aloud with Kokoro, on the GPU when it is faster** (2026-11-21, T38)
+**D-59 Read aloud with Kokoro, on the GPU when it is faster** (2026-11-21, T38; the device choice is replaced by D-60)
 
 - **Why.** The system voices of D-58 sounded poor (on Linux, eSpeak through
   speech-dispatcher); asked for: an open-source voice such as Kokoro, on the
@@ -2072,3 +2072,23 @@ left a choice.
   for an Apache-2.0 app (or whether eSpeak should be downloaded with the
   model, or replaced by a dictionary-based phonemizer) is for the
   maintainer to decide before the next release.
+
+**D-60 Read aloud on the CPU, the GPU only when the learner turns it on** (2026-11-21, T39)
+
+- **Why.** Asked for: simpler logic, the CPU by default, and a setting to
+  use the GPU. D-59's choice by timing both devices cost a slow first start
+  (about 30 s here with a software Vulkan driver) and took code (a
+  benchmark, a warm-up budget, a saved `device.json`, `ALGO_TTS_DEVICE`)
+  for a gain that is unmeasured on real GPUs.
+- **What.** `library.readAloudGpu` (boolean, default false) in
+  `settings.json`, shown in Settings → Library as **Use the GPU**. Off: one
+  CPU session. On: the GPU providers of D-59 (DirectML then WebGPU on
+  Windows, WebGPU elsewhere), each checked with one short run (which also
+  warms it up); if none works, the CPU, and the status says "No GPU could
+  be used". Main reads the setting when it starts the utility process; a
+  change restarts the process before the next chunk, never during one.
+- **Speed shown** is measured on each chunk actually spoken, not by a
+  benchmark; until one is spoken Settings shows only the device. Speeds
+  under 1× read "slower than real time", so a learner whose GPU is slow
+  can see it and turn the setting off.
+- `device.json` files left by T38 are ignored.

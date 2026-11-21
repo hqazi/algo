@@ -4,6 +4,7 @@
  * with its audio. The process is stopped after `IDLE_MS` without a request
  * (the model takes several hundred megabytes) and started again when needed;
  * if it dies, waiting chunks fail and the next one starts a new process.
+ * When the device setting changes, the next chunk starts a new process on it.
  *
  * `fork` is injected so tests run without Electron.
  */
@@ -12,7 +13,7 @@ import type { EngineInfo } from './engine';
 import type { WorkerConfig, WorkerReply, WorkerRequest } from './worker';
 
 export const IDLE_MS = 5 * 60_000;
-/** The first chunk also loads the model and times the devices. */
+/** The first chunk also loads the model. */
 export const SPEAK_MS = 180_000;
 
 export interface ChildLike {
@@ -36,13 +37,15 @@ export class TtsHost {
   private readonly waiting = new Map<number, Waiting>();
   private idle: ReturnType<typeof setTimeout> | undefined;
   private info: EngineInfo | null = null;
+  private childDevice: TtsDevice | null = null;
 
   constructor(
     private readonly opts: {
       fork: ForkFn;
       ortPath: string;
       modelDir: string;
-      force?: TtsDevice | undefined;
+      /** The device setting, read when the process starts. */
+      device: () => TtsDevice;
       log?: (m: string) => void;
     },
   ) {}
@@ -77,13 +80,20 @@ export class TtsHost {
   }
 
   private start(): ChildLike {
+    const device = this.opts.device();
+    // The setting changed: start again on the new device, between chunks.
+    if (this.child && this.childDevice !== device && this.waiting.size === 0) {
+      this.stop();
+      this.info = null;
+    }
     if (this.child) return this.child;
     const child = this.opts.fork({
       ortPath: this.opts.ortPath,
       modelDir: this.opts.modelDir,
-      force: this.opts.force,
+      device,
     });
     this.child = child;
+    this.childDevice = device;
     child.on('message', (m) => this.onMessage(m as WorkerReply));
     child.on('exit', (code) => {
       if (this.child !== child) return;

@@ -895,11 +895,12 @@ resume), `n`, `b`, `x`.
   renderer sends text chunks over IPC (`tts:speak`) and gets mono 24 kHz
   samples back, which it plays with Web Audio; the next chunk is made while
   one plays.
-- **GPU or CPU**: on first use both are timed on the same sentence and the
-  GPU (ONNX Runtime's WebGPU provider: Vulkan, Metal or Direct3D 12;
-  DirectML first on Windows) is kept only if at least 1.2 times as fast; the
-  choice is remembered with the model. Any GPU failure falls back to the
-  CPU. Settings → Library says where it runs and how much faster than real
+- **CPU or GPU**: the CPU by default. Settings → Library → **Use the GPU**
+  (`library.readAloudGpu`, off) runs it on the GPU instead, through ONNX
+  Runtime's WebGPU provider (Vulkan, Metal or Direct3D 12; DirectML first
+  on Windows); if no GPU provider opens and runs, it falls back to the CPU
+  and says so. A change applies from the next chunk the engine makes.
+  Settings → Library says where it runs and how much faster than real
   time.
 - Nothing the learner reads leaves the computer.
 

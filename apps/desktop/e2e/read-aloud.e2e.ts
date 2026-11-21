@@ -11,11 +11,12 @@
  * (default `~/.cache/algo-e2e/kokoro-v1.0`), laid out like the repo
  * (`onnx/model.onnx`, `voices/*.bin`); missing ones are downloaded there
  * first, from the pinned revision. Not part of `npm run e2e`: it needs
- * the files and takes a minute or two on a CPU. `ALGO_TTS_DEVICE=cpu|gpu`
- * is passed through.
+ * the files and takes a minute or two on a CPU. It runs on the CPU (the
+ * default); then, with "Use the GPU" on, reads again and checks the engine
+ * restarted on the GPU, or says no GPU could be used.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from 'playwright-core';
@@ -209,12 +210,44 @@ try {
   const after = (await pg.getByTestId('read-aloud-voice').textContent()) ?? '';
   check(
     'Settings says it is downloaded and where it runs',
-    /Kokoro is downloaded \(324 MB\)\. Runs on the (CPU|GPU \(\w+\)), [\d.]+× faster than real time/.test(
-      after,
-    ),
+    /Kokoro is downloaded \(324 MB\)\. Runs on the CPU, [\d.]+× faster than real time/.test(after),
     after,
   );
+  const gpuBox = pg.getByRole('checkbox', { name: 'Use the GPU' });
+  check('"Use the GPU" is off by default', !(await gpuBox.isChecked()));
   await shot(pg, '5-settings');
+  // Controlled by the saved settings: it ticks once main has saved them.
+  await gpuBox.click();
+  await pg.getByRole('checkbox', { name: 'Use the GPU', checked: true }).waitFor();
+  const saved = JSON.parse(readFileSync(join(dataDir, 'settings.json'), 'utf8'));
+  check('"Use the GPU" is saved', saved?.library?.readAloudGpu === true, saved?.library);
+
+  // ---- with the GPU on: the next read starts the engine again there
+  await pg.getByRole('link', { name: 'Library', exact: true }).click();
+  await pg.getByRole('link', { name: 'Binary search' }).click();
+  await pg.locator('.article-body').waitFor();
+  await instrument();
+  const heard = (await played()).length;
+  await pg.getByRole('button', { name: 'Read aloud' }).click();
+  const t2 = Date.now();
+  let again: unknown[] = [];
+  while (Date.now() - t2 < 240_000) {
+    // The first chunk may come from the reader's cache; the second is made
+    // by the engine started again for the new setting.
+    again = (await played()).slice(heard);
+    if (again.length > 1) break;
+    await pg.waitForTimeout(250);
+  }
+  check('with the GPU on, it still speaks', again.length > 1, { ms: Date.now() - t2 });
+  await pg.getByRole('button', { name: 'Stop reading aloud', pressed: true }).click();
+  await pg.getByRole('link', { name: 'Settings', exact: true }).click();
+  await pg.getByText(/Runs on the GPU|No GPU could be used/).waitFor({ timeout: 10_000 });
+  const gpuText = (await pg.getByTestId('read-aloud-voice').textContent()) ?? '';
+  check(
+    'the engine restarted for the GPU (or says why not)',
+    /Runs on the GPU \(\w+\)|No GPU could be used, so it runs on the CPU/.test(gpuText),
+    gpuText,
+  );
   await pg.getByTestId('read-aloud-voice').getByRole('button', { name: 'Remove' }).click();
   await pg.getByText(/Not downloaded \(324 MB\)/).waitFor();
   check('Remove deletes the model', !existsSync(join(dataDir, 'cache', 'kokoro-v1.0')));

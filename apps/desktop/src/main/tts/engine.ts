@@ -1,21 +1,18 @@
 /**
- * The Kokoro engine (T38, D-59): runs in the read-aloud utility process
- * (`worker.ts`), never in the main process, so synthesis cannot stall the UI
- * or IPC.
+ * The Kokoro engine (T38, T39, D-59, D-60): runs in the read-aloud utility
+ * process (`worker.ts`), never in the main process, so synthesis cannot
+ * stall the UI or IPC.
  *
- * Where it runs: the GPU only when it is clearly faster. On first use both
- * are timed on the same sentence (after a warm-up run each) and the GPU is
- * kept only if it is at least `GPU_MARGIN` times as fast; the choice is
- * remembered in `device.json` next to the model, so later starts load one
- * session. The GPU goes through onnxruntime-node's WebGPU provider (Vulkan
- * on Linux, Metal on macOS, Direct3D 12 on Windows), with DirectML tried
- * first on Windows. Any GPU failure falls back to the CPU, which always
- * works. `ALGO_TTS_DEVICE=cpu|gpu` forces one (checks and debugging).
+ * Where it runs: the CPU, unless the learner turns on "Use the GPU" in
+ * Settings → Library. The GPU goes through onnxruntime-node's WebGPU
+ * provider (Vulkan on Linux, Metal on macOS, Direct3D 12 on Windows), with
+ * DirectML tried first on Windows. If no GPU provider opens and runs, it
+ * falls back to the CPU, which always works.
  *
  * Written against a small `Ort` interface so tests can stand in for the
  * runtime.
  */
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { SAMPLE_RATE, type TtsDevice, type VoiceId } from '../../shared/tts';
 import { MODEL_FILE, voicePath } from './model';
@@ -41,18 +38,18 @@ export interface Ort {
 
 export interface EngineInfo {
   device: TtsDevice;
-  /** Seconds of speech per second of work (above 1 is faster than real time). */
+  /**
+   * Seconds of speech per second of work on the last chunk (above 1 is
+   * faster than real time); 0 before the first.
+   */
   speed: number;
   /** The GPU provider in use, e.g. "WebGPU"; null on the CPU. */
   gpu: string | null;
+  /** The GPU was asked for but none could be used. */
+  fellBack: boolean;
 }
 
-/** A GPU is kept only when it is at least this many times as fast as the CPU. */
-export const GPU_MARGIN = 1.2;
-export const BENCH_TEXT =
-  'Binary search halves the range on every step, so a million items take about twenty looks.';
 const STYLE = 256;
-const CHOICE_FILE = 'device.json';
 
 interface Provider {
   label: string;
@@ -66,22 +63,14 @@ export function gpuProviders(platform: NodeJS.Platform): Provider[] {
     : [webgpu];
 }
 
-interface Choice {
-  key: string;
-  device: TtsDevice;
-  gpu: string | null;
-  speed: number;
-}
-
 export interface EngineOptions {
   ort: Ort;
-  /** The `ModelStore` directory (model, voices, `device.json`). */
+  /** The `ModelStore` directory (model and voices). */
   dir: string;
   phonemize: Phonemize;
   platform?: NodeJS.Platform;
-  /** Changes when the runtime or the model changes, so the choice is made again. */
-  choiceKey: string;
-  force?: TtsDevice | undefined;
+  /** Where to run; `gpu` falls back to the CPU when no GPU provider works. */
+  device: TtsDevice;
   log?: (message: string) => void;
 }
 
@@ -91,14 +80,12 @@ export class Engine {
   private loading: Promise<EngineInfo> | null = null;
   private readonly voices = new Map<VoiceId, Float32Array<ArrayBuffer>>();
   private queue: Promise<unknown> = Promise.resolve();
-  /** How long the benchmark sentence is, in seconds of speech (known after the first run). */
-  private benchAudioSecs: number | null = null;
 
   constructor(private readonly opts: EngineOptions) {}
 
-  /** Loads the model (choosing the device the first time); idempotent. */
+  /** Loads the model on the chosen device; idempotent. */
   load(): Promise<EngineInfo> {
-    this.loading ??= this.choose().catch((e: unknown) => {
+    this.loading ??= this.open().catch((e: unknown) => {
       this.loading = null;
       throw e;
     });
@@ -110,7 +97,11 @@ export class Engine {
     const run = this.queue.then(async () => {
       await this.load();
       if (!this.session) throw new Error('the voice model is not loaded');
-      return this.synth(this.session, text, voice, speed);
+      const t = performance.now();
+      const audio = await this.synth(this.session, text, voice, speed);
+      const secs = Math.max((performance.now() - t) / 1000, 1e-3);
+      if (this.info) this.info = { ...this.info, speed: audio.length / SAMPLE_RATE / secs };
+      return audio;
     });
     this.queue = run.catch(() => undefined);
     return run;
@@ -127,7 +118,7 @@ export class Engine {
     return join(this.opts.dir, ...MODEL_FILE.path.split('/'));
   }
 
-  private async open(providers: unknown[]): Promise<OrtSession> {
+  private async openSession(providers: unknown[]): Promise<OrtSession> {
     return this.opts.ort.InferenceSession.create(this.modelPath, {
       executionProviders: providers,
       graphOptimizationLevel: 'all',
@@ -171,48 +162,19 @@ export class Engine {
   }
 
   /**
-   * Seconds of speech per second of work, from a second run (the first warms
-   * up). A warm-up slower than `budgetMs` is the answer by itself: a GPU that
-   * slow (a software driver) is not timed again.
-   */
-  private async bench(session: OrtSession, budgetMs = Infinity): Promise<number> {
-    const time = async (): Promise<number> => {
-      const t = performance.now();
-      const wave = await this.synth(session, BENCH_TEXT, 'af_heart', 1);
-      this.benchAudioSecs = wave.length / SAMPLE_RATE;
-      return wave.length / SAMPLE_RATE / Math.max((performance.now() - t) / 1000, 1e-3);
-    };
-    const warm = await time();
-    const benchSecs = this.benchAudioSecs ?? 0;
-    if (benchSecs > 0 && (benchSecs / warm) * 1000 > budgetMs) return warm;
-    return time();
-  }
-
-  private async readChoice(): Promise<Choice | null> {
-    try {
-      const c = JSON.parse(await readFile(join(this.opts.dir, CHOICE_FILE), 'utf8')) as Choice;
-      return c.key === this.opts.choiceKey && (c.device === 'cpu' || c.device === 'gpu') ? c : null;
-    } catch {
-      return null;
-    }
-  }
-
-  /**
    * Opens the first GPU provider that works. A session can open and still
-   * fail on its first run (a driver without what the provider needs), so
-   * `check` runs it once; when choosing, the benchmark is that run.
+   * fail on its first run (a driver without what the provider needs), so it
+   * is run once; that also warms it up (shader compilation).
    */
-  private async tryGpu(check: boolean): Promise<{ session: OrtSession; label: string } | null> {
+  private async tryGpu(): Promise<{ session: OrtSession; label: string } | null> {
     for (const p of gpuProviders(this.opts.platform ?? process.platform)) {
       try {
-        const session = await this.open(p.providers);
-        if (check) {
-          try {
-            await this.synth(session, 'Ready.', 'af_heart', 1);
-          } catch (e) {
-            await session.release();
-            throw e;
-          }
+        const session = await this.openSession(p.providers);
+        try {
+          await this.synth(session, 'Ready.', 'af_heart', 1);
+        } catch (e) {
+          await session.release();
+          throw e;
         }
         return { session, label: p.label };
       } catch (e) {
@@ -222,68 +184,19 @@ export class Engine {
     return null;
   }
 
-  private async choose(): Promise<EngineInfo> {
-    const { force } = this.opts;
-    const saved = force ? null : await this.readChoice();
-    if (force === 'cpu' || saved?.device === 'cpu') {
-      this.session = await this.open(['cpu']);
-      return this.done({
-        device: 'cpu',
-        gpu: null,
-        speed: saved?.speed ?? (await this.bench(this.session)),
-      });
-    }
-    if (force === 'gpu' || saved?.device === 'gpu') {
-      const gpu = await this.tryGpu(true);
+  private async open(): Promise<EngineInfo> {
+    if (this.opts.device === 'gpu') {
+      const gpu = await this.tryGpu();
       if (gpu) {
         this.session = gpu.session;
-        return this.done({
-          device: 'gpu',
-          gpu: gpu.label,
-          speed: saved?.speed ?? (await this.bench(gpu.session)),
-        });
+        this.info = { device: 'gpu', gpu: gpu.label, speed: 0, fellBack: false };
+        return this.info;
       }
-      // The GPU went away (driver, another machine): choose again.
+      this.opts.log?.('read aloud: no GPU could be used; running on the CPU');
     }
-    const cpu = await this.open(['cpu']);
-    const cpuSpeed = await this.bench(cpu);
-    const gpu = await this.tryGpu(false);
-    let info: EngineInfo = { device: 'cpu', gpu: null, speed: cpuSpeed };
-    // Shader compilation makes a GPU's first run slow; one far slower than
-    // the CPU's timed run is not worth a second.
-    const cpuMs = ((this.benchAudioSecs ?? 0) / cpuSpeed) * 1000;
-    const gpuSpeed = gpu
-      ? await this.bench(gpu.session, cpuMs * 4 + 5000).catch(async (e: unknown) => {
-          this.opts.log?.(`read aloud: ${gpu.label} failed: ${String(e).split('\n')[0]}`);
-          await gpu.session.release();
-          return null;
-        })
-      : null;
-    if (gpu && gpuSpeed !== null) {
-      this.opts.log?.(
-        `read aloud: ${gpu.label} ${gpuSpeed.toFixed(1)}x, CPU ${cpuSpeed.toFixed(1)}x real time`,
-      );
-      if (gpuSpeed >= cpuSpeed * GPU_MARGIN) {
-        info = { device: 'gpu', gpu: gpu.label, speed: gpuSpeed };
-        await cpu.release();
-        this.session = gpu.session;
-      } else {
-        await gpu.session.release();
-        this.session = cpu;
-      }
-    } else {
-      this.session = cpu;
-    }
-    await writeFile(
-      join(this.opts.dir, CHOICE_FILE),
-      JSON.stringify({ key: this.opts.choiceKey, ...info } satisfies Choice),
-    ).catch(() => undefined);
-    return this.done(info);
-  }
-
-  private done(info: EngineInfo): EngineInfo {
-    this.info = info;
-    return info;
+    this.session = await this.openSession(['cpu']);
+    this.info = { device: 'cpu', gpu: null, speed: 0, fellBack: this.opts.device === 'gpu' };
+    return this.info;
   }
 
   get current(): EngineInfo | null {

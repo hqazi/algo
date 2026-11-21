@@ -24,7 +24,14 @@ export function registerTtsHandlers(
       installed: await store.installed(),
       bytes: store.bytes,
       downloading: store.downloading,
-      engine: e ? { device: e.device, speed: Math.round(e.speed * 10) / 10, gpu: e.gpu } : null,
+      engine: e
+        ? {
+            device: e.device,
+            speed: Math.round(e.speed * 10) / 10,
+            gpu: e.gpu,
+            fellBack: e.fellBack,
+          }
+        : null,
     };
   };
 

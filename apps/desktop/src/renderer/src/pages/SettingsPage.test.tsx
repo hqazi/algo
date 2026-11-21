@@ -203,7 +203,7 @@ describe('SettingsPage', () => {
         editor: { fontSize: 14, keymap: 'default' },
         ui: { theme: 'system', leader: 'ctrl+b' },
         updates: { channel: 'stable', auto: true },
-        library: { images: 'on-open' },
+        library: { images: 'on-open', readAloudGpu: false },
       },
       issues: [{ key: 'ui.theme', message: '"neon" is not valid; using "system"' }],
       default_model: 'claude-opus-5-5',

@@ -332,14 +332,13 @@ export async function startPractice(
     cacheDir: storage.paths.cache,
     ...(testHooks.ttsFetch ? { fetch: testHooks.ttsFetch } : {}),
   });
-  const forced = process.env['ALGO_TTS_DEVICE'];
   const ttsHost = new TtsHost({
     modelDir: ttsStore.dir,
     // Shipped outside the asar (native code); in development, from node_modules.
     ortPath: app.isPackaged
       ? join(process.resourcesPath, 'onnxruntime-node')
       : createRequire(import.meta.url).resolve('onnxruntime-node'),
-    force: forced === 'cpu' || forced === 'gpu' ? forced : undefined,
+    device: () => (storage.settings.get().library.readAloudGpu ? 'gpu' : 'cpu'),
     fork: (config) =>
       utilityProcess.fork(join(mainDir, 'tts-worker.js'), [], {
         serviceName: 'Algo read aloud',

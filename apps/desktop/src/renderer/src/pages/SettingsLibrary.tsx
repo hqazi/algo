@@ -98,6 +98,7 @@ function LinkedImagesSettings() {
  */
 function ReadAloudSettings() {
   const app = useApp();
+  const gpu = app.settings?.settings.library.readAloudGpu;
   const [status, setStatus] = useState<TtsStatus | null>(null);
 
   useEffect(() => {
@@ -145,6 +146,20 @@ function ReadAloudSettings() {
           )}
         </p>
       </SettingRow>
+      <label className="radio setting-check">
+        <input
+          type="checkbox"
+          checked={gpu ?? false}
+          disabled={gpu === undefined}
+          onChange={(e) => void app.updateSettings({ library: { readAloudGpu: e.target.checked } })}
+        />{' '}
+        Use the GPU
+      </label>
+      <p className="small muted setting-help">
+        Off: the voice runs on the CPU, which works everywhere. On: it uses your graphics card if it
+        has one (WebGPU or DirectML), which is often faster; if none works it stays on the CPU.
+        Applies from the next paragraph read.
+      </p>
     </div>
   );
 }

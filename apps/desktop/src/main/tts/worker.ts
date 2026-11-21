@@ -5,7 +5,7 @@
  * asar, `<resources>/onnxruntime-node`) and answers one message per chunk.
  *
  *   main → here:  { id, text, voice, speed }
- *   here → main:  { id, audio } | { id, error } and, once loaded, { engine }
+ *   here → main:  { id, audio } | { id, error }, and { engine } after each chunk
  */
 import { createRequire } from 'node:module';
 import { phonemize } from 'phonemizer';
@@ -15,7 +15,7 @@ import { Engine, type EngineInfo, type Ort } from './engine';
 export interface WorkerConfig {
   ortPath: string;
   modelDir: string;
-  force?: TtsDevice | undefined;
+  device: TtsDevice;
 }
 
 export type WorkerRequest = { id: number; text: string; voice: VoiceId; speed: number };
@@ -35,26 +35,19 @@ const raw = process.env['ALGO_TTS_CONFIG'];
 
 if (port && raw) {
   const config = JSON.parse(raw) as WorkerConfig;
-  const ort = createRequire(import.meta.url)(config.ortPath) as Ort & {
-    env: { versions?: { node?: string } };
-  };
+  const ort = createRequire(import.meta.url)(config.ortPath) as Ort;
   const engine = new Engine({
     ort,
     dir: config.modelDir,
     phonemize,
-    choiceKey: `ort-${ort.env.versions?.node ?? '?'}-${process.platform}-${process.arch}`,
-    force: config.force,
+    device: config.device,
     log: (m) => port.postMessage({ log: m } satisfies WorkerReply),
   });
-  let announced = false;
   port.on('message', ({ data }) => {
     const req = data as WorkerRequest;
     engine.speak(req.text, req.voice, req.speed).then(
       (audio) => {
-        if (!announced && engine.current) {
-          announced = true;
-          port.postMessage({ engine: engine.current } satisfies WorkerReply);
-        }
+        if (engine.current) port.postMessage({ engine: engine.current } satisfies WorkerReply);
         port.postMessage({ id: req.id, audio } satisfies WorkerReply);
       },
       (e: unknown) =>

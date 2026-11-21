@@ -119,7 +119,7 @@ export function settingsFixture(): SettingsResponse {
       editor,
       ui,
       updates,
-      library: { images: library.images },
+      library: { images: library.images, readAloudGpu: library.readAloudGpu },
     }))(structuredClone(DEFAULT_SETTINGS)),
     issues: [],
     default_model: 'claude-opus-5-5',

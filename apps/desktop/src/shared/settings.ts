@@ -40,7 +40,7 @@ const groups = {
   ui: { theme: z.enum(UI_THEMES), leader: z.enum(LEADER_KEYS) },
   updates: { channel: z.enum(UPDATE_CHANNELS), auto: z.boolean() },
   /** `library.folders` (paths) are never in the view or a patch from the UI. */
-  library: { images: z.enum(LIBRARY_IMAGE_MODES) },
+  library: { images: z.enum(LIBRARY_IMAGE_MODES), readAloudGpu: z.boolean() },
 };
 
 export const settingsView = z.strictObject({

@@ -77,7 +77,14 @@ export function registerSettingsHandlers(router: IpcRouter, deps: SettingsHandle
   const view = () => {
     const { tutor, execution, editor, ui, updates, library } = settings.get();
     return {
-      settings: { tutor, execution, editor, ui, updates, library: { images: library.images } },
+      settings: {
+        tutor,
+        execution,
+        editor,
+        ui,
+        updates,
+        library: { images: library.images, readAloudGpu: library.readAloudGpu },
+      },
       issues: settings.issues.map((i) => ({ key: i.key, message: i.message })),
       default_model: deps.defaultModel,
     };

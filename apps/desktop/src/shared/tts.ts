@@ -51,7 +51,7 @@ export const SAMPLE_RATE = 24_000;
 /** The longest text one `tts:speak` takes (the reader sends chunks of at most 240). */
 export const MAX_SPEAK_CHARS = 1000;
 
-/** Where the engine runs: chosen by timing both on first use (D-59). */
+/** Where the engine runs: the CPU unless Settings → Library turns on the GPU (D-60). */
 export const ttsDevice = z.enum(['gpu', 'cpu']);
 export type TtsDevice = z.infer<typeof ttsDevice>;
 
@@ -62,9 +62,18 @@ export const ttsStatus = z.strictObject({
   bytes: z.int().min(0),
   /** A download is under way (in any window). */
   downloading: z.boolean(),
-  /** Once the engine has started: where it runs, and how many times faster than real time. */
+  /**
+   * Once the engine has started: where it runs, how many times faster than
+   * real time (0 until a chunk is spoken), and whether the GPU was asked for
+   * but could not be used.
+   */
   engine: z
-    .strictObject({ device: ttsDevice, speed: z.number().min(0), gpu: z.string().nullable() })
+    .strictObject({
+      device: ttsDevice,
+      speed: z.number().min(0),
+      gpu: z.string().nullable(),
+      fellBack: z.boolean(),
+    })
     .nullable(),
 });
 export type TtsStatus = z.infer<typeof ttsStatus>;

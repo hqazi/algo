@@ -13,7 +13,7 @@ flowchart LR
     UI["<b>UI window</b><br/>React · CodeMirror 6<br/><i>sandboxed renderer</i>"]
     Main["<b>Main process</b> (Node)<br/>IPC handlers · storage · secrets<br/>tutor backends · executors · updater"]
     Host["<b>Execution host</b><br/>hidden window, no network<br/>Pyodide in a Web Worker per job"]
-    Voice["<b>Read-aloud process</b><br/>utility process<br/>Kokoro on ONNX Runtime (GPU or CPU)"]
+    Voice["<b>Read-aloud process</b><br/>utility process<br/>Kokoro on ONNX Runtime (CPU or GPU)"]
     UI -- "typed IPC<br/>(preload bridge, zod-validated)" --> Main
     Main -- "MessagePort" --> Host
     Main -- "text → samples" --> Voice
@@ -38,9 +38,9 @@ flowchart LR
   code the model writes run only here.
 - **The read-aloud process** (`main/tts/`) is an Electron utility process,
   started on the first chunk the reader asks for and stopped when idle. It
-  runs the Kokoro voice model with onnxruntime-node, on the GPU when that
-  is faster, and only turns text into audio samples. The model is
-  downloaded once, on request, by the main process.
+  runs the Kokoro voice model with onnxruntime-node, on the CPU or, when
+  Settings turns it on, the GPU, and only turns text into audio samples.
+  The model is downloaded once, on request, by the main process.
 - **`packages/core`** is pure TypeScript with no Electron or Node-only
   imports: problem schema and validation, test comparison, the recommender and
   levels, the hint ladder, tutor tools and the system prompt. Storage,

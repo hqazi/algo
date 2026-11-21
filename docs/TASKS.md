@@ -93,6 +93,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T36 | Leader key (tmux-style) for pane actions | design | 1d | T35 | done |
 | T37 | Library: read articles aloud | v3 | 1d | T22, T36 | done |
 | T38 | Read aloud with Kokoro (GPU when faster) | v3 | 2d | T37 | done |
+| T39 | Read aloud: CPU by default, GPU as a setting | v3 | 0.5d | T38 | done |
 
 ## Order
 
@@ -2728,3 +2729,39 @@ Kokoro faster.
   Apache-2.0-labelled package (D-59 VERIFY): decide before a release.
   English only. Guide screenshots not retaken; dark mode and the narrow
   layout not looked at.
+
+### T39 — Read aloud: CPU by default, GPU as a setting
+
+- Milestone: v3
+- Spec: §15.6 (read aloud)
+- Size: 0.5d
+- Depends on: T38
+- Owns: `main/tts/`, `shared/tts.ts`, `library.readAloudGpu` in core's and the app's settings, the read-aloud rows in `SettingsLibrary.tsx`, `library/read-aloud-text.ts`, `e2e/read-aloud.e2e.ts`
+
+**Goal.** Simplify T38's device choice: run on the CPU by default, and let
+the learner turn on the GPU in Settings if they have one.
+
+**Acceptance.**
+- [x] No benchmark or saved device choice; the CPU unless `library.readAloudGpu` is on.
+- [x] Settings → Library → **Use the GPU** (off by default) saves the setting; the next chunk runs on the GPU, or on the CPU with "No GPU could be used" when none works.
+- [x] Tests (engine, host, Settings); the real-model e2e covers both settings.
+
+**Notes.** (2026-11-21)
+- **Built.** `engine.ts` lost the benchmark, the warm-up budget,
+  `GPU_MARGIN`, `device.json` and `choiceKey`; it takes `device` and
+  reports `fellBack` and the speed of the last chunk. `host.ts` reads the
+  setting through `device()` when it starts the process and restarts it
+  between chunks when it changed (dropping the old engine info).
+  `ALGO_TTS_DEVICE` is gone. New setting `library.readAloudGpu` in
+  `packages/core/src/settings.ts`, `shared/settings.ts` and the settings
+  view (`main/ipc/handlers/settings.ts`; wiring outside Owns), with test
+  fixtures updated. D-60 (D-59's device choice replaced).
+- **Checked.** typecheck, lint, `npm test`. `npm run e2e:read-aloud` with
+  the real model (xvfb): first chunk now in about 5 s (was about 31 s with
+  the benchmark), "Runs on the CPU, 3.6× faster than real time", the box
+  off by default, ticking it saves `readAloudGpu: true`, the next read
+  restarts on WebGPU (a software Vulkan driver here: "slower than real
+  time"), Remove, no page request off the app.
+- **Not done / not tested.** Still no real GPU here (DirectML, Metal and
+  real WebGPU speed untested); macOS and Windows not built. The settings
+  screenshot in the guide not retaken.

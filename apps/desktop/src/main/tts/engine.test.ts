@@ -1,9 +1,10 @@
 /**
- * The Kokoro engine (T38) with a stand-in runtime: the GPU kept only when
- * clearly faster, the choice remembered, failures falling back to the CPU,
- * and the model's inputs (token ids, the voice's style row, speed).
+ * The Kokoro engine (T38, T39) with a stand-in runtime: the CPU unless the
+ * GPU is asked for, GPU failures falling back to the CPU, the speed of the
+ * last chunk, and the model's inputs (token ids, the voice's style row,
+ * speed).
  */
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -86,82 +87,62 @@ afterEach(async () => {
 });
 
 const engine = (extra: Partial<ConstructorParameters<typeof Engine>[0]> = {}) =>
-  new Engine({ ort, dir, phonemize, platform: 'linux', choiceKey: 'k1', ...extra });
+  new Engine({ ort, dir, phonemize, platform: 'linux', device: 'cpu', ...extra });
 
 describe('Engine', () => {
-  it('keeps a GPU that is clearly faster, and remembers it', async () => {
-    const log: string[] = [];
-    const e = engine({ log: (m) => log.push(m) });
-    const info = await e.load();
-    expect(info).toMatchObject({ device: 'gpu', gpu: 'WebGPU' });
-    expect(released).toEqual(['cpu']);
-    expect(log.join('\n')).toMatch(/WebGPU .*x, CPU .*x real time/);
-    const saved = JSON.parse(await readFile(join(dir, 'device.json'), 'utf8'));
-    expect(saved).toMatchObject({ key: 'k1', device: 'gpu', gpu: 'WebGPU' });
+  it('runs on the CPU by default, without touching the GPU', async () => {
+    const info = await engine().load();
+    expect(info).toMatchObject({ device: 'cpu', gpu: null, fellBack: false });
+    expect(opened).toEqual(['cpu']);
+    expect(runs).toHaveLength(0);
+  });
 
-    // Next start: only the GPU session opens, checked with one short run.
-    opened = [];
-    runs = [];
-    const again = await engine().load();
-    expect(again.device).toBe('gpu');
+  it('uses the GPU when asked, checked and warmed up with one short run', async () => {
+    const info = await engine({ device: 'gpu' }).load();
+    expect(info).toMatchObject({ device: 'gpu', gpu: 'WebGPU', fellBack: false });
     expect(opened).toEqual(['webgpu']);
     expect(runs).toHaveLength(1);
-  });
-
-  it('stays on the CPU when the GPU is not faster enough', async () => {
-    cost = { cpu: 1000, webgpu: 900 };
-    const info = await engine().load();
-    expect(info).toMatchObject({ device: 'cpu', gpu: null });
-    expect(released).toEqual(['webgpu']);
-  });
-
-  it('times a very slow GPU once, not twice', async () => {
-    cost = { cpu: 1000, webgpu: 60_000 };
-    const info = await engine().load();
-    expect(info.device).toBe('cpu');
-    expect(runs.filter((r) => r.ep === 'webgpu')).toHaveLength(1);
-    expect(runs.filter((r) => r.ep === 'cpu')).toHaveLength(2);
   });
 
   it('falls back to the CPU when no GPU provider opens', async () => {
     failOpen = new Set(['webgpu']);
     const log: string[] = [];
-    const info = await engine({ log: (m) => log.push(m) }).load();
-    expect(info.device).toBe('cpu');
+    const info = await engine({ device: 'gpu', log: (m) => log.push(m) }).load();
+    expect(info).toMatchObject({ device: 'cpu', fellBack: true });
     expect(log.join('\n')).toMatch(/WebGPU unavailable: Error: no webgpu adapter/);
   });
 
-  it('chooses again when the remembered GPU has gone', async () => {
-    await engine().load();
-    failOpen = new Set(['webgpu']);
-    const info = await engine().load();
-    expect(info.device).toBe('cpu');
-    const saved = JSON.parse(await readFile(join(dir, 'device.json'), 'utf8'));
-    expect(saved.device).toBe('cpu');
-  });
-
-  it('chooses again when the runtime changed', async () => {
-    await engine().load();
-    cost = { cpu: 100, webgpu: 1000 };
-    expect((await engine({ choiceKey: 'k2' }).load()).device).toBe('cpu');
-  });
-
-  it('can be forced to the CPU', async () => {
-    const info = await engine({ force: 'cpu' }).load();
-    expect(info.device).toBe('cpu');
-    expect(opened).toEqual(['cpu']);
+  it('falls back to the CPU when the GPU opens but cannot run', async () => {
+    const create = ort.InferenceSession.create.bind(ort.InferenceSession);
+    vi.spyOn(ort.InferenceSession, 'create').mockImplementation(async (path, options) => {
+      const s = await create(path, options);
+      const ep = providerName((options['executionProviders'] as unknown[])[0]);
+      if (ep !== 'webgpu') return s;
+      return { ...s, run: () => Promise.reject(new Error('device lost')) };
+    });
+    const info = await engine({ device: 'gpu' }).load();
+    expect(info).toMatchObject({ device: 'cpu', fellBack: true });
+    expect(released).toEqual(['webgpu']);
   });
 
   it('tries DirectML, then WebGPU, on Windows', async () => {
     expect(gpuProviders('win32').map((p) => p.label)).toEqual(['DirectML', 'WebGPU']);
     expect(gpuProviders('darwin').map((p) => p.label)).toEqual(['WebGPU']);
     failOpen = new Set(['dml']);
-    const info = await engine({ platform: 'win32' }).load();
+    const info = await engine({ device: 'gpu', platform: 'win32' }).load();
     expect(info).toMatchObject({ device: 'gpu', gpu: 'WebGPU' });
   });
 
+  it('reports the speed of the last chunk', async () => {
+    const e = engine();
+    expect((await e.load()).speed).toBe(0);
+    // 3 tokens + 2 pads = 0.5 s of audio in 1 s of work.
+    await e.speak('abc', 'af_heart', 1);
+    expect(e.current?.speed).toBeCloseTo(0.5);
+  });
+
   it("feeds token ids, the voice's style row for that length, and the speed", async () => {
-    const e = engine({ force: 'cpu' });
+    const e = engine();
     await e.load();
     runs = [];
     languages.length = 0;
@@ -183,7 +164,7 @@ describe('Engine', () => {
   });
 
   it('speaks one chunk at a time, in order', async () => {
-    const e = engine({ force: 'cpu' });
+    const e = engine();
     await e.load();
     runs = [];
     await Promise.all([e.speak('one', 'af_heart', 1), e.speak('two', 'af_heart', 1)]);

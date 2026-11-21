@@ -64,6 +64,8 @@ const FIELDS = {
       .max(MAX_LIBRARY_FOLDERS)
       .refine((fs) => new Set(fs.map((f) => f.id)).size === fs.length, 'folder ids must differ'),
     images: z.enum(LIBRARY_IMAGE_MODES),
+    /** Read aloud on the GPU instead of the CPU (T39, D-60). */
+    readAloudGpu: z.boolean(),
   },
 } as const;
 
@@ -79,7 +81,7 @@ export const DEFAULT_SETTINGS: Settings = {
   editor: { fontSize: 14, keymap: 'default' },
   ui: { theme: 'system', leader: 'ctrl+b' },
   updates: { channel: 'stable', auto: true },
-  library: { folders: [], images: 'on-open' },
+  library: { folders: [], images: 'on-open', readAloudGpu: false },
 };
 
 export interface SettingsIssue {

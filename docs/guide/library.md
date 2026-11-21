@@ -60,10 +60,11 @@ blocks and images are skipped.
 The first time, the app offers to download the voice: 324 MB, once, from
 Hugging Face. After that, reading aloud works offline and nothing you read
 leaves your computer. The first paragraph takes a little longer while the
-voice starts; the app also checks once whether your graphics card makes it
-faster than the processor, and uses whichever is quicker.
-**Settings → Library** shows where it runs and has **Remove** to delete
-the download.
+voice starts. It runs on the processor (CPU). If your computer has a
+graphics card, **Use the GPU** in **Settings → Library** runs it there
+instead, which is often faster; if the card can't be used it stays on the
+CPU and says so. **Settings → Library** shows where it runs and how fast,
+and has **Remove** to delete the download.
 
 While it reads, a bar at the bottom of the reader has **Previous
 paragraph**, **Pause**/**Resume** (it pauses mid-sentence), **Next

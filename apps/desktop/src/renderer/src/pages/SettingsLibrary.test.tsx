@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /**
  * Settings → Library (T21): empty state, adding with the OS picker (main),
- * removing only after a confirm, and the read-only line.
+ * removing only after a confirm, and the read-only line; read aloud's
+ * "Use the GPU" (T39).
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -89,5 +90,30 @@ describe('LibrarySection', () => {
     expect(bridge.calls.find((c) => c.channel === 'library:remove-folder')?.request).toEqual({
       id: 'f1',
     });
+  });
+
+  it('read aloud runs on the CPU unless "Use the GPU" is turned on', async () => {
+    const bridge = baseHandlers(new FakeBridge()).on('tts:status', () => ({
+      installed: true,
+      bytes: 340_154_952,
+      downloading: false,
+      engine: { device: 'cpu', speed: 3.6, gpu: null, fellBack: true },
+    }));
+    renderSection(bridge);
+    await waitFor(() =>
+      expect(screen.getByTestId('read-aloud-voice').textContent).toContain(
+        'No GPU could be used, so it runs on the CPU, 3.6× faster than real time.',
+      ),
+    );
+    const box = screen.getByRole('checkbox', { name: 'Use the GPU' });
+    await waitFor(() => expect(box).toHaveProperty('disabled', false));
+    expect(box).toHaveProperty('checked', false);
+    fireEvent.click(box);
+    await waitFor(() =>
+      expect(bridge.calls.find((c) => c.channel === 'settings:set')?.request).toEqual({
+        library: { readAloudGpu: true },
+      }),
+    );
+    await waitFor(() => expect(box).toHaveProperty('checked', true));
   });
 });
