@@ -196,6 +196,15 @@ JetBrains Mono.
   ("2 min ago", full date in a tooltip); the open thread's **Rename**,
   **New chat**, **Close** as icon buttons; the same message and composer
   styles as Practice.
+- **Tree actions (T42, T43):** each row has a ⋯ icon button (shown on
+  hover or focus) opening a menu: **New folder**, **Write here…**, **Move
+  to…**, **Delete** (danger). A folder a drag is over gets an
+  `--accent-subtle` background with a dashed accent outline. Tutor-written
+  articles outside the tutor's folder show a small sparkle after the title.
+  **Write an article** is a wide dialog: a One article / A series segmented
+  control, the brief, then Articles, Level and Length in a row, Save in;
+  while writing, a tinted panel lists the parts with a spinner, a check or
+  an empty circle.
 - **Read aloud (T37, T38):** a speaker icon button at the end of the Reader's
   header (pressed while on). While on, a bar sticks to the foot of the
   reader pane (surface, top border): back, play/pause, forward as icon

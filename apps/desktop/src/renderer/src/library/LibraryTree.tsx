@@ -21,6 +21,7 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
+  PenLine,
   Sparkles,
   Trash2,
 } from 'lucide-react';
@@ -60,6 +61,7 @@ interface Shared {
   setDragged: (d: Dragged | null) => void;
   move: (d: Dragged, to: FolderPlace) => void;
   open: (d: TreeDialogState) => void;
+  write?: ((at: FolderPlace) => void) | undefined;
 }
 
 function hasArticle(t: TreeView, id: string): boolean {
@@ -112,6 +114,16 @@ function FolderRow({
       icon: <FolderPlus size={14} aria-hidden="true" />,
       onSelect: () => shared.open({ kind: 'new-folder', at: place, label }),
     },
+    ...(shared.write
+      ? [
+          {
+            label: 'Write here…',
+            icon: <PenLine size={14} aria-hidden="true" />,
+            title: 'The tutor writes an article or a series into this folder',
+            onSelect: () => shared.write?.(place),
+          },
+        ]
+      : []),
     ...(self
       ? [
           {
@@ -250,12 +262,15 @@ export function LibraryTree({
   filter,
   selected,
   onTree,
+  onWrite,
 }: {
   tree: TreeView;
   filter: string;
   selected: string | null;
   /** T42: the tree main sends back after a change. */
   onTree?: (tree: TreeView) => void;
+  /** T43: **Write here…** on a folder. */
+  onWrite?: (at: FolderPlace) => void;
 }) {
   const app = useApp();
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
@@ -300,6 +315,7 @@ export function LibraryTree({
     },
     move: (d, to) => void run(() => invoke('library:move', { item: d.item, to })),
     open: setDialog,
+    write: onWrite,
   };
 
   return (

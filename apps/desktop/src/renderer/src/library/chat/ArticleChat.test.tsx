@@ -346,20 +346,70 @@ describe('T25: problems from a passage and articles the tutor writes', () => {
 
   it('a generated article is labelled AI-written; Write an article opens the new one', async () => {
     const { bridge } = setup({ article: { ...ARTICLE, generated: true } });
-    bridge.on('library:write-article', () => ({ id: 'g1', title: 'Tries' }));
     expect(await screen.findByTestId('ai-written')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Write an article' }));
-    const form = within(screen.getByRole('form', { name: 'Write an article' }));
-    fireEvent.change(form.getByRole('textbox', { name: 'Topic' }), { target: { value: 'Tries' } });
+    const form = within(screen.getByRole('dialog', { name: 'Write an article' }));
+    fireEvent.change(form.getByRole('textbox', { name: 'What should it cover?' }), {
+      target: { value: 'Tries\n- insert and search' },
+    });
     fireEvent.change(form.getByRole('combobox', { name: 'Level' }), {
       target: { value: 'beginner' },
     });
+    expect(
+      (form.getByRole('combobox', { name: 'Save in' }) as HTMLSelectElement).selectedOptions[0]!
+        .textContent,
+    ).toBe('Written by the tutor');
     fireEvent.click(form.getByRole('button', { name: 'Write' }));
-    await waitFor(() => expect(window.location.hash).toBe('#/library/g1'));
-    expect(bridge.calls.find((c) => c.channel === 'library:write-article')!.request).toEqual({
-      topic: 'Tries',
+    await waitFor(() =>
+      expect(bridge.streams.some((s) => s.channel === 'library:write')).toBe(true),
+    );
+    const s = bridge.streams.find((x) => x.channel === 'library:write')!;
+    expect(s.request).toEqual({
+      brief: 'Tries\n- insert and search',
       level: 'beginner',
       length: 'medium',
+      parts: 1,
+      to: { folderId: 'generated', path: '' },
     });
+    s.emit({ kind: 'writing', part: 1, of: 1, title: null });
+    s.finish({ articles: [{ id: 'g1', title: 'Tries' }], stopped: null });
+    await waitFor(() => expect(window.location.hash).toBe('#/library/g1'));
+    expect(screen.queryByRole('dialog', { name: 'Write an article' })).toBeNull();
+  });
+
+  it('writes a series into a chosen folder, shows each part, and Stop keeps the saved ones', async () => {
+    const { bridge } = setup();
+    await screen.findByRole('list', { name: 'Library folders' });
+    fireEvent.click(screen.getByRole('button', { name: 'Write an article' }));
+    const form = within(screen.getByRole('dialog', { name: 'Write an article' }));
+    fireEvent.click(form.getByRole('button', { name: 'A series' }));
+    fireEvent.change(form.getByRole('textbox', { name: 'What should the series teach?' }), {
+      target: { value: 'How to build a compiler' },
+    });
+    fireEvent.change(form.getByRole('combobox', { name: 'Articles' }), { target: { value: '3' } });
+    const saveIn = form.getByRole('combobox', { name: 'Save in' }) as HTMLSelectElement;
+    const vault = [...saveIn.options].find((o) => o.textContent === 'Vault')!;
+    fireEvent.change(saveIn, { target: { value: vault.value } });
+    fireEvent.click(form.getByRole('button', { name: 'Write 3 articles' }));
+    await waitFor(() =>
+      expect(bridge.streams.some((s) => s.channel === 'library:write')).toBe(true),
+    );
+    const s = bridge.streams.find((x) => x.channel === 'library:write')!;
+    expect(s.request).toMatchObject({ parts: 3, to: { folderId: 'f1', path: '' } });
+    s.emit({ kind: 'planning' });
+    expect(await form.findByText('Planning the series…')).toBeTruthy();
+    s.emit({ kind: 'planned', title: 'Compilers', parts: ['Lexing', 'Parsing', 'Codegen'] });
+    s.emit({ kind: 'writing', part: 1, of: 3, title: 'Lexing' });
+    s.emit({ kind: 'saved', part: 1, of: 3, id: 'p1', title: 'Lexing' });
+    s.emit({ kind: 'writing', part: 2, of: 3, title: 'Parsing' });
+    expect(await form.findByText('Compilers')).toBeTruthy();
+    expect(form.getByRole('link', { name: 'Lexing' })).toBeTruthy();
+    const items = form.getAllByRole('listitem').map((li) => li.getAttribute('data-state'));
+    expect(items).toEqual(['saved', 'writing', 'waiting']);
+    fireEvent.click(form.getByRole('button', { name: 'Stop' }));
+    expect(s.cancelled).toBe(true);
+    expect(await form.findByText(/1 of 3 saved/)).toBeTruthy();
+    fireEvent.click(form.getByRole('link', { name: 'Lexing' }));
+    expect(window.location.hash).toBe('#/library/p1');
   });
 });

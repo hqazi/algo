@@ -336,6 +336,44 @@ try {
     trashed,
   );
 
+  // ---- T43: the tutor writes a two-part series into a folder of the vault
+  await page.getByRole('button', { name: 'Actions for Read' }).click();
+  await page.getByRole('menuitem', { name: 'Write here…' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Write an article' });
+  await dlg.getByRole('button', { name: 'A series' }).click();
+  await dlg.getByLabel('What should the series teach?').fill('Heaps, from the idea to heap sort');
+  await dlg.getByLabel('Articles').selectOption('2');
+  check(
+    'Write here… preselects the folder',
+    (await dlg.getByLabel('Save in').locator('option:checked').textContent()) === 'vault / Read',
+  );
+  await shot(page, '5-write-series');
+  await dlg.getByRole('button', { name: 'Write 2 articles' }).click();
+  await page.getByRole('heading', { name: 'Heap basics', level: 1 }).waitFor({ timeout: 30_000 });
+  const seriesDir = join(vault, 'Read', 'Heaps in practice');
+  check(
+    'the series is saved in its own folder, one file per part, in order',
+    existsSync(join(seriesDir, '01 Heap basics.md')) &&
+      existsSync(join(seriesDir, '02 Heap sort.md')),
+  );
+  check(
+    'the first part opens, labelled AI-written',
+    await page.getByTestId('ai-written').isVisible(),
+  );
+  await page.locator('.article-body').getByText('Heap sort', { exact: true }).click();
+  await page.getByRole('heading', { name: 'Heap sort', level: 1 }).waitFor();
+  check('the link to the next part opens it', true);
+  const current = await page
+    .getByRole('list', { name: 'Library folders' })
+    .locator('[aria-current="page"]')
+    .allTextContents();
+  check(
+    'the tree marks the open part',
+    current.length === 1 && current[0]!.startsWith('Heap sort'),
+    current,
+  );
+  await shot(page, '6-series');
+
   const others = requests.filter((u) => !u.startsWith('tutor-app://'));
   check(
     'every request the page made was tutor-app://',

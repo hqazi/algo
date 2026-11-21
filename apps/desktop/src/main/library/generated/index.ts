@@ -1,104 +1,92 @@
 /**
- * Articles the tutor writes (SPEC §15.1, T25), in the main process: the
- * files in `<data>/articles/generated/<slug>.md` (the app's own folder,
- * never a library folder), the writer over the tutor's backend, and the
- * `library:write-article` channel. The renderer sends a topic, level and
- * length and gets back the new article's id and title.
+ * Articles the tutor writes (SPEC §15.1, T25, T43), in the main process: the
+ * app's own folder (`<data>/articles/generated`, the default place), the
+ * writer over the tutor's backend, and the `library:write` stream. The
+ * renderer sends a brief, level, length, how many parts and where to save;
+ * it gets progress per part and the articles saved. A series goes into a new
+ * folder named after it. Every file is written new (never over another),
+ * indexed and marked AI-written by the library service.
  */
-import { randomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import {
   ArticleWriter,
-  GENERATED_FOLDER_ID,
   GenerateError,
-  type ArticleToSave,
+  SeriesStopped,
+  type ArticleSink,
   type TutorBackend,
 } from '@algo/core';
 import { IpcRefusal, type IpcRouter } from '../../ipc/router';
-import type { LibraryService } from '../service';
+import { LibraryError, type LibraryService } from '../service';
 
-/** How long writing one article may take. */
+/** How long writing one article (or planning a series) may take. */
 export const WRITE_TIMEOUT_MS = 5 * 60 * 1000;
 
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-/** The generated articles' folder: names checked, written staged then renamed. */
+/** The app's own folder for the tutor's articles. */
 export class GeneratedArticles {
   constructor(readonly dir: string) {}
 
   ensure(): Promise<string | undefined> {
     return mkdir(this.dir, { recursive: true });
   }
-
-  taken(slug: string): boolean {
-    return existsSync(join(this.dir, `${slug}.md`));
-  }
-
-  async write(slug: string, markdown: string): Promise<string> {
-    if (!SLUG_RE.test(slug) || slug.length > 80) throw new Error(`bad article slug ${slug}`);
-    await this.ensure();
-    const target = join(this.dir, `${slug}.md`);
-    if (existsSync(target)) throw new Error(`article ${slug}.md exists already`);
-    // A dot name: a scan meanwhile skips it.
-    const staging = join(this.dir, `.${slug}-${randomBytes(6).toString('hex')}.tmp`);
-    try {
-      await writeFile(staging, markdown, { encoding: 'utf8', flag: 'wx' });
-      await rename(staging, target);
-    } finally {
-      await rm(staging, { force: true });
-    }
-    return `${slug}.md`;
-  }
 }
 
 export interface GeneratedDeps {
-  files: GeneratedArticles;
-  library: LibraryService;
   backend: () => TutorBackend;
   now: () => string;
   newId: () => string;
-  timeoutMs?: number;
   log?: (message: string, error?: unknown) => void;
 }
 
-/** The writer, saving into `files` and indexing the result. */
 export function articleWriter(deps: GeneratedDeps): ArticleWriter {
   return new ArticleWriter({
     backend: deps.backend,
-    taken: (slug) => deps.files.taken(slug),
     now: deps.now,
     newId: deps.newId,
     ...(deps.log ? { log: deps.log } : {}),
-    save: async (a: ArticleToSave) => {
-      const relPath = await deps.files.write(a.slug, a.markdown);
-      await deps.library.refresh();
-      const id = deps.library.articleAt(GENERATED_FOLDER_ID, relPath);
-      if (!id) throw new Error('the new article was not indexed');
-      return id;
-    },
   });
+}
+
+/** Where the writer saves: `to` for one article, a new folder in `to` for a series. */
+export function librarySink(
+  library: LibraryService,
+  to: { folderId: string; path: string },
+): (series: string | null) => Promise<ArticleSink> {
+  return async (series) => {
+    const at = series === null ? to : await library.seriesFolder(to, series);
+    return { save: (a) => library.saveGenerated(at, a) };
+  };
 }
 
 export function registerGeneratedHandlers(
   router: IpcRouter,
   writer: ArticleWriter,
+  library: LibraryService,
   options: { timeoutMs?: number; log?: (message: string, error?: unknown) => void } = {},
 ): void {
-  router.handle('library:write-article', async (request) => {
-    const signal = AbortSignal.timeout(options.timeoutMs ?? WRITE_TIMEOUT_MS);
+  router.handleStream('library:write', async (request, { signal, emit }) => {
+    // Planning and each part get the same allowance.
+    const per = options.timeoutMs ?? WRITE_TIMEOUT_MS;
+    const timeout = AbortSignal.timeout(per * (request.parts === 1 ? 1 : request.parts + 1));
+    const both = AbortSignal.any([signal, timeout]);
+    const message = (e: GenerateError) =>
+      e.code === 'cancelled' && timeout.aborted
+        ? 'Writing took too long and was stopped. Try again.'
+        : e.message;
     try {
-      const a = await writer.write(request, signal);
-      return { id: a.id, title: a.title };
+      // A bad place is refused before the tutor is asked.
+      library.place(request.to);
+      const written = await writer.write(request, librarySink(library, request.to), both, (p) => {
+        if (!signal.aborted) emit(p);
+      });
+      return { articles: written, stopped: null };
     } catch (e) {
-      if (e instanceof GenerateError) {
-        const message =
-          e.code === 'cancelled' && signal.aborted
-            ? 'Writing the article took too long and was stopped. Try again.'
-            : e.message;
-        throw new IpcRefusal(e.code, message);
-      }
+      if (e instanceof SeriesStopped && e.written.length > 0)
+        return {
+          articles: e.written,
+          stopped: { code: e.code, message: message(e) },
+        };
+      if (e instanceof GenerateError) throw new IpcRefusal(e.code, message(e));
+      if (e instanceof LibraryError) throw new IpcRefusal(e.reason, e.message);
       options.log?.('writing an article failed', e);
       throw new IpcRefusal('backend', 'Writing the article failed. Try again.');
     }

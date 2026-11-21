@@ -125,9 +125,25 @@ reading aloud, never send anything.
 
 ## Articles written by the tutor
 
-**Write an article** (the pen button at the top of the Articles pane) asks
-the tutor for an article on a topic, at a level
-(beginner, intermediate or advanced) and length you choose. Tutor-written
-articles are saved in the app's own data folder, not in your folders, are
-listed under **Written by the tutor**, and are labelled as AI-written. They
-are included when you [export your data](data-and-privacy.md#export-import-and-reset).
+**Write an article** (the pen button at the top of the Articles pane, or
+**Write here…** on a folder's ⋯ menu) asks the tutor to write for you:
+
+- **What should it cover?** Describe what you want in your own words, as
+  much as you like (up to 4,000 characters): the topic, what you already
+  know, what to focus on or skip, examples you'd like.
+- **One article** or **A series** of 2 to 12 articles, for a bigger subject
+  ("how to write a compiler"). The tutor plans the series first, then
+  writes the articles one by one; each builds on the earlier ones.
+- **Level** (beginner, intermediate or advanced) and **length** (of each
+  article, for a series).
+- **Save in**: any of your folders, or **Written by the tutor** (the app's
+  own folder, the default). A series gets a new folder named after it,
+  with the articles numbered `01`, `02`… and linked to the previous and
+  next one.
+
+While it writes, the dialog shows each article as it is planned, written
+and saved; **Stop** ends it and keeps the ones already saved. Everything
+the tutor writes is labelled as AI-written, wherever it is saved or moved.
+Articles in **Written by the tutor** are included when you
+[export your data](data-and-privacy.md#export-import-and-reset); ones saved
+in your own folders are your files, like any other note there.

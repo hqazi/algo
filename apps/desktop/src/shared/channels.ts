@@ -61,7 +61,6 @@ export const INVOKE_CHANNELS = [
   'library:delete',
   'library:article',
   'library:open-link',
-  'library:write-article',
   'library:threads',
   'library:thread-create',
   'library:thread-rename',
@@ -86,6 +85,7 @@ export const STREAM_CHANNELS = [
   'exec:pull',
   'tts:download',
   'library:watch',
+  'library:write',
   'library:offline',
 ] as const;
 

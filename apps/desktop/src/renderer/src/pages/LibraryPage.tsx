@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PenLine, RefreshCw, Search } from 'lucide-react';
 import type { AnchorView } from '../../../shared/article-chat';
-import type { ArticleView, TreeView } from '../../../shared/library';
+import type { ArticleView, FolderPlace, TreeView } from '../../../shared/library';
 import { Link } from '../components/Link';
 import { useLeaderBindings } from '../components/leader';
 import { Panes } from '../components/Panes';
@@ -31,7 +31,8 @@ export function LibraryPage({ article }: { article: string | null }) {
   const [version, setVersion] = useState(0);
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
-  const [writing, setWriting] = useState(false);
+  /** The Write dialog: `undefined` closed, else the folder to save in (`null`: the tutor's). */
+  const [writing, setWriting] = useState<FolderPlace | null | undefined>(undefined);
   const [tab, setTab] = useState(article ? 'reader' : 'articles');
   const chats = useArticleChats(article);
   const [missing, setMissing] = useState(false);
@@ -98,13 +99,6 @@ export function LibraryPage({ article }: { article: string | null }) {
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
-      <WriteArticle
-        open={writing}
-        onClose={() => setWriting(false)}
-        onWritten={() => {
-          void invoke('library:tree').then(setTree, () => undefined);
-        }}
-      />
       {tree === null ? (
         <p className="muted small lib-none">Loading…</p>
       ) : empty ? (
@@ -112,7 +106,13 @@ export function LibraryPage({ article }: { article: string | null }) {
           No folders yet. Add one in <Link to="/settings">Settings → Library</Link>.
         </p>
       ) : (
-        <LibraryTree tree={tree} filter={filter} selected={article} onTree={setTree} />
+        <LibraryTree
+          tree={tree}
+          filter={filter}
+          selected={article}
+          onTree={setTree}
+          onWrite={(at) => setWriting(at)}
+        />
       )}
     </div>
   );
@@ -122,11 +122,11 @@ export function LibraryPage({ article }: { article: string | null }) {
       <span className="spacer" />
       <IconButton
         aria-label="Write an article"
-        title="Write an article: the tutor writes one on a topic you choose"
+        title="Write an article: the tutor writes one, or a series, from your brief"
         size="sm"
         icon={<PenLine aria-hidden="true" />}
-        aria-pressed={writing}
-        onClick={() => setWriting((w) => !w)}
+        aria-haspopup="dialog"
+        onClick={() => setWriting(null)}
       />
       <IconButton
         aria-label="Refresh"
@@ -200,6 +200,16 @@ export function LibraryPage({ article }: { article: string | null }) {
 
   return (
     <main className="practice library-page">
+      {writing !== undefined && (
+        <WriteArticle
+          tree={tree}
+          at={writing}
+          onClose={() => {
+            setWriting(undefined);
+            void invoke('library:tree').then(setTree, () => undefined);
+          }}
+        />
+      )}
       <Panes
         tab={tab}
         onTab={setTab}

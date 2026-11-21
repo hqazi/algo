@@ -202,12 +202,20 @@ describe('LibraryPage', () => {
   it('opens Write an article from the pane header (T32)', async () => {
     setup(null);
     await screen.findByRole('list', { name: 'Library folders' });
-    expect(screen.queryByRole('form', { name: 'Write an article' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Write an article' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Write an article' }));
-    const form = screen.getByRole('form', { name: 'Write an article' });
+    const form = screen.getByRole('dialog', { name: 'Write an article' });
     expect(within(form).getByRole('option', { name: 'Intermediate' })).toBeTruthy();
     fireEvent.click(within(form).getByRole('button', { name: 'Cancel' }));
-    expect(screen.queryByRole('form', { name: 'Write an article' })).toBeNull();
+    expect(screen.queryByRole('dialog', { name: 'Write an article' })).toBeNull();
+    // A folder's menu opens it with that folder chosen (T43).
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for Clippings' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Write here…' }));
+    const save = within(screen.getByRole('dialog', { name: 'Write an article' })).getByRole(
+      'combobox',
+      { name: 'Save in' },
+    ) as HTMLSelectElement;
+    expect(save.selectedOptions[0]!.textContent).toBe('Vault / Clippings');
   });
 
   it('opens web links through main and library links in the app', async () => {
@@ -282,7 +290,10 @@ describe('LibraryPage', () => {
       setup(null);
       await screen.findByRole('list', { name: 'Library folders' });
       menu('Vault');
-      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual(['New folder']);
+      expect(screen.getAllByRole('menuitem').map((m) => m.textContent)).toEqual([
+        'New folder',
+        'Write here…',
+      ]);
     });
 
     it('moves an article with Move to…, offering only other folders', async () => {

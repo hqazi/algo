@@ -6,8 +6,12 @@ import { UnavailableBackend } from '../tutor/backend';
 import { parseNote } from './frontmatter';
 import {
   ArticleWriter,
-  articleSlug,
   checkArticleRequest,
+  checkPlan,
+  PLANNER_REMINDER,
+  SeriesStopped,
+  seriesFooter,
+  type WriteProgress,
   cleanArticleBody,
   cleanTags,
   GenerateError,
@@ -39,11 +43,7 @@ describe('generated article files', () => {
     expect(out).toContain('a heap and ref style and  and [[Other note]]');
   });
 
-  it('slugs, tags and the frontmatter round-trip through the library parser', () => {
-    expect(articleSlug('Binary Heaps, explained!', () => false)).toBe('binary-heaps-explained');
-    expect(articleSlug('!!!', () => false)).toBe('article');
-    const taken = new Set(['heaps', 'heaps-2']);
-    expect(articleSlug('Heaps', (s) => taken.has(s))).toBe('heaps-3');
+  it('tags and the frontmatter round-trip through the library parser', () => {
     expect(cleanTags(['#Graphs', 'graphs', 'Dynamic Programming', 3, ''])).toEqual([
       'graphs',
       'dynamic-programming',
@@ -63,72 +63,210 @@ describe('generated article files', () => {
     });
   });
 
-  it('checks the request', () => {
-    expect(checkArticleRequest({ topic: '  Tries  ' })).toEqual({
-      topic: 'Tries',
+  it('checks the request: a brief with its line breaks, and 1 or 2–12 parts', () => {
+    expect(checkArticleRequest({ brief: '  Tries  \r\n\r\n\r\n- insert   and search ' })).toEqual({
+      brief: 'Tries\n\n- insert and search',
       level: 'intermediate',
       length: 'medium',
+      parts: 1,
     });
+    expect(checkArticleRequest({ brief: 'x'.repeat(4000), parts: 12 }).parts).toBe(12);
     for (const bad of [
       null,
-      { topic: '' },
-      { topic: 'x', level: 'guru' },
-      { topic: 'x'.repeat(301) },
+      { brief: '' },
+      { brief: 'x', level: 'guru' },
+      { brief: 'x'.repeat(4001) },
+      { brief: 'x', parts: 0 },
+      { brief: 'x', parts: 13 },
+      { brief: 'x', parts: 2.5 },
+      { topic: 'old shape' },
     ])
       expect(() => checkArticleRequest(bad)).toThrow(GenerateError);
+  });
+
+  it('plans: exact count, titles and summaries, ordered unique file names', () => {
+    const plan = checkPlan(
+      {
+        title: ' Build a compiler ',
+        parts: [
+          { title: 'Lexing: tokens?', summary: 'Characters to tokens.' },
+          { title: 'Lexing: tokens?', summary: 'Again.' },
+        ],
+      },
+      2,
+    );
+    expect(plan).toEqual({
+      title: 'Build a compiler',
+      parts: [
+        { title: 'Lexing: tokens?', summary: 'Characters to tokens.', file: '01 Lexing tokens' },
+        { title: 'Lexing: tokens?', summary: 'Again.', file: '02 Lexing tokens' },
+      ],
+    });
+    expect(checkPlan({ title: 'x', parts: [{ title: 'a', summary: 'b' }] }, 2)).toMatch(
+      /exactly 2/,
+    );
+    expect(
+      checkPlan({ title: 'x', parts: [{ title: 'a' }, { title: 'b', summary: 'c' }] }, 2),
+    ).toMatch(/summary/);
+    expect(checkPlan({ parts: [] }, 2)).toMatch(/title/);
+  });
+
+  it('links each part to the previous and next one', () => {
+    const plan = {
+      title: 'Compilers',
+      parts: [
+        { title: 'Lexing', summary: 's', file: '01 Lexing' },
+        { title: 'Parsing [LL]', summary: 's', file: '02 Parsing LL' },
+        { title: 'Codegen', summary: 's', file: '03 Codegen' },
+      ],
+    };
+    expect(seriesFooter(plan, 0)).toContain('Next: [[02 Parsing LL|Parsing LL]] →');
+    expect(seriesFooter(plan, 0)).not.toContain('Previous');
+    expect(seriesFooter(plan, 1)).toContain(
+      '← Previous: [[01 Lexing|Lexing]] · Next: [[03 Codegen|Codegen]] →',
+    );
+    expect(seriesFooter(plan, 2)).toContain('*Part 3 of 3 of the series “Compilers”.*');
   });
 });
 
 describe('ArticleWriter (fake tutor)', () => {
   function writer(script: FakeScript, backend?: UnavailableBackend) {
     const saved: ArticleToSave[] = [];
+    const sinks: (string | null)[] = [];
     const fake = new FakeBackend(script);
     const w = new ArticleWriter({
       backend: () => backend ?? fake,
-      save: (a) => {
-        saved.push(a);
-        return Promise.resolve(`id-${a.slug}`);
-      },
-      taken: () => false,
       now: () => '2026-11-20T10:00:00Z',
       newId: () => 'j1',
     });
-    return { w, saved, fake };
+    const sink = (series: string | null) => {
+      sinks.push(series);
+      return Promise.resolve({
+        save: (a: ArticleToSave) => {
+          saved.push(a);
+          return Promise.resolve(`id-${saved.length}`);
+        },
+      });
+    };
+    return { w, saved, sinks, fake, sink };
   }
 
   it('saves after a reminder turn, with only save_article offered', async () => {
-    const { w, saved, fake } = writer([
+    const { w, saved, fake, sink, sinks } = writer([
       { match: '^Write an article', steps: [{ text: 'Here it is in chat.' }] },
       {
         match: 'not saved yet',
         steps: [{ tool: 'save_article', input: { title: 'Heaps', tags: ['heaps'], body: LONG } }],
       },
     ]);
-    expect(await w.write({ topic: 'heaps', level: 'beginner', length: 'short' }, never)).toEqual({
-      id: 'id-heaps',
-      title: 'Heaps',
-      slug: 'heaps',
-    });
+    expect(
+      await w.write(
+        { brief: 'heaps\n- sift down', level: 'beginner', length: 'short' },
+        sink,
+        never,
+      ),
+    ).toEqual([{ id: 'id-1', title: 'Heaps' }]);
+    expect(sinks).toEqual([null]);
     expect(saved[0]!.markdown).toMatch(/^---\ntitle: "Heaps"\n/);
+    expect(saved[0]!.file).toBeUndefined();
     expect(fake.turns.map((t) => t.userText)).toEqual([
       expect.stringContaining('Level: beginner'),
       WRITER_REMINDER,
     ]);
+    expect(fake.turns[0]!.userText).toContain('The brief:\nheaps\n- sift down');
     expect(fake.turns[0]!.tools.names()).toEqual(['save_article']);
     expect(fake.turns[1]!.history).toHaveLength(2);
   });
 
   it('refuses a too-short body, gives up after two turns, and needs a tutor', async () => {
-    const { w, saved } = writer([
+    const { w, saved, sink } = writer([
       [{ tool: 'save_article', input: { title: 'Heaps', body: 'Too short.' } }],
     ]);
-    await expect(w.write({ topic: 'heaps' }, never)).rejects.toMatchObject({ code: 'not_written' });
+    await expect(w.write({ brief: 'heaps' }, sink, never)).rejects.toMatchObject({
+      code: 'not_written',
+    });
     expect(saved).toEqual([]);
     const off = writer([], new UnavailableBackend('anthropic', 'No key.'));
-    await expect(off.w.write({ topic: 'heaps' }, never)).rejects.toMatchObject({
+    await expect(off.w.write({ brief: 'heaps' }, off.sink, never)).rejects.toMatchObject({
       code: 'unavailable',
       message: 'No key.',
     });
+  });
+
+  const PLAN = {
+    title: 'Writing a compiler',
+    parts: [
+      { title: 'Lexing', summary: 'Characters into tokens.' },
+      { title: 'Parsing', summary: 'Tokens into a tree.' },
+      { title: 'Code generation', summary: 'The tree into instructions.' },
+    ],
+  };
+
+  it('a series: plans, then writes each part with the plan, in order, linked', async () => {
+    const { w, saved, sinks, fake, sink } = writer([
+      { match: '^Plan a series of 3', steps: [{ text: 'A plan in chat.' }] },
+      { match: 'not planned yet', steps: [{ tool: 'plan_series', input: PLAN }] },
+      ...PLAN.parts.map((p) => ({
+        match: `^Write part \\d of 3 of the series “Writing a compiler”\\.\\nIts title: ${p.title}`,
+        steps: [
+          { tool: 'save_article', input: { title: 'Ignored', tags: ['compilers'], body: LONG } },
+        ],
+      })),
+    ]);
+    const progress: WriteProgress[] = [];
+    const out = await w.write(
+      { brief: 'How to write a small compiler', parts: 3 },
+      sink,
+      never,
+      (p) => progress.push(p),
+    );
+    expect(out.map((a) => a.title)).toEqual(['Lexing', 'Parsing', 'Code generation']);
+    expect(sinks).toEqual(['Writing a compiler']);
+    expect(saved.map((a) => a.file)).toEqual(['01 Lexing', '02 Parsing', '03 Code generation']);
+    expect(saved[1]!.markdown).toContain('series: "Writing a compiler"\npart: 2\nparts: 3\n');
+    expect(saved[1]!.markdown).toContain(
+      '← Previous: [[01 Lexing|Lexing]] · Next: [[03 Code generation|Code generation]] →',
+    );
+    expect(fake.turns[0]!.tools.names()).toEqual(['plan_series']);
+    expect(fake.turns[1]!.userText).toBe(PLANNER_REMINDER);
+    const part2 = fake.turns.find((t) => t.userText.includes('Its title: Parsing'))!;
+    expect(part2.userText).toContain('2. Parsing: Tokens into a tree.  <- this part');
+    expect(part2.userText).toContain('How to write a small compiler');
+    expect(part2.history).toEqual([]);
+    expect(progress.map((p) => p.kind)).toEqual([
+      'planning',
+      'planned',
+      'writing',
+      'saved',
+      'writing',
+      'saved',
+      'writing',
+      'saved',
+    ]);
+  });
+
+  it('a series that stops keeps the parts written and says which', async () => {
+    const { w, sink } = writer([
+      [{ tool: 'plan_series', input: PLAN }],
+      [{ tool: 'save_article', input: { title: 'x', body: LONG } }],
+      [{ text: 'no' }],
+      [{ text: 'still no' }],
+    ]);
+    const e = await w.write({ brief: 'compiler', parts: 3 }, sink, never).catch((x: unknown) => x);
+    expect(e).toBeInstanceOf(SeriesStopped);
+    expect((e as SeriesStopped).code).toBe('not_written');
+    expect((e as SeriesStopped).written).toEqual([{ id: 'id-1', title: 'Lexing' }]);
+  });
+
+  it('a plan with the wrong number of parts is refused, then given up', async () => {
+    const { w, sinks, sink } = writer([
+      [{ tool: 'plan_series', input: { ...PLAN, parts: PLAN.parts.slice(0, 2) } }],
+      [{ text: 'no' }],
+    ]);
+    await expect(w.write({ brief: 'compiler', parts: 3 }, sink, never)).rejects.toMatchObject({
+      code: 'not_written',
+    });
+    expect(sinks).toEqual([]);
   });
 });
 

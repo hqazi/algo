@@ -220,12 +220,6 @@ export const invokeChannels = {
   'tts:speak': { request: V.speakRequest, response: V.speakResponse },
   /** Deletes the downloaded model and voices. Refused: `busy` while downloading. */
   'tts:remove': { request: z.undefined(), response: V.ttsStatus },
-  /**
-   * T25: the tutor writes an article on a topic (level, length) and saves it
-   * in the app's own `articles/generated/`; resolves when it is indexed.
-   * Refused: `invalid`, `unavailable`, `busy`, `not_written`, `cancelled`, `backend`.
-   */
-  'library:write-article': { request: L.writeArticleRequest, response: L.writeArticleResponse },
   /** Opens an article's link in the system browser: `https:`, `http:`, `mailto:` only. Refused: `scheme`. */
   'library:open-link': {
     request: L.openLinkRequest,
@@ -303,6 +297,14 @@ export const streamChannels = {
     event: L.treeResponse,
     result: z.strictObject({ closed: z.literal(true) }),
   },
+  /**
+   * The tutor writes an article, or a series (T25, T43), into the folder
+   * the user chose: progress per part, then the articles saved. A series
+   * that stops part-way (cancel, an error) still answers with the parts it
+   * saved. Refused (nothing saved): `invalid`, `unavailable`, `busy`,
+   * `not_written`, `cancelled`, `backend`, `not_found`.
+   */
+  'library:write': { request: L.writeRequest, event: L.writeProgress, result: L.writeResult },
   /**
    * "Make available offline" (T23): downloads every article's linked images
    * in a folder, in the background; progress per article. Cancel stops it.

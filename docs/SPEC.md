@@ -718,16 +718,29 @@ and, once and on request, the read-aloud voice model (15.6).
   title → file name. Unknown keys are kept and shown, never interpreted.
 - Groups are the folder tree (as in Obsidian) plus `tags`. The app keeps no
   groups of its own in v3.
-- Articles the tutor writes (T25) are the one exception to "only the user's
-  folders": they are saved in the app's own `articles/generated/<slug>.md`,
-  shown as a **Written by the tutor** group, labelled as AI-written, and
-  exported with the user's data. **Write an article** takes a topic, a level
-  (beginner / intermediate / advanced) and a length (short / medium / long);
-  the tutor's only tool is `save_article`. The app writes the frontmatter
-  (`title`, `created`, `tags`, `generated: true`) and removes any image from
-  the body, so a generated article never causes a download (15.4). Only the
-  app's folder makes an article AI-written, not a `generated` key in a
-  user's note (D-43).
+- **Articles the tutor writes** (T25, T43, D-63). **Write an article** (the
+  Articles pane's pen button, or **Write here…** on a folder's menu) takes a
+  **brief** (the user's own words, up to 4,000 characters, line breaks
+  kept), a level (beginner / intermediate / advanced), a length (short /
+  medium / long), one article or a **series** of 2–12, and **where to
+  save**: any library folder or the app's own `articles/generated/` (the
+  default; shown as **Written by the tutor** and exported with the user's
+  data). One article is saved as `<Title>.md`; a series goes in a new folder
+  named after it, `01 <Part title>.md`…, each part ending with its place in
+  the series and wikilinks to the previous and next parts, and listed in
+  part order. For a series the tutor first calls `plan_series` (title, and
+  exactly that many parts with summaries), then writes each part in its own
+  conversation that sees the brief and the plan (not the earlier parts'
+  text), with `save_article` as its only tool; a part keeps the plan's
+  title so the links hold. Progress per part streams to the dialog
+  (`library:write`); **Stop**, or a part that fails, ends the series and
+  keeps the parts saved. Files are written new (`wx`, never over another,
+  ` 2` added to a taken name). The app writes the frontmatter (`title`,
+  `created`, `tags`, for a series `series`, `part`, `parts`, then
+  `generated: true`) and removes any image from the body, so a generated
+  article never causes a download (15.4). Only the app marks an article
+  AI-written (`articles.generated`), not a `generated` key in a user's note
+  (D-43).
 - **Changing folders** (T42, D-62): each tree row has a menu, **New folder**
   (folders and subfolders), **Move to…** and **Delete**; articles and
   folders can also be dragged onto a folder. Moves work across library

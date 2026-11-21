@@ -32,13 +32,21 @@ import {
   deleteArticleRow,
   deleteFolderRows,
   listArticles,
+  markGenerated,
   moveRows,
   rowsUnder,
   trashedRows,
   type ArticleRow,
   type IndexedNote,
 } from './index-store';
-import { FileOpError, makeFolder, moveEntry, trashEntry } from './files';
+import {
+  FileOpError,
+  makeFolder,
+  makeNamedFolder,
+  moveEntry,
+  trashEntry,
+  writeNewNote,
+} from './files';
 import { FolderUnavailableError, scanFolder } from './scanner';
 
 export interface FolderInfo {
@@ -152,7 +160,10 @@ export class LibraryService {
   tree(): FolderTree[] {
     const rows = this.deps.storage.readSql((db) => listArticles(db));
     const folders = this.all().filter(
-      (f) => f.id !== GENERATED_FOLDER_ID || rows.some((r) => r.folderId === f.id),
+      (f) =>
+        f.id !== GENERATED_FOLDER_ID ||
+        rows.some((r) => r.folderId === f.id) ||
+        (this.dirs.get(f.id)?.length ?? 0) > 0,
     );
     return folders.map((f) => {
       const mine = rows
@@ -164,6 +175,10 @@ export class LibraryService {
           tags: articleMeta(r.frontmatter, r.relPath).tags,
           missing: r.missingSince !== null,
           generated: r.generated && f.id !== GENERATED_FOLDER_ID,
+          // T43: the tutor's series parts list in order (only notes the app marked).
+          ...(r.generated && Number.isInteger(r.frontmatter['part'])
+            ? { order: r.frontmatter['part'] as number }
+            : {}),
         }));
       const dirs = this.dirs.get(f.id) ?? [];
       if (f.id === GENERATED_FOLDER_ID)
@@ -403,6 +418,46 @@ export class LibraryService {
         .map((r) => r.id);
       await this.deps.storage.writeSql((db) => trashedRows(db, ids, this.deps.now()));
     });
+  }
+
+  // ---- T43: the tutor's articles, saved where the user chose
+
+  /** Checks that `at` names a library folder (or the tutor's); throws if not. */
+  place(at: { folderId: string; path: string }): void {
+    this.anyFolder(at.folderId);
+  }
+
+  /** Makes a folder for a series in `at`, named after its title; resolves to its place. */
+  async seriesFolder(
+    at: { folderId: string; path: string },
+    title: string,
+  ): Promise<{ folderId: string; path: string }> {
+    const f = this.anyFolder(at.folderId);
+    let name = '';
+    await this.change(async () => {
+      name = await makeNamedFolder(f.path, at.path, title);
+    });
+    return { folderId: at.folderId, path: at.path ? `${at.path}/${name}` : name };
+  }
+
+  /**
+   * Writes a note the tutor wrote into `at` (never over a file), indexes it
+   * and marks it AI-written; resolves to its article id.
+   */
+  async saveGenerated(
+    at: { folderId: string; path: string },
+    note: { title: string; markdown: string; file?: string },
+  ): Promise<string> {
+    const f = this.anyFolder(at.folderId);
+    let name = '';
+    await this.change(async () => {
+      name = await writeNewNote(f.path, at.path, note);
+    });
+    const relPath = at.path ? `${at.path}/${name}` : name;
+    const id = this.articleAt(at.folderId, relPath);
+    if (!id) throw new LibraryError('unavailable', 'The new article was not indexed.');
+    await this.deps.storage.writeSql((db) => markGenerated(db, id));
+    return id;
   }
 
   private source(item: LibraryItem): {

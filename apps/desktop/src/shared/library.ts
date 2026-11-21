@@ -253,14 +253,50 @@ export type ImagesMode = z.output<typeof imagesMode>;
 export type LoadImagesView = z.output<typeof loadImagesResponse>;
 export type OfflineProgress = z.output<typeof offlineProgress>;
 
-// ---- T25: articles the tutor writes
+// ---- T25, T43: articles the tutor writes
 
-export const writeArticleRequest = z.strictObject({
-  topic: z.string().min(1).max(300),
+export const writeRequest = z.strictObject({
+  /** What to cover: the user's own words. */
+  brief: z.string().min(1).max(4000),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
   length: z.enum(['short', 'medium', 'long']),
+  /** 1: one article; 2–12: a series in a new folder. */
+  parts: z.int().min(1).max(12),
+  /** Where to save it: any library folder or the tutor's (`generated`). */
+  to: folderPlace,
 });
 
-export const writeArticleResponse = z.strictObject({ id, title: z.string().max(2000) });
+export const writtenArticle = z.strictObject({ id, title: z.string().max(2000) });
 
-export type WriteArticleRequest = z.output<typeof writeArticleRequest>;
+export const writeProgress = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('planning') }),
+  z.strictObject({
+    kind: z.literal('planned'),
+    title: z.string().max(200),
+    parts: z.array(z.string().max(200)).max(12),
+  }),
+  z.strictObject({
+    kind: z.literal('writing'),
+    part: z.int().min(1),
+    of: z.int().min(1),
+    title: z.string().max(200).nullable(),
+  }),
+  z.strictObject({
+    kind: z.literal('saved'),
+    part: z.int().min(1),
+    of: z.int().min(1),
+    id,
+    title: z.string().max(2000),
+  }),
+]);
+
+export const writeResult = z.strictObject({
+  /** In order; for a series that stopped, the parts saved before it stopped. */
+  articles: z.array(writtenArticle).max(12),
+  /** Why a series stopped part-way (`cancelled` when the user stopped it); `null` if it finished. */
+  stopped: z.strictObject({ code: z.string().max(50), message: z.string().max(1000) }).nullable(),
+});
+
+export type WriteRequest = z.output<typeof writeRequest>;
+export type WriteProgressView = z.output<typeof writeProgress>;
+export type WriteResult = z.output<typeof writeResult>;

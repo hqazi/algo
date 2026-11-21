@@ -11,6 +11,8 @@ export interface TreeArticleInput {
   tags: string[];
   missing: boolean;
   generated?: boolean;
+  /** T43: a series part's number (tutor-written only): parts list in order, before other notes. */
+  order?: number;
 }
 
 export interface TreeArticle {
@@ -34,10 +36,14 @@ const compare = (a: string, b: string) =>
   a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true }) ||
   (a < b ? -1 : a > b ? 1 : 0);
 
-function sortFolder(f: TreeFolder): void {
+function sortFolder(f: TreeFolder, order: ReadonlyMap<string, number>): void {
+  const at = (id: string) => order.get(id) ?? Infinity;
   f.folders.sort((a, b) => compare(a.name, b.name));
-  f.articles.sort((a, b) => compare(a.title, b.title) || compare(a.id, b.id));
-  f.folders.forEach(sortFolder);
+  // Infinity − Infinity is NaN: falls through to the title.
+  f.articles.sort(
+    (a, b) => at(a.id) - at(b.id) || compare(a.title, b.title) || compare(a.id, b.id),
+  );
+  for (const x of f.folders) sortFolder(x, order);
 }
 
 /**
@@ -80,6 +86,9 @@ export function buildTree(
       ...(a.generated ? { generated: true as const } : {}),
     });
   }
-  sortFolder(root);
+  sortFolder(
+    root,
+    new Map(articles.flatMap((a) => (a.order === undefined ? [] : [[a.id, a.order] as const]))),
+  );
   return root;
 }

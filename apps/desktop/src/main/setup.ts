@@ -277,17 +277,16 @@ export async function startPractice(
     log: (m) => console.warn(m),
   });
   registerLibraryHandlers(router, library, { log: (m) => console.warn(m) });
-  // Articles the tutor writes (T25): the app's own folder, never a library folder.
+  // Articles the tutor writes (T25, T43): into the folder the user chose.
   registerGeneratedHandlers(
     router,
     articleWriter({
-      files: generatedArticles,
-      library,
       backend: () => tutor.backend(),
       now: isoNow,
       newId: randomUUID,
       log: (m, e) => console.warn(m, e ?? ''),
     }),
+    library,
     { log: (m, e) => console.warn(m, e ?? '') },
   );
   libraryFolders = () => library.paths().map((f) => f.id);

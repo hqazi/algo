@@ -97,7 +97,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T40 | Read aloud: download eSpeak NG instead of shipping it | v3 | 0.5d | T39 | done |
 | T41 | Read aloud: buffer chunks ahead | v3 | 0.25d | T40 | done |
 | T42 | Library: new folder, move and delete in the tree | v3 | 2d | T32 | done |
-| T43 | Write articles: a brief, a destination, and series | v3 | 2d | T42, T25 | in-progress |
+| T43 | Write articles: a brief, a destination, and series | v3 | 2d | T42, T25 | done |
 
 ## Order
 
@@ -2910,10 +2910,41 @@ where to save it, and can write a **series**: the tutor plans the parts,
 then writes them one by one into a folder of their own, linked in order.
 
 **Acceptance.**
-- [ ] A brief of up to 4,000 characters, level, length, and a destination folder (any library folder or the tutor's folder).
-- [ ] Series: 2–12 parts; the tutor plans titles and summaries (`plan_series`), then writes each part with the plan and the earlier parts' titles; saved as `01 Title.md`… in a new folder named after the series, with `series` and `part` in the frontmatter and links to the previous and next part.
-- [ ] Progress per part in the dialog; Stop keeps the parts already written.
-- [ ] Every file the tutor writes is labelled AI-written wherever it is saved; still no images.
-- [ ] Tests: the planner and series writer with a fake backend, file names, the dialog.
+- [x] A brief of up to 4,000 characters, level, length, and a destination folder (any library folder or the tutor's folder).
+- [x] Series: 2–12 parts; the tutor plans titles and summaries (`plan_series`), then writes each part with the plan and the earlier parts' titles; saved as `01 Title.md`… in a new folder named after the series, with `series` and `part` in the frontmatter and links to the previous and next part.
+- [x] Progress per part in the dialog; Stop keeps the parts already written.
+- [x] Every file the tutor writes is labelled AI-written wherever it is saved; still no images.
+- [x] Tests: the planner and series writer with a fake backend, file names, the dialog.
 
-**Notes.**
+**Notes.** (2026-11-21)
+- **Built.** Core `generate.ts`: `brief` (4,000 chars) and `parts`
+  replace `topic`; `plan_series` with `checkPlan` (exact count, file names
+  `01 Title`), `partMessage`, `seriesFooter` (wikilinks to previous and
+  next), `series`/`part`/`parts` frontmatter; `ArticleWriter.write(request,
+  sink, signal, progress)` for one article or a series, `SeriesStopped`
+  carrying the parts saved; `articleSlug` removed (titles as file names,
+  `noteFileName`). Main: `LibraryService.seriesFolder` and
+  `saveGenerated` (write `wx` under the lock, index, mark AI-written),
+  `files.ts` `makeNamedFolder`/`writeNewNote`; `generated/index.ts` is
+  now the `library:write` stream. Tree lists tutor-written series parts by
+  part number. Renderer: `WriteArticle.tsx` is a dialog (one article /
+  series, brief, parts, level, length, Save in) with per-part progress and
+  Stop; **Write here…** on folder menus. D-63; SPEC §15.1; guide.
+- **Wiring outside Owns.** `shared/{library,ipc,channels}.ts`
+  (`library:write-article` removed), `LibraryPage.tsx`, `LibraryTree.tsx`,
+  `library.css`, `setup.ts`, `core/library/tree.ts` (order),
+  `service.ts`, `files.ts`, the e2e and its fake tutor script.
+- **Checked.** typecheck, lint, prettier, `npm test`; new tests: request
+  and plan checks, footer links, the series writer (order, plan in each
+  part's message, stop keeps parts, wrong part count), main (a series into
+  a vault subfolder: files, frontmatter, AI-written, the next-part link
+  resolves; a stopped series reports its parts), the dialog (single,
+  series progress, Stop). `xvfb-run` library e2e: **Write here…**
+  preselects the folder, a two-part series is written into it, opens
+  labelled AI-written, and its link opens the next part.
+- **Not done / not tested.** Never run against a real AI provider (no
+  test may): how well a real model keeps to the plan and the length is
+  untested. Stopping cannot interrupt a part mid-save; a part being written
+  is dropped. No editing of the plan before writing starts, and no "add a
+  part" to an existing series. Old `library:write-article` callers: none
+  left in the app.

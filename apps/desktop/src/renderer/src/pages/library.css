@@ -260,6 +260,75 @@
 .library-page .lib-write-form p {
   margin: 0;
 }
+/* T43: the dialog */
+.library-page fieldset.lib-write-form {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  min-width: 0;
+}
+.library-page .lib-write-form textarea {
+  width: 100%;
+  min-height: 7.5em;
+  resize: vertical;
+  font: inherit;
+  font-weight: 400;
+}
+.library-page .lib-write-count {
+  align-self: flex-end;
+  margin-top: calc(-1 * var(--space-1));
+}
+.library-page .lib-write-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.library-page .lib-write-row > label {
+  flex: 1 1 8rem;
+}
+.library-page .lib-write-progress {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.library-page .lib-write-progress p {
+  margin: 0 0 var(--space-2);
+}
+.library-page .lib-write-series {
+  font-weight: 600;
+}
+.library-page .lib-write-progress ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.library-page .lib-write-progress li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.library-page .lib-write-progress li > :last-child {
+  margin-left: auto;
+}
+.library-page .lib-write-progress li[data-state='waiting'] {
+  color: var(--muted);
+}
+.library-page .lib-write-progress li[data-state='saved'] svg {
+  color: var(--pass);
+}
+.library-page .lib-write-dot {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  flex: none;
+}
 .library-page .lib-write-actions {
   display: flex;
   gap: var(--space-2);

@@ -8,10 +8,19 @@
  * outright (the trash), except the source of a file copied across drives.
  */
 import { constants } from 'node:fs';
-import { copyFile, lstat, mkdir, realpath, rename, stat, unlink } from 'node:fs/promises';
+import {
+  copyFile,
+  lstat,
+  mkdir,
+  realpath,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import type { Stats } from 'node:fs';
-import { entryName, entryNameProblem, pathParts } from '@algo/core';
+import { entryName, entryNameProblem, noteFileName, pathParts } from '@algo/core';
 
 export type FileOpReason = 'invalid' | 'exists' | 'not_found' | 'unavailable';
 
@@ -157,5 +166,70 @@ export async function trashEntry(
     await trash(abs);
   } catch {
     throw new FileOpError('unavailable', 'It could not be moved to the trash.');
+  }
+}
+
+const exists = async (abs: string): Promise<boolean> => {
+  try {
+    await lstat(abs);
+    return true;
+  } catch (e) {
+    if (code(e) === 'ENOENT') return false;
+    throw e;
+  }
+};
+
+/**
+ * T43: makes a new folder for a series titled `title` in the folder at
+ * `parent`, named after the title (` 2`, ` 3`… if taken). Resolves to its
+ * name.
+ */
+export async function makeNamedFolder(
+  folder: string,
+  parent: string,
+  title: string,
+): Promise<string> {
+  const root = await rootOf(folder);
+  const dir = await dirAt(root, parent);
+  const taken = new Set<string>();
+  for (;;) {
+    const name = noteFileName(title, (n) => taken.has(n)).slice(0, -3);
+    try {
+      await mkdir(join(dir, name));
+      return name;
+    } catch (e) {
+      if (code(e) !== 'EEXIST') throw e;
+      taken.add(`${name}.md`);
+    }
+  }
+}
+
+/**
+ * T43: writes a new note in the folder at `dir`: named `file`.md if given,
+ * else after `title`, made unique. Never replaces a file (`wx`). Resolves
+ * to its name.
+ */
+export async function writeNewNote(
+  folder: string,
+  dirPath: string,
+  note: { title: string; markdown: string; file?: string },
+): Promise<string> {
+  const root = await rootOf(folder);
+  const dir = await dirAt(root, dirPath);
+  const taken = new Set<string>();
+  for (;;) {
+    // A series part's name (`01 Title`) passes through unchanged.
+    const name = noteFileName(note.file ?? note.title, (n) => taken.has(n));
+    if (await exists(join(dir, name))) {
+      taken.add(name);
+      continue;
+    }
+    try {
+      await writeFile(join(dir, name), note.markdown, { encoding: 'utf8', flag: 'wx' });
+      return name;
+    } catch (e) {
+      if (code(e) !== 'EEXIST') throw e;
+      taken.add(name);
+    }
   }
 }

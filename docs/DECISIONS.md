@@ -2161,3 +2161,37 @@ left a choice.
 - The Settings line and the guide say the app changes the folders only when
   asked.
 
+**D-63 The tutor writes from a brief, where the user chooses, and in series** (2026-11-21, T43; changes SPEC §15.1)
+
+- **Why.** The maintainer asked to give a detailed prompt, to choose where
+  the article is saved, and to ask for a series ("how to create a
+  compiler").
+- **Brief, not topic.** Up to 4,000 characters of the user's own words,
+  line breaks kept; the writer prompt says to follow it. It is the user's
+  request, not untrusted data (it never comes from an article).
+- **Series = plan, then one conversation per part.** `plan_series` fixes
+  the title, the number of parts (exactly as asked, else the tool refuses
+  and the reminder turn tries once more) and a summary per part. Each part
+  is then written in a fresh conversation given the brief and the whole
+  plan, but not the earlier parts' text: it keeps each request small and
+  bounded (12 long parts would not fit one context), and the plan already
+  says what came before. The part keeps the plan's title, so file names
+  (`01 Title`) and the footer's wikilinks are known before any part is
+  written. Stopping or a failed part ends the series; parts saved stay and
+  the result lists them (a series is never rolled back: they are the
+  user's to keep or delete).
+- **Where.** Any library folder or the app's folder (D-62 allows writing
+  to library folders); a series gets a new folder, ` 2` if the name is
+  taken. Files are created with `wx` under the scan lock, so they are never
+  partly read or written over. File names are now the title (as Obsidian
+  and the clipper name notes), not a slug.
+- **AI-written** is set on the row when the app saves the file
+  (`articles.generated`, D-62), in any folder.
+- **Order.** Parts list by part number in the tree, but only for notes the
+  app marked AI-written (a user's own `part:` key is still not
+  interpreted).
+- **Time.** Five minutes for one article; for a series, five minutes per
+  part plus one for the plan, in total.
+- The `library:write-article` invoke is replaced by the `library:write`
+  stream (progress events, then the articles saved).
+

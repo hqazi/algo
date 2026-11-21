@@ -6,7 +6,7 @@
  * worker threads). The tutor is the fake backend; nothing calls an AI
  * provider or the network.
  */
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -78,6 +78,7 @@ let ipc: FakeIpcMain;
 let pyodideJobs: RunJob[];
 let otherJobs: RunJob[];
 let streamId = 0;
+let vault: string;
 
 const spy = (id: ExecutorId, jobs: RunJob[], real?: Executor): Executor => ({
   id,
@@ -125,7 +126,7 @@ async function make(script: FakeScript): Promise<void> {
     storage: app.storage,
     now,
     newId: () => `art-${++ids}`,
-    chooseFolder: () => Promise.resolve(null),
+    chooseFolder: () => Promise.resolve(vault),
     openPath: () => Promise.resolve(false),
     generatedDir: files.dir,
   });
@@ -158,12 +159,15 @@ async function make(script: FakeScript): Promise<void> {
   });
   registerGeneratedHandlers(
     router,
-    articleWriter({ files, library, backend: () => tutor.backend(), now, newId: () => 'w1' }),
+    articleWriter({ backend: () => tutor.backend(), now, newId: () => 'w1' }),
+    library,
   );
 }
 
 beforeEach(async () => {
   dataDir = mkdtempSync(join(tmpdir(), 'algotutor-generated-'));
+  vault = join(dataDir, 'Vault');
+  mkdirSync(vault);
   app = openAppStorage(dataDir);
   catalog = await FileCatalog.open({ content: CONTENT, dataDir }, now, app.storage);
   pyodideJobs = [];
@@ -195,7 +199,10 @@ async function value<T>(channel: string, request?: unknown): Promise<T> {
 
 type Ev = { type: string; [k: string]: unknown };
 
-async function send(request: unknown): Promise<{ events: Ev[]; result: IpcResult<unknown> }> {
+async function send(
+  request: unknown,
+  channel = 'chat:send',
+): Promise<{ events: Ev[]; result: IpcResult<unknown> }> {
   const p = page();
   const id = `s${++streamId}`;
   const seen: Ev[] = [];
@@ -207,7 +214,7 @@ async function send(request: unknown): Promise<{ events: Ev[]; result: IpcResult
   };
   const result = (await ipc.invoke(p.event, STREAM_START, {
     id,
-    channel: 'chat:send',
+    channel,
     request,
   })) as IpcResult<unknown>;
   return { events: seen, result };
@@ -224,12 +231,29 @@ const WRITE_STEP = {
   ],
 };
 
+type Written = { articles: { id: string; title: string }[]; stopped: unknown };
+
+async function write(
+  extra: Record<string, unknown> = {},
+): Promise<{ events: Ev[]; result: IpcResult<Written> }> {
+  const r = await send(
+    {
+      brief: 'Counting even numbers',
+      level: 'beginner',
+      length: 'short',
+      parts: 1,
+      to: { folderId: 'generated', path: '' },
+      ...extra,
+    },
+    'library:write',
+  );
+  return r as { events: Ev[]; result: IpcResult<Written> };
+}
+
 async function writeArticle(): Promise<{ id: string; title: string }> {
-  return value('library:write-article', {
-    topic: 'Counting even numbers',
-    level: 'beginner',
-    length: 'short',
-  });
+  const { result } = await write();
+  if (!result.ok) throw new Error(`library:write: ${JSON.stringify(result.error)}`);
+  return result.value.articles[0]!;
 }
 
 describe('articles the tutor writes', () => {
@@ -240,9 +264,9 @@ describe('articles the tutor writes', () => {
 
     const written = await writeArticle();
     expect(written).toEqual({ id: expect.any(String), title: 'Counting with parity' });
-    const file = join(app.paths.generatedArticles, 'counting-with-parity.md');
+    const file = join(app.paths.generatedArticles, 'Counting with parity.md');
     const text = readFileSync(file, 'utf8');
-    const note = parseNote(text, 'counting-with-parity.md');
+    const note = parseNote(text, 'Counting with parity.md');
     expect(note.frontmatter).toEqual({
       title: 'Counting with parity',
       created: now(),
@@ -254,7 +278,7 @@ describe('articles the tutor writes', () => {
     expect(note.body).not.toMatch(/^# /m);
     expect(note.body).toContain('chart');
     // Nothing else was written there (no staging file left).
-    expect(readdirSync(app.paths.generatedArticles)).toEqual(['counting-with-parity.md']);
+    expect(readdirSync(app.paths.generatedArticles)).toEqual(['Counting with parity.md']);
 
     const tree = await value<{
       folders: {
@@ -293,23 +317,102 @@ describe('articles the tutor writes', () => {
     const dest = join(dataDir, 'out.zip');
     await exportData({ paths: app.paths, db: app.storage, appVersion: '0.0.0', now: now(), dest });
     const zip = unzipSync(readFileSync(dest));
-    expect(strFromU8(zip['articles/generated/counting-with-parity.md']!)).toBe(text);
+    expect(strFromU8(zip['articles/generated/Counting with parity.md']!)).toBe(text);
   });
 
   it('a second article with the same title gets its own file; a turn without saving is refused', async () => {
     await make([WRITE_STEP]);
     await writeArticle();
     const again = await writeArticle();
-    expect(existsSync(join(app.paths.generatedArticles, 'counting-with-parity-2.md'))).toBe(true);
+    expect(existsSync(join(app.paths.generatedArticles, 'Counting with parity 2.md'))).toBe(true);
     expect(again.title).toBe('Counting with parity');
 
     await make([{ match: '.', steps: [{ text: 'I would rather not.' }] }]);
     expect(await writeArticle().catch((e: Error) => e.message)).toMatch(/not_written/);
-    expect(
-      await invoke('library:write-article', { topic: '', level: 'x', length: 'short' }),
-    ).toMatchObject({
+    expect((await write({ brief: '', level: 'x' })).result).toMatchObject({ ok: false });
+    expect((await write({ to: { folderId: 'nope', path: '' } })).result).toMatchObject({
       ok: false,
+      error: { reason: 'not_found' },
     });
+  });
+
+  const PLAN = {
+    title: 'Parity, step by step',
+    parts: [
+      { title: 'Even and odd', summary: 'What parity is.' },
+      { title: 'Counting in one pass', summary: 'The loop and its cost.' },
+    ],
+  };
+  const part = (title: string) => ({
+    match: `^Write part \\d of 2 of the series “Parity, step by step”\\.\\nIts title: ${title}`,
+    steps: [
+      { tool: 'save_article', input: { title: 'x', tags: ['parity'], body: ARTICLE_BODY } },
+      { text: 'Saved.' },
+    ],
+  });
+
+  it('writes a series into a folder of the user’s library, labelled and linked', async () => {
+    await make([
+      { match: '^Plan a series of 2', steps: [{ tool: 'plan_series', input: PLAN }] },
+      part('Even and odd'),
+      part('Counting in one pass'),
+    ]);
+    mkdirSync(join(vault, 'Learning'));
+    await value('library:add-folder');
+    const { folders } = await value<{ folders: { id: string }[] }>('library:folders');
+    const { events, result } = await write({
+      parts: 2,
+      to: { folderId: folders[0]!.id, path: 'Learning' },
+    });
+    expect(result.ok).toBe(true);
+    const out = (result as { value: Written }).value;
+    expect(out.stopped).toBeNull();
+    expect(out.articles.map((a) => a.title)).toEqual(['Even and odd', 'Counting in one pass']);
+    expect(events.map((e) => e['kind'])).toEqual([
+      'planning',
+      'planned',
+      'writing',
+      'saved',
+      'writing',
+      'saved',
+    ]);
+    const dir = join(vault, 'Learning', 'Parity, step by step');
+    expect(readdirSync(dir).sort()).toEqual(['01 Even and odd.md', '02 Counting in one pass.md']);
+    const first = parseNote(readFileSync(join(dir, '01 Even and odd.md'), 'utf8'), 'x.md');
+    expect(first.frontmatter).toMatchObject({
+      title: 'Even and odd',
+      series: 'Parity, step by step',
+      part: 1,
+      parts: 2,
+      generated: true,
+    });
+    // Both are AI-written, and the link to the next part opens it.
+    const view = await value<{ generated: boolean; links: Record<string, string | null> }>(
+      'library:article',
+      { id: out.articles[0]!.id },
+    );
+    expect(view.generated).toBe(true);
+    expect(view.links['02 Counting in one pass']).toBe(out.articles[1]!.id);
+    const second = await value<{ generated: boolean }>('library:article', {
+      id: out.articles[1]!.id,
+    });
+    expect(second.generated).toBe(true);
+  });
+
+  it('a series that stops part-way keeps and reports the parts written', async () => {
+    await make([
+      { match: '^Plan a series of 2', steps: [{ tool: 'plan_series', input: PLAN }] },
+      part('Even and odd'),
+      { match: '.', steps: [{ text: 'No more.' }] },
+    ]);
+    const { result } = await write({ parts: 2 });
+    expect(result).toMatchObject({
+      ok: true,
+      value: { articles: [{ title: 'Even and odd' }], stopped: { code: 'not_written' } },
+    });
+    expect(readdirSync(join(app.paths.generatedArticles, 'Parity, step by step'))).toEqual([
+      '01 Even and odd.md',
+    ]);
   });
 });
 

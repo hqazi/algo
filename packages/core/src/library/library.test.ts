@@ -182,4 +182,20 @@ describe('buildTree', () => {
     expect(t.folders[1]!.folders.map((f) => f.path)).toEqual(['B/C']);
     expect(t.folders[0]!.articles[0]).toMatchObject({ id: '1', generated: true });
   });
+
+  it('lists series parts in order, before other notes (T43)', () => {
+    const t = buildTree([
+      { id: 'n', relPath: 'S/notes.md', title: 'A note', tags: [], missing: false },
+      { id: '2', relPath: 'S/02 Lexing.md', title: 'Lexing', tags: [], missing: false, order: 2 },
+      { id: '1', relPath: 'S/01 Why.md', title: 'Why compile', tags: [], missing: false, order: 1 },
+      { id: '3', relPath: 'S/03 Codegen.md', title: 'Codegen', tags: [], missing: false, order: 3 },
+    ]);
+    expect(t.folders[0]!.articles.map((a) => a.title)).toEqual([
+      'Why compile',
+      'Lexing',
+      'Codegen',
+      'A note',
+    ]);
+    expect(t.folders[0]!.articles[0]).not.toHaveProperty('order');
+  });
 });
