@@ -198,7 +198,7 @@ describe('Settings → Code execution', () => {
         tutor: { backend: 'auto', model: null, effort: 'medium', claudeCodePath: null },
         execution: { runtime: 'podman', timeScale: 1 },
         editor: { fontSize: 14, keymap: 'default' },
-        ui: { theme: 'system' },
+        ui: { theme: 'system', leader: 'ctrl+b' },
         updates: { channel: 'stable', auto: true },
         library: { images: 'on-open' },
       },

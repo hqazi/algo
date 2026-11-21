@@ -36,5 +36,9 @@ First version of the desktop app, the successor to
   lives in [`docs/guide/`](docs/guide/installation.md).
 - Collapsible panes: on Practice and Library the side panes fold into a
   thin rail and the test results to their summary line, remembered per
-  page. Shortcuts: Ctrl/Cmd+B and Ctrl/Cmd+Alt+B for the side panes,
-  Ctrl/Cmd+J for the results, Ctrl/Cmd+1–3 and F6 to move between panes.
+  page. Shortcuts: Ctrl/Cmd+J for the results, Ctrl/Cmd+1–3 and F6 to
+  move between panes.
+- A tmux-style leader key (Ctrl+B by default; Ctrl+A, Ctrl+Space or off in
+  Settings): the leader, then `[` `]` to hide the side panes, `z` to hide
+  both, `h` `l` `o` `1`–`3` to move between panes, `t` `j` `k` `r` `s` for
+  the tests, editor, Run and Submit, and `?` for the list.

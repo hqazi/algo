@@ -194,7 +194,7 @@ export function ResultsPanel({
   const className = collapsed ? 'results collapsed' : 'results';
   const toggle = onToggle ? <Toggle collapsed={collapsed} onToggle={onToggle} /> : null;
   const note = (p: ReactNode) => (
-    <section className={className} aria-live="polite">
+    <section className={className} aria-live="polite" tabIndex={-1}>
       <div className="results-bar">
         {p}
         {toggle}
@@ -230,7 +230,7 @@ export function ResultsPanel({
   const categories = [...new Set(hiddenFailed.map((c) => words(c.category || 'test')))];
   const Icon = report.all_passed ? CircleCheck : CircleX;
   return (
-    <section className={className} aria-live="polite">
+    <section className={className} aria-live="polite" tabIndex={-1}>
       <div className={`results-summary ${report.all_passed ? 'summary-pass' : 'summary-fail'}`}>
         <Icon size={16} aria-hidden="true" />
         <strong data-testid="summary">

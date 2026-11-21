@@ -129,8 +129,12 @@ JetBrains Mono.
   button. The pane stays mounted, so drafts survive. The divider beside a
   rail is a plain line. On Practice the results fold to their first line
   (summary or note) with a panel-bottom icon button at its end. Shortcuts:
-  Ctrl/Cmd+B left, Ctrl/Cmd+Alt+B right, Ctrl/Cmd+J results, Ctrl/Cmd+1–3
-  and F6/Shift+F6 to move between panes.
+  Ctrl/Cmd+J results, Ctrl/Cmd+1–3 and F6/Shift+F6 to move between panes;
+  the rest are behind the leader key.
+- **Leader key (T36).** tmux-style: the leader (Ctrl+B by default,
+  `ui.leader`), then one key. While waiting, a chip at the bottom centre
+  (surface, `--shadow-lg`, the leader as a `kbd`) says so. Leader `?` opens
+  a dialog listing the actions by group, keys as `kbd` caps.
 - **Narrow windows.** Under 1100px the nav shows icons only (names in the
   tooltip). Under 900px multi-pane pages show one pane at a time with tabs
   above; switching layouts keeps each pane's state. The window's minimum

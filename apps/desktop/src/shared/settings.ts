@@ -18,6 +18,7 @@ import {
   TUTOR_BACKENDS,
   TUTOR_EFFORTS,
   UI_THEMES,
+  LEADER_KEYS,
   UPDATE_CHANNELS,
 } from '@algo/core';
 
@@ -36,7 +37,7 @@ const groups = {
     fontSize: z.int().min(MIN_FONT_SIZE).max(MAX_FONT_SIZE),
     keymap: z.enum(EDITOR_KEYMAPS),
   },
-  ui: { theme: z.enum(UI_THEMES) },
+  ui: { theme: z.enum(UI_THEMES), leader: z.enum(LEADER_KEYS) },
   updates: { channel: z.enum(UPDATE_CHANNELS), auto: z.boolean() },
   /** `library.folders` (paths) are never in the view or a patch from the UI. */
   library: { images: z.enum(LIBRARY_IMAGE_MODES) },

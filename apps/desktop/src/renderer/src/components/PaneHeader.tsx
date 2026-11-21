@@ -33,7 +33,11 @@ export function PaneHeader({
           className="pane-collapse"
           size="sm"
           aria-label={`Hide ${control.title}`}
-          title={`Hide ${control.title} (${control.shortcut})`}
+          title={
+            control.shortcut
+              ? `Hide ${control.title} (${control.shortcut})`
+              : `Hide ${control.title}`
+          }
           icon={<Icon aria-hidden="true" />}
           onClick={control.collapse}
         />

@@ -1962,3 +1962,29 @@ left a choice.
 - **Collapse button via context.** `Panes` provides the control and
   `PaneHeader` draws the button, so panes that draw their own header (the
   Tutor, the Library's chats) get it without new props.
+
+**D-57 A tmux-style leader key** (2026-11-21, T36)
+
+- **Prefix, not chords.** Asked for: a leader, then a key, like tmux. The
+  leader is Ctrl+B by default (tmux's prefix), Ctrl also on macOS as in
+  tmux, so it never clashes with Cmd shortcuts. `ui.leader` offers Ctrl+A
+  (GNU screen, tmux's common rebinding), Ctrl+Space and off; nothing
+  freer, as a free-form key would need validation against keys the app and
+  the editor keymaps use.
+- **Caught first.** The listener is on `window` in the capture phase and
+  stops the event, so the leader works inside the code editor and the key
+  after it is never typed. The cost: the leader's own meaning in the
+  editor (Ctrl+B is page up in Vim, back a character in Emacs) is lost;
+  the setting is the way out. Dialogs keep their keys (leader ignored while
+  `aria-modal` is open).
+- **Keys.** tmux and Vim habits: `h`/`l` to move left/right (arrows too),
+  `o` next pane, `1`–`3` by number, `z` zoom (here: hide both side panes,
+  then restore what was open), `?` the list. `[`/`]` for the left/right
+  pane. On Practice `j`/`k` move down to the results and up to the editor,
+  `t` folds the results, `r`/`s` Run/Submit (Submit records an attempt,
+  as Ctrl+Shift+Enter does; two deliberate keys were judged enough).
+- **No timeout.** As in tmux the leader waits for the next key; a chip at
+  the bottom says so, and Escape, the leader again, an unbound key or the
+  window losing focus cancel.
+- **T35's Ctrl/Cmd+B and Ctrl/Cmd+Alt+B are gone** (Ctrl+B is the leader);
+  Ctrl/Cmd+J, Ctrl/Cmd+1–3 and F6 stay as direct keys.

@@ -14,6 +14,8 @@ export const TUTOR_EFFORTS = ['low', 'medium', 'high'] as const;
 export const EXECUTION_RUNTIMES = ['local', 'podman', 'docker'] as const;
 export const EDITOR_KEYMAPS = ['default', 'vim', 'emacs'] as const;
 export const UI_THEMES = ['system', 'light', 'dark'] as const;
+/** The tmux-style leader key for pane actions (D-57); `off` turns them off. */
+export const LEADER_KEYS = ['ctrl+b', 'ctrl+a', 'ctrl+space', 'off'] as const;
 export const UPDATE_CHANNELS = ['stable', 'beta'] as const;
 /** When images an article links to are downloaded (SPEC §15.4). */
 export const LIBRARY_IMAGE_MODES = ['on-open', 'ask'] as const;
@@ -49,6 +51,7 @@ const FIELDS = {
   },
   ui: {
     theme: z.enum(UI_THEMES),
+    leader: z.enum(LEADER_KEYS),
   },
   updates: {
     channel: z.enum(UPDATE_CHANNELS),
@@ -74,7 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tutor: { backend: 'auto', model: null, effort: 'medium', claudeCodePath: null },
   execution: { runtime: 'local', timeScale: 1.0 },
   editor: { fontSize: 14, keymap: 'default' },
-  ui: { theme: 'system' },
+  ui: { theme: 'system', leader: 'ctrl+b' },
   updates: { channel: 'stable', auto: true },
   library: { folders: [], images: 'on-open' },
 };

@@ -189,6 +189,7 @@ nested in the file: `tutor.backend` is `{"tutor": {"backend": "auto"}}`.
 | `library.folders` | `[]` | v3: `{id, path}` per chosen folder; read only, never written (15.1). |
 | `library.images` | `on-open` | v3: `on-open` / `ask`, for images an article links to (15.4). |
 | `ui.theme` | `system` | `system` / `light` / `dark`. |
+| `ui.leader` | `ctrl+b` | `ctrl+b` / `ctrl+a` / `ctrl+space` / `off`: the tmux-style leader key for pane actions (D-57). |
 | `updates.channel` | `stable` | `stable` / `beta`. |
 | `updates.auto` | `true` | Download in background, install on quit. |
 

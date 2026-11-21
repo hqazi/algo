@@ -8,6 +8,7 @@ import { EditorView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ChatStore, ChatStoreContext } from '../chat/store';
 import { Toasts } from '../components/Toasts';
+import { LeaderProvider } from '../components/Leader';
 import { AppProvider } from '../lib/app';
 import { FakeBridge, installBridge, Refused } from '../test/fake-bridge';
 import { baseHandlers, DETAIL, REPORT, WORKSPACE } from '../test/fixtures';
@@ -49,8 +50,10 @@ async function open(): Promise<void> {
   render(
     <ChatStoreContext.Provider value={chat}>
       <AppProvider>
-        <PracticePage slug={SLUG} />
-        <Toasts />
+        <LeaderProvider>
+          <PracticePage slug={SLUG} />
+          <Toasts />
+        </LeaderProvider>
       </AppProvider>
     </ChatStoreContext.Provider>,
   );
@@ -156,6 +159,22 @@ describe('PracticePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Hide Tutor' }));
     expect(screen.getByRole('button', { name: 'Show Tutor' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Hide Problem' })).toBeTruthy();
+  });
+
+  it('leader t, j and r: the results, focus on them, and Run (T36)', async () => {
+    await open();
+    const leader = (key: string) => {
+      fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+      fireEvent.keyDown(window, { key });
+    };
+    leader('t');
+    expect(screen.getByRole('button', { name: 'Show test results' })).toBeTruthy();
+    leader('j'); // opens them and moves focus there
+    expect(screen.getByRole('button', { name: 'Hide test results' })).toBeTruthy();
+    expect(document.activeElement?.classList.contains('results')).toBe(true);
+    leader('r');
+    expect((await screen.findByTestId('summary')).textContent).toBe('1/1 passed');
+    expect(bridge.channels()).toContain('runs:run');
   });
 
   it('saves as you type, and before a run', async () => {

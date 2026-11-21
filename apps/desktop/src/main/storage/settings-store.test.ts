@@ -61,7 +61,7 @@ describe('SettingsStore.update', () => {
     expect(store.get()).toBe(next);
     expect(readFile()).toEqual({
       ...DEFAULT_SETTINGS,
-      ui: { theme: 'dark', sidebar: 'left' },
+      ui: { theme: 'dark', leader: 'ctrl+b', sidebar: 'left' },
       editor: { fontSize: 14, keymap: 'emacs' },
       mine: [1],
     });

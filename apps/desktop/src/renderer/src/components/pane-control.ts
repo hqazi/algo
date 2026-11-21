@@ -10,8 +10,8 @@ export interface PaneControl {
   side: 'left' | 'right';
   /** The pane's title ("Problem"), for the button's label. */
   title: string;
-  /** The shortcut, as shown to people ("Ctrl+B", "⌘B"). */
-  shortcut: string;
+  /** The shortcut, as shown to people ("Ctrl+B ["); null when there is none. */
+  shortcut: string | null;
   collapse: () => void;
 }
 

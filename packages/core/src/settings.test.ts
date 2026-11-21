@@ -16,7 +16,7 @@ describe('parseSettings', () => {
       tutor: { backend: 'auto', model: null, effort: 'medium', claudeCodePath: null },
       execution: { runtime: 'local', timeScale: 1 },
       editor: { fontSize: 14, keymap: 'default' },
-      ui: { theme: 'system' },
+      ui: { theme: 'system', leader: 'ctrl+b' },
       updates: { channel: 'stable', auto: true },
       library: { folders: [], images: 'on-open' },
     });
@@ -89,7 +89,7 @@ describe('applySettingsPatch', () => {
     const r = applySettingsPatch(before, { ui: { theme: 'dark' }, editor: { fontSize: 16 } });
     expect(r).toEqual({
       ok: true,
-      settings: { ...before, ui: { theme: 'dark' }, editor: { fontSize: 16, keymap: 'default' } },
+      settings: { ...before, ui: { theme: 'dark', leader: 'ctrl+b' }, editor: { fontSize: 16, keymap: 'default' } },
     });
     expect(before.ui.theme).toBe('system');
   });
@@ -127,10 +127,10 @@ describe('applySettingsPatch', () => {
 describe('settingsForFile', () => {
   it('keeps unknown keys at every level and writes every known setting', () => {
     const raw = { ui: { theme: 'nonsense', sidebar: 'left' }, plugins: { x: 1 }, tutor: 'bad' };
-    const settings = { ...defaultSettings(), ui: { theme: 'dark' as const } };
+    const settings = { ...defaultSettings(), ui: { theme: 'dark' as const, leader: 'ctrl+b' as const } };
     expect(settingsForFile(raw, settings)).toEqual({
       ...settings,
-      ui: { theme: 'dark', sidebar: 'left' },
+      ui: { theme: 'dark', leader: 'ctrl+b', sidebar: 'left' },
       plugins: { x: 1 },
     });
     expect(settingsForFile(undefined, settings)).toEqual(settings);
@@ -142,7 +142,7 @@ describe('changedSettings', () => {
     const a = defaultSettings();
     const b = {
       ...a,
-      ui: { theme: 'dark' as const },
+      ui: { theme: 'dark' as const, leader: 'ctrl+b' as const },
       updates: { channel: 'beta' as const, auto: true },
     };
     expect(changedSettings(a, b)).toEqual(['ui.theme', 'updates.channel']);

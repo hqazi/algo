@@ -90,6 +90,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | done |
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | done |
 | T35 | Collapsible panes and pane shortcuts | design | 1d | T34 | done |
+| T36 | Leader key (tmux-style) for pane actions | design | 1d | T35 | done |
 
 ## Order
 
@@ -2585,3 +2586,44 @@ and by keyboard, and the keyboard moves between panes.
   `docs/assets/` not retaken (the default layout is unchanged, bar a small
   icon at the end of each side pane's header and the results line); the
   other e2e files not run. Home's tutor card is not collapsible (it is a card, not a pane).
+
+### T36 — Leader key (tmux-style) for pane actions
+
+- Milestone: design
+- Spec: §4.3 (`ui.leader`); look in [`design.md`](design.md) → App frame
+- Size: 1d
+- Depends on: T35
+- Owns: `components/leader.ts`, `components/Leader.tsx`, the leader bindings in `Panes.tsx` and `PracticePage.tsx`, `ui.leader` in core and shared settings, Settings → Appearance and editor, their tests, `docs/guide/getting-started.md`
+
+**Goal.** Pane actions behind a leader key, as in tmux: press the leader,
+let go, then one key.
+
+**Acceptance.**
+- [x] A leader key, default Ctrl+B (Ctrl on macOS too), set in Settings (`ui.leader`: Ctrl+B, Ctrl+A, Ctrl+Space, off).
+- [x] It works with focus anywhere, the code editor included; neither the leader nor the key after it reaches the focused control. Escape, the leader again, an unbound key or leaving the window stop waiting; a chip shows it is waiting. Ignored while a dialog is open.
+- [x] Panes: `[` `]` hide/show the side panes, `z` hides both and restores, `h`/`l` (or arrows), `o`, `1`–`3` move between panes. Practice: `t` results, `j`/`k` (or arrows) results/editor, `r` Run, `s` Submit. `?` lists the actions of the page.
+- [x] T35's direct Ctrl/Cmd+B and Ctrl/Cmd+Alt+B removed (Ctrl+B is now the leader); Ctrl/Cmd+J, Ctrl/Cmd+1–3 and F6 kept.
+- [x] Tests; guide, SPEC §4.3, design.md, CHANGELOG updated.
+
+**Notes.** (2026-11-21)
+- **Built.** `LeaderProvider` (around the app, reading `ui.leader`; tests
+  use `LeaderKeys` with the setting given) listens on `window` in the
+  capture phase, so it sees the keys before CodeMirror and stops them
+  there. Pages add actions with `useLeaderBindings`, read when a key comes;
+  a later registration wins a shared key. `ResultsPanel`'s section takes
+  focus (`tabIndex -1`) for leader `j`. Collapse tooltips show the leader
+  keys ("Hide Problem (Ctrl+B [)"), none when the leader is off. D-57.
+- **Checked.** typecheck, lint, `npm test`. In the built app (xvfb):
+  Ctrl+B from inside the editor then `?` (dialog), `z` (both sides hidden,
+  nothing typed into the editor), `h`, `l` `l` (to the chat box), `r` (a
+  run), `j` (results focused), `k` (editor), `t`; screenshots looked at.
+  `settings`, `practice` and `library` e2e pass. Note: UI state in
+  `localStorage` (pane sizes, what is collapsed) lives in Electron's
+  profile, which the e2e runs share (`ALGOTUTOR_DATA_DIR` does not move
+  it); a run left with the results collapsed made `practice.e2e` fail
+  until that state was cleared.
+- **Not done.** No leader repeat (tmux's `-r` keys) and no way to send
+  the leader itself through (tmux's prefix twice); the leader twice just
+  cancels. Keys are fixed, only the leader is configurable. Library has
+  only the pane actions (none of its own). Not looked at in dark mode or
+  on the Library page in the built app; the other e2e files not run.

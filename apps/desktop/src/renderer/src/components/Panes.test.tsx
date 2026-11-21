@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PaneHeader } from './PaneHeader';
+import { LeaderKeys } from './Leader';
 import { Panes, type Pane } from './Panes';
 
 beforeEach(() => localStorage.clear());
@@ -122,42 +123,127 @@ describe('Panes', () => {
     expect(screen.getByRole('button', { name: 'count 1' })).toBeTruthy(); // state kept
   });
 
-  it('toggles the side panes with Ctrl+B and Ctrl+Alt+B', () => {
+  it('hides and shows the side panes with the leader then [ ] and z', () => {
     const { container } = render(
-      <Panes panes={PANES} storageKey="t" initialSizes={[30, 40, 30]} />,
+      <LeaderKeys setting="ctrl+b">
+        <Panes panes={PANES} storageKey="t" initialSizes={[30, 40, 30]} />
+      </LeaderKeys>,
     );
     const grid = container.querySelector('.panes') as HTMLElement;
-    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    const leader = () => fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    const press = (key: string) => fireEvent.keyDown(window, { key });
+    leader();
+    expect(screen.getByTestId('leader-waiting').textContent).toContain('Ctrl+B');
+    press('[');
+    expect(screen.queryByTestId('leader-waiting')).toBeNull();
     expect(grid.style.gridTemplateColumns).toBe('var(--pane-rail-w) 1px 40fr 1px 30fr');
-    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true, altKey: true });
+    expect(screen.getByRole('button', { name: 'Show Left' }).title).toBe('Show Left (Ctrl+B [)');
+    // Without the leader the keys do nothing.
+    press(']');
+    expect(grid.style.gridTemplateColumns).toBe('var(--pane-rail-w) 1px 40fr 1px 30fr');
+    leader();
+    press(']');
     expect(grid.style.gridTemplateColumns).toBe(
       'var(--pane-rail-w) 1px 40fr 1px var(--pane-rail-w)',
     );
-    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    leader();
+    press('[');
     expect(grid.style.gridTemplateColumns).toBe('30fr 1px 40fr 1px var(--pane-rail-w)');
-    // A key the focused control already handled (the editor's) is left alone.
-    const handled = new KeyboardEvent('keydown', { code: 'KeyB', ctrlKey: true, cancelable: true });
-    handled.preventDefault();
-    window.dispatchEvent(handled);
+    // z hides both, then brings back what was open.
+    leader();
+    press('Shift'); // modifiers alone keep it waiting
+    expect(screen.getByTestId('leader-waiting')).toBeTruthy();
+    press('z');
+    expect(grid.style.gridTemplateColumns).toBe(
+      'var(--pane-rail-w) 1px 40fr 1px var(--pane-rail-w)',
+    );
+    leader();
+    press('z');
     expect(grid.style.gridTemplateColumns).toBe('30fr 1px 40fr 1px var(--pane-rail-w)');
+    // Escape and unknown keys stop waiting and do nothing.
+    leader();
+    press('Escape');
+    expect(screen.queryByTestId('leader-waiting')).toBeNull();
+    leader();
+    press('q');
+    expect(screen.queryByTestId('leader-waiting')).toBeNull();
   });
 
-  it('goes to a pane with Ctrl+1/2/3 (opening it) and moves between them with F6', () => {
+  it('catches the leader and its key before the focused control sees them', () => {
+    const typed: string[] = [];
+    const panes: [Pane, Pane, Pane] = [
+      PANES[0],
+      {
+        ...PANES[1],
+        content: <textarea aria-label="Draft" onKeyDown={(e) => typed.push(e.key)} />,
+      },
+      PANES[2],
+    ];
+    render(
+      <LeaderKeys setting="ctrl+a">
+        <Panes panes={panes} storageKey="t" />
+      </LeaderKeys>,
+    );
+    const draft = screen.getByRole('textbox', { name: 'Draft' });
+    fireEvent.keyDown(draft, { code: 'KeyA', key: 'a', ctrlKey: true });
+    fireEvent.keyDown(draft, { key: '[' });
+    expect(typed).toEqual([]);
+    expect(screen.getByRole('button', { name: 'Show Left' })).toBeTruthy();
+    // Ctrl+B is not the leader now: it reaches the text box.
+    fireEvent.keyDown(draft, { code: 'KeyB', key: 'b', ctrlKey: true });
+    expect(typed).toEqual(['b']);
+  });
+
+  it('lists the actions on leader ?', () => {
+    render(
+      <LeaderKeys setting="ctrl+b">
+        <Panes panes={PANES} storageKey="t" />
+      </LeaderKeys>,
+    );
+    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    fireEvent.keyDown(window, { key: '?' });
+    const dialog = screen.getByRole('dialog', { name: 'Leader key actions' });
+    expect(dialog.textContent).toContain('Hide or show Left');
+    expect(dialog.textContent).toContain('Go to Middle');
+    // While a dialog is open the leader is left alone.
+    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    expect(screen.queryByTestId('leader-waiting')).toBeNull();
+  });
+
+  it('goes to a pane with Ctrl+1/2/3 or leader h/l/o (opening it), and F6', () => {
     const panes: [Pane, Pane, Pane] = [
       PANES[0],
       { ...PANES[1], content: <textarea aria-label="Draft" /> },
       PANES[2],
     ];
-    render(<Panes panes={panes} storageKey="t" />);
+    render(
+      <LeaderKeys setting="ctrl+b">
+        <Panes panes={panes} storageKey="t" />
+      </LeaderKeys>,
+    );
     const region = (name: string) => screen.getByRole('region', { name });
+    const leader = (key: string) => {
+      fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+      fireEvent.keyDown(window, { key });
+    };
     fireEvent.keyDown(window, { code: 'Digit2', key: '2', ctrlKey: true });
     expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Draft' }));
     // Collapsing the pane with focus hands it to the middle pane.
     fireEvent.keyDown(window, { code: 'Digit1', key: '1', ctrlKey: true });
     expect(region('Left').contains(document.activeElement)).toBe(true);
-    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    leader('[');
     expect(screen.getByRole('button', { name: 'Show Left' })).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Draft' }));
+    // Leader h goes left, opening the pane.
+    leader('h');
+    expect(region('Left').contains(document.activeElement)).toBe(true);
+    leader('l');
+    expect(region('Middle').contains(document.activeElement)).toBe(true);
+    leader('ArrowRight');
+    expect(region('Right').contains(document.activeElement)).toBe(true);
+    leader('o');
+    expect(region('Left').contains(document.activeElement)).toBe(true);
+    leader('[');
     // Ctrl+1 opens it again.
     fireEvent.keyDown(window, { code: 'Digit1', key: '1', ctrlKey: true });
     expect(screen.queryByRole('button', { name: 'Show Left' })).toBeNull();

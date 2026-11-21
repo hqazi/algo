@@ -52,6 +52,12 @@ const THEMES = [
   { id: 'light', label: 'Light' },
   { id: 'dark', label: 'Dark' },
 ] as const;
+const LEADERS = [
+  { id: 'ctrl+b', label: 'Ctrl+B (as in tmux)' },
+  { id: 'ctrl+a', label: 'Ctrl+A' },
+  { id: 'ctrl+space', label: 'Ctrl+Space' },
+  { id: 'off', label: 'Off' },
+] as const;
 const KEYMAPS = [
   { id: 'default', label: 'Standard' },
   { id: 'vim', label: 'Vim' },
@@ -135,6 +141,25 @@ function AppearanceSection() {
           ))}
         </select>
       </label>
+      <label className="field">
+        Leader key
+        <select
+          aria-label="Leader key"
+          aria-describedby="leader-hint"
+          value={s.ui.leader}
+          onChange={(e) => set({ ui: { leader: e.target.value as typeof s.ui.leader } })}
+        >
+          {LEADERS.map((k) => (
+            <option key={k.id} value={k.id}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="muted small" id="leader-hint">
+        Like tmux’s prefix: press the leader, let go, then a key. Then ? lists the actions (for
+        example [ and ] hide the side panes, h and l move between them, z hides both).
+      </p>
     </section>
   );
 }

@@ -7,6 +7,7 @@ import { ChatEffects } from './chat/ChatEffects';
 import { useChatStore, useTutorStatus } from './chat/store';
 import { TitleBar } from './components/AppFrame';
 import { Link } from './components/Link';
+import { LeaderProvider } from './components/Leader';
 import { Toasts } from './components/Toasts';
 import { NewProblemDialog } from './intake/NewProblemDialog';
 import { invoke, isRefusal } from './ipc';
@@ -168,7 +169,9 @@ export function Shell() {
 export function App() {
   return (
     <AppProvider>
-      <Shell />
+      <LeaderProvider>
+        <Shell />
+      </LeaderProvider>
     </AppProvider>
   );
 }

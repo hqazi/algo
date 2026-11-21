@@ -53,17 +53,34 @@ fold to their summary line the same way, with the button at the end of that
 line. The app remembers what you hid. On the Library page the **Articles**
 and **Chats** panes fold the same way.
 
-| Shortcut (Cmd instead of Ctrl on macOS) | What it does |
-|---|---|
-| Ctrl+B | Hide or show the left pane (Problem, Articles) |
-| Ctrl+Alt+B | Hide or show the right pane (Tutor, Chats) |
-| Ctrl+J | Hide or show the test results |
-| Ctrl+1, Ctrl+2, Ctrl+3 | Go to the left, middle or right pane (showing it if hidden): the editor, the chat box, or the pane's text |
-| F6, Shift+F6 | Go to the next or previous pane |
+**The leader key.** Like tmux's prefix: press **Ctrl+B** (Ctrl on macOS
+too), let go, then one key. A small note at the bottom of the window shows
+the app is waiting; Escape cancels. **Ctrl+B ?** lists every action on the
+page you are on.
 
-With the Vim or Emacs editor keymap on Windows or Linux, Ctrl+B in the
-editor keeps its editor meaning (a page up in Vim, back one character in
-Emacs); use F6 to leave the editor first, or click the panel button.
+| After the leader | What it does |
+|---|---|
+| `[` / `]` | Hide or show the left pane (Problem, Articles) / the right pane (Tutor, Chats) |
+| `z` | Hide both side panes; again to bring them back |
+| `h` or ← / `l` or → | Go to the pane on the left / right (showing it if hidden) |
+| `o` | Go to the next pane |
+| `1`, `2`, `3` | Go to the left, middle or right pane |
+| `t` | Practice: hide or show the test results |
+| `j` or ↓ / `k` or ↑ | Practice: go to the test results / the code editor |
+| `r` / `s` | Practice: Run / Submit |
+| `?` | List the actions |
+
+Going to a pane puts you in its editor or chat box, or on its text. The
+leader is caught everywhere, the code editor included, so Ctrl+B no longer
+reaches the editor (in the Vim keymap it is a page up, in Emacs back one
+character). To keep it there, choose another leader (Ctrl+A or
+Ctrl+Space), or turn it off, in **Settings → Appearance and editor →
+Leader key**.
+
+A few shortcuts work without the leader (Cmd instead of Ctrl on macOS):
+**Ctrl+J** hides or shows the test results, **Ctrl+1**, **Ctrl+2** and
+**Ctrl+3** go to a pane, and **F6** and **Shift+F6** go to the next or
+previous pane.
 
 **Keyboard.** Everything can be reached with Tab. In the code editor Tab
 indents; press **Escape** and then **Tab** to move on to the results and the

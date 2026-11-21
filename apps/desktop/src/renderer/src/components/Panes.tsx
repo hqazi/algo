@@ -6,9 +6,11 @@
  * its own (`header: false`).
  *
  * The side panes collapse to a thin rail (T35): the button at the end of their
- * header, or Ctrl/Cmd+B (left) and Ctrl/Cmd+Alt+B (right). Ctrl/Cmd+1, 2 and 3
- * go to a pane (opening it if collapsed); F6 and Shift+F6 move between them.
- * A collapsed pane stays mounted, so its state (a chat draft) survives.
+ * header, or the leader key (T36) then `[` (left) or `]` (right); leader `z`
+ * hides both and brings them back. Leader `h`/`l` (or arrows), `o` and `1`–`3`
+ * move between panes, as do Ctrl/Cmd+1, 2 and 3 and F6/Shift+F6. Going to a
+ * collapsed pane opens it. A collapsed pane stays mounted, so its state (a
+ * chat draft) survives.
  */
 import {
   useEffect,
@@ -21,7 +23,8 @@ import {
 import { PanelLeftOpen, PanelRightOpen } from 'lucide-react';
 import { useMedia, useStored } from '../lib/hooks';
 import { PaneHeader } from './PaneHeader';
-import { isMod, PaneControlContext, shortcutLabel, type PaneControl } from './pane-control';
+import { leaderKeys, useLeader, useLeaderBindings } from './leader';
+import { isMod, PaneControlContext, type PaneControl } from './pane-control';
 
 export interface Pane {
   id: string;
@@ -115,19 +118,83 @@ export function Panes({
     setPendingFocus(null);
   }, [pendingFocus, stored, narrow, active]);
 
-  // Latest state for the window listener.
+  /** The pane with focus (the middle one when none has it). */
+  const here = (): number => {
+    const i = sections.current.findIndex((s) => s?.contains(document.activeElement));
+    return i < 0 ? 1 : i;
+  };
   const toggle = (index: 0 | 2): void => (isCollapsed(index) ? goTo(index) : collapse(index));
-  const keys = useRef({ toggle, goTo, narrow });
-  keys.current = { toggle, goTo, narrow };
+
+  // Leader `z`: hide both side panes, then put back what was open.
+  const unzoom = useRef<Collapsed | null>(null);
+  function zoom(): void {
+    if (narrow) return;
+    if (!stored[0] || !stored[1]) {
+      unzoom.current = stored;
+      if (here() !== 1) setPendingFocus(1);
+      setCollapsed([true, true]);
+    } else {
+      setCollapsed(unzoom.current ?? [false, false]);
+      unzoom.current = null;
+    }
+  }
+
+  useLeaderBindings([
+    {
+      keys: ['h', 'ArrowLeft'],
+      label: 'Go to the pane on the left',
+      group: 'Panes',
+      run: () => goTo(Math.max(0, here() - 1)),
+    },
+    {
+      keys: ['l', 'ArrowRight'],
+      label: 'Go to the pane on the right',
+      group: 'Panes',
+      run: () => goTo(Math.min(2, here() + 1)),
+    },
+    {
+      keys: ['o'],
+      label: 'Go to the next pane',
+      group: 'Panes',
+      run: () => goTo((here() + 1) % 3),
+    },
+    ...([0, 1, 2] as const).map((i) => ({
+      keys: [String(i + 1)],
+      label: `Go to ${panes[i].title}`,
+      group: 'Panes',
+      run: () => goTo(i),
+    })),
+    ...(narrow
+      ? []
+      : [
+          {
+            keys: ['['],
+            label: `Hide or show ${panes[0].title}`,
+            group: 'Panes',
+            run: () => toggle(0),
+          },
+          {
+            keys: [']'],
+            label: `Hide or show ${panes[2].title}`,
+            group: 'Panes',
+            run: () => toggle(2),
+          },
+          {
+            keys: ['z'],
+            label: `Hide both side panes, or bring them back`,
+            group: 'Panes',
+            run: zoom,
+          },
+        ]),
+  ]);
+
+  // Direct keys (not behind the leader): Ctrl/Cmd+1-3 and F6.
+  const keys = useRef({ goTo });
+  keys.current = { goTo };
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent): void => {
       if (e.defaultPrevented) return;
       const k = keys.current;
-      if (e.code === 'KeyB' && !k.narrow && (isMod(e) || isMod(e, { alt: true }))) {
-        e.preventDefault();
-        k.toggle(e.altKey ? 2 : 0);
-        return;
-      }
       const digit = /^Digit([1-3])$/.exec(e.code);
       if (digit && isMod(e)) {
         e.preventDefault();
@@ -209,7 +276,8 @@ export function Panes({
       />
     );
 
-  const shortcuts = { left: shortcutLabel('B'), right: shortcutLabel('B', { alt: true }) };
+  const leader = useLeader()?.label ?? null;
+  const shortcuts = { left: leaderKeys(leader, '['), right: leaderKeys(leader, ']') };
 
   // One tree for both layouts, so crossing 900px keeps each pane's state
   // (editor, drafts, open chats): only the tabs, gutters and rails come and go.
@@ -244,7 +312,7 @@ export function Panes({
             className="pane-rail"
             aria-label={`Show ${p.title}`}
             aria-expanded={false}
-            title={`Show ${p.title} (${shortcuts[side]})`}
+            title={shortcuts[side] ? `Show ${p.title} (${shortcuts[side]})` : `Show ${p.title}`}
             onClick={() => goTo(index)}
           >
             <Open size={16} aria-hidden="true" />

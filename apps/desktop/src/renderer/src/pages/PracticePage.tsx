@@ -20,6 +20,7 @@ import { Editor } from '../components/Editor';
 import { ExplanationList } from '../explanation/ExplanationList';
 import { Markdown } from '../components/Markdown';
 import { Panes } from '../components/Panes';
+import { useLeaderBindings } from '../components/leader';
 import { isMod } from '../components/pane-control';
 import { ResultsPanel } from '../components/ResultsPanel';
 import { Dialog } from '../components/Dialog';
@@ -373,6 +374,39 @@ export function PracticePage({ slug }: { slug: string }) {
     setOnDisk(null);
     setSaveState('saved');
   }
+
+  // Leader actions (T36): the results, the editor, Run and Submit.
+  function focusResults(): void {
+    if (resultsCollapsed) setResultsCollapsed(false);
+    document.querySelector<HTMLElement>('.code-pane .results')?.focus();
+  }
+  useLeaderBindings([
+    { keys: ['t'], label: 'Hide or show the test results', group: 'Practice', run: toggleResults },
+    {
+      keys: ['j', 'ArrowDown'],
+      label: 'Go to the test results',
+      group: 'Practice',
+      run: focusResults,
+    },
+    {
+      keys: ['k', 'ArrowUp'],
+      label: 'Go to the code editor',
+      group: 'Practice',
+      run: () => document.querySelector<HTMLElement>('.code-pane .cm-content')?.focus(),
+    },
+    {
+      keys: ['r'],
+      label: 'Run the visible tests',
+      group: 'Practice',
+      run: () => void execute('run'),
+    },
+    {
+      keys: ['s'],
+      label: 'Submit (all tests)',
+      group: 'Practice',
+      run: () => void execute('submit'),
+    },
+  ]);
 
   // Page-wide shortcuts (the editor handles its own and marks them handled).
   // Ctrl/Cmd+J hides or shows the test results (T35); Panes has the pane keys.
