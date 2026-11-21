@@ -24,10 +24,21 @@ files:
   - '!**/*.map'
 
 asar: true
-# Nothing native to rebuild: the main process is one bundle.
+# Nothing native to rebuild: the main process is one bundle, and
+# onnxruntime-node ships prebuilt N-API binaries (any Electron).
 npmRebuild: false
 
 extraResources:
+  # Read aloud (T38, D-59): onnxruntime-node is native code, so it ships
+  # outside the asar as `<resources>/onnxruntime-node`, with only the
+  # binaries for the platform and architecture being built (see each
+  # platform below) and its one runtime dependency.
+  - from: ../../node_modules/onnxruntime-node
+    to: onnxruntime-node
+    filter: [package.json, LICENSE*, 'dist/**/*.js']
+  - from: ../../node_modules/onnxruntime-common
+    to: onnxruntime-node/node_modules/onnxruntime-common
+    filter: [package.json, LICENSE*, 'dist/cjs/**/*.js', 'dist/cjs/package.json']
   # Curated problems and open-set indexes: `<resources>/content` (D-22).
   - from: ../../content
     to: content
@@ -46,6 +57,9 @@ publish:
 
 mac:
   category: public.app-category.education
+  extraResources:
+    - from: ../../node_modules/onnxruntime-node/bin/napi-v6/darwin/${arch}
+      to: onnxruntime-node/bin/napi-v6/darwin/${arch}
   target:
     - target: dmg
       arch: [x64, arm64]
@@ -56,6 +70,9 @@ mac:
   # Notarizes only when APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER are set.
 
 win:
+  extraResources:
+    - from: ../../node_modules/onnxruntime-node/bin/napi-v6/win32/${arch}
+      to: onnxruntime-node/bin/napi-v6/win32/${arch}
   target:
     - target: nsis
       arch: [x64]
@@ -67,6 +84,9 @@ nsis:
   deleteAppDataOnUninstall: false
 
 linux:
+  extraResources:
+    - from: ../../node_modules/onnxruntime-node/bin/napi-v6/linux/${arch}
+      to: onnxruntime-node/bin/napi-v6/linux/${arch}
   # Linux only: macOS and Windows keep the product name (`Algo.app`,
   # `Algo.exe`); a top-level executableName renames those too.
   executableName: algo

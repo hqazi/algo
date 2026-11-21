@@ -6,6 +6,8 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { FolderView, OfflineProgress } from '../../../shared/library';
+import type { TtsStatus } from '../../../shared/tts';
+import { engineText, formatMB } from '../library/read-aloud-text';
 import { invoke, stream } from '../ipc';
 import { Folder } from 'lucide-react';
 import { errorText, useApp } from '../lib/app-context';
@@ -84,6 +86,63 @@ function LinkedImagesSettings() {
           >
             Clear
           </button>
+        </p>
+      </SettingRow>
+    </div>
+  );
+}
+
+/**
+ * The read-aloud voice (T38, D-59): whether Kokoro is downloaded, where it
+ * runs, and Remove. It is downloaded from the reader, on first use.
+ */
+function ReadAloudSettings() {
+  const app = useApp();
+  const [status, setStatus] = useState<TtsStatus | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void invoke('tts:status').then(
+      (s) => live && setStatus(s),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  async function remove(): Promise<void> {
+    try {
+      setStatus(await invoke('tts:remove'));
+    } catch (err) {
+      app.notify(errorText(err), 'error');
+    }
+  }
+
+  const engine = engineText(status?.engine ?? null);
+  return (
+    <div className="read-aloud-settings" data-testid="read-aloud-settings">
+      <h3>Read aloud</h3>
+      <SettingRow label="Voice">
+        <p className="setting-inline" data-testid="read-aloud-voice">
+          <span>
+            {!status
+              ? 'Kokoro: …'
+              : status.installed
+                ? `Kokoro is downloaded (${formatMB(status.bytes)}).${engine ? ` ${engine}.` : ''}`
+                : status.downloading
+                  ? 'Kokoro is downloading.'
+                  : `Not downloaded (${formatMB(status.bytes)}). The reader offers it the first time you read aloud.`}
+          </span>{' '}
+          {status?.installed && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => void remove()}
+            >
+              Remove
+            </button>
+          )}
         </p>
       </SettingRow>
     </div>
@@ -273,6 +332,7 @@ export function LibrarySection() {
         </button>
       </div>
       <LinkedImagesSettings />
+      <ReadAloudSettings />
     </section>
   );
 }

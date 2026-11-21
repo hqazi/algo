@@ -196,12 +196,16 @@ JetBrains Mono.
   ("2 min ago", full date in a tooltip); the open thread's **Rename**,
   **New chat**, **Close** as icon buttons; the same message and composer
   styles as Practice.
-- **Read aloud (T37):** a speaker icon button at the end of the Reader's
+- **Read aloud (T37, T38):** a speaker icon button at the end of the Reader's
   header (pressed while on). While on, a bar sticks to the foot of the
   reader pane (surface, top border): back, play/pause, forward as icon
-  buttons, "n of m" in muted tabular numbers, then speed and voice selects
+  buttons, "n of m" in muted tabular numbers (where the engine runs in its
+  tooltip), a small spinner with "Starting the voice…" while the first
+  chunk is made, then speed and voice selects (voices grouped by accent)
   and a close icon. The block being read has an `--accent-subtle`
-  background with a 4px halo of the same colour.
+  background with a 4px halo of the same colour. The first time, a dialog
+  offers the download with its size; a thin progress bar and "n MB of m MB"
+  while it downloads.
 
 ### Onboarding, Settings, dialogs (T33)
 

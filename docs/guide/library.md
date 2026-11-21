@@ -52,23 +52,27 @@ with size and time limits. The page itself never contacts a website.
 ## Listening to an article
 
 **Read aloud** (the speaker button in the Reader's header) reads the
-article to you with your computer's own voices. It starts at the top, or
-at the paragraph you have selected text in. The paragraph being read is
-highlighted and kept in view; code blocks and images are skipped.
+article to you with **Kokoro**, an open-source neural voice that runs on
+your computer. It starts at the top, or at the paragraph you have selected
+text in. The paragraph being read is highlighted and kept in view; code
+blocks and images are skipped.
+
+The first time, the app offers to download the voice: 324 MB, once, from
+Hugging Face. After that, reading aloud works offline and nothing you read
+leaves your computer. The first paragraph takes a little longer while the
+voice starts; the app also checks once whether your graphics card makes it
+faster than the processor, and uses whichever is quicker.
+**Settings → Library** shows where it runs and has **Remove** to delete
+the download.
 
 While it reads, a bar at the bottom of the reader has **Previous
-paragraph**, **Pause**/**Resume**, **Next paragraph**, where it is, the
-**speed** (0.75× to 2×), the **voice** and **Stop**. Speed and voice are
-remembered on this computer. Opening another article or leaving the
-Library stops it. With the [leader key](getting-started.md), `p` starts,
-pauses and resumes, `n` and `b` move a paragraph forward and back, and `x`
-stops.
-
-The voices are the system's, so the text never leaves your computer.
-macOS and Windows come with voices (add more in the system's speech or
-language settings). On Linux the app uses **speech-dispatcher**; if the
-button is greyed out, install it and a voice, for example
-`sudo apt install speech-dispatcher espeak-ng`, then restart the app.
+paragraph**, **Pause**/**Resume** (it pauses mid-sentence), **Next
+paragraph**, where it is, the **speed** (0.75× to 2×), the **voice** (28
+American and British English voices; Heart is the default) and **Stop**.
+Speed and voice are remembered on this computer. Opening another article
+or leaving the Library stops it. With the
+[leader key](getting-started.md), `p` starts, pauses and resumes, `n` and
+`b` move a paragraph forward and back, and `x` stops.
 
 ## Chatting about a passage
 

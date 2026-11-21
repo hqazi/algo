@@ -1989,7 +1989,7 @@ left a choice.
 - **T35's Ctrl/Cmd+B and Ctrl/Cmd+Alt+B are gone** (Ctrl+B is the leader);
   Ctrl/Cmd+J, Ctrl/Cmd+1–3 and F6 stay as direct keys.
 
-**D-58 Read aloud with the system's voices** (2026-11-21, T37)
+**D-58 Read aloud with the system's voices** (2026-11-21, T37; the voice is replaced by D-59)
 
 - **Web Speech API, not a cloud or bundled voice.** Asked for: text to
   speech for Library articles. `speechSynthesis` in the renderer uses the
@@ -2019,3 +2019,56 @@ left a choice.
   next/previous window), `x` (stop; tmux's kill). Only while an article is
   open and a voice exists.
 
+**D-59 Read aloud with Kokoro, on the GPU when it is faster** (2026-11-21, T38)
+
+- **Why.** The system voices of D-58 sounded poor (on Linux, eSpeak through
+  speech-dispatcher); asked for: an open-source voice such as Kokoro, on the
+  GPU if that helps. Kokoro-82M v1.0 (Apache-2.0) replaces the Web Speech
+  API entirely; one engine is simpler to keep right than two. The blocks,
+  chunks, highlight, bar and leader keys of D-58 stay.
+- **Native runtime, not the browser.** Measured in this container (4
+  cores): one 9.4 s sentence took 24 s with transformers.js on WebAssembly
+  (q8, one thread), 17 s with threads, 5.7 s with onnxruntime-node on the
+  CPU (q8) and 2.5 s with the full-precision model. So the engine is
+  onnxruntime-node 1.31.1 in an Electron **utility process**, the full
+  model (`model.onnx`, 325 MB: faster and better than the quantized ones on
+  a native CPU), and no transformers.js or kokoro-js (they would ship
+  onnxruntime-web and sharp for nothing). The text side (normalization,
+  eSpeak NG phonemes, the vocabulary) is ported from kokoro-js 1.2.1
+  (`main/tts/text.ts`) and checked to give the same phonemes.
+- **GPU only when faster.** onnxruntime-node 1.31 bundles a WebGPU provider
+  (Dawn: Vulkan on Linux, Metal on macOS, D3D12 on Windows) and, on
+  Windows, DirectML; CUDA needs a separate install, so it is not used. On
+  first use the CPU and the GPU are timed on the same sentence (after a
+  warm-up each) and the GPU is kept only at 1.2× the CPU's speed or better;
+  a GPU whose warm-up is far slower than the CPU's run is not timed again
+  (a software Vulkan driver here: 0.2× against the CPU's 3.9×). The choice
+  is saved in `device.json` beside the model, keyed by runtime version and
+  platform, and made again if the GPU fails to open. `ALGO_TTS_DEVICE`
+  forces one. Not measured on a real GPU (none here).
+- **Download on request, pinned and hashed.** The model is not in the
+  installer (it would triple it); the first Read aloud offers it with its
+  size. Main downloads from one revision of
+  `onnx-community/Kokoro-82M-v1.0-ONNX`, redirects only to Hugging Face
+  hosts, SHA-256 per file, `.part` then rename, `ready.json` last; one
+  download shared by its callers. It lives in the cache folder: not
+  exported, re-downloadable.
+- **Audio over IPC, Web Audio in the renderer.** `tts:speak` returns a
+  `Float32Array` (24 kHz mono); the renderer plays it and asks for the next
+  chunk while one plays, so there is no gap. Pause suspends the
+  `AudioContext`, so it stops mid-sentence and resumes there (better than
+  D-58's cancel). A new speed or voice applies from the start of the
+  current chunk. The renderer's CSP is unchanged (`connect-src 'none'`).
+- **Packaging.** `onnxruntime-node` is native: `electron-builder.yml` ships
+  it outside the asar as `<resources>/onnxruntime-node` with only the
+  binaries for the platform and architecture built (47 MB on Linux x64),
+  and main passes its path to the utility process. Checked in a packaged
+  Linux build with its fuses on; not built for macOS or Windows here
+  (macOS signing of the dylib is untested).
+- **VERIFY eSpeak NG's licence before a release.** `phonemizer` (1.2.1) is
+  labelled Apache-2.0 but contains eSpeak NG, which is GPL-3.0-or-later, and
+  it is bundled into the utility process. Notices are in
+  `build/notices/espeak-ng.txt`. Whether shipping it this way is acceptable
+  for an Apache-2.0 app (or whether eSpeak should be downloaded with the
+  model, or replaced by a dictionary-based phonemizer) is for the
+  maintainer to decide before the next release.

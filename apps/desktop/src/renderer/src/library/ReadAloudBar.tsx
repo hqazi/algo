@@ -1,17 +1,16 @@
 /**
- * Read aloud (T37, SPEC §15.6): the header button that starts and stops it,
- * and the bar kept at the bottom of the reader while it is on: back,
- * play/pause, forward, where it is, speed, voice and stop.
+ * Read aloud (T37, T38, SPEC §15.6): the header button that starts and
+ * stops it, the bar kept at the bottom of the reader while it is on (back,
+ * play/pause, forward, where it is, speed, voice, stop), and the offer to
+ * download the voice the first time.
  */
 import { Pause, Play, SkipBack, SkipForward, Volume2, X } from 'lucide-react';
-import { IconButton, Select } from '../components/ui';
+import { VOICES, type VoiceId } from '../../../shared/tts';
+import { Dialog } from '../components/Dialog';
 import { leaderKeys, useLeader } from '../components/leader';
+import { Button, IconButton, Select } from '../components/ui';
+import { engineText, formatMB } from './read-aloud-text';
 import { RATES, type ReadAloud } from './useReadAloud';
-
-/** Why it cannot start, for the disabled button's tooltip. */
-export const NO_VOICES =
-  'Read aloud needs a text-to-speech voice on this computer; none was found ' +
-  '(on Linux, install speech-dispatcher and a voice such as espeak-ng)';
 
 function withKeys(text: string, keys: string | null): string {
   return keys ? `${text} (${keys})` : text;
@@ -20,20 +19,20 @@ function withKeys(text: string, keys: string | null): string {
 export function ReadAloudButton({ speech }: { speech: ReadAloud }) {
   const leader = useLeader()?.label ?? null;
   const on = speech.status !== 'idle';
+  const first =
+    speech.installed === false && speech.info
+      ? ` (downloads a ${formatMB(speech.info.bytes)} voice the first time)`
+      : '';
   return (
     <IconButton
       aria-label={on ? 'Stop reading aloud' : 'Read aloud'}
-      title={
-        speech.available
-          ? withKeys(
-              on ? 'Stop reading aloud' : 'Read aloud: from the top, or from the selected text',
-              leaderKeys(leader, on ? 'x' : 'p'),
-            )
-          : NO_VOICES
-      }
+      title={withKeys(
+        on ? 'Stop reading aloud' : `Read aloud: from the top, or from the selected text${first}`,
+        leaderKeys(leader, on ? 'x' : 'p'),
+      )}
       size="sm"
       aria-pressed={on}
-      disabled={!speech.available}
+      disabled={speech.installed === null}
       icon={<Volume2 aria-hidden="true" />}
       onClick={() => (on ? speech.stop() : speech.start())}
       data-testid="read-aloud"
@@ -41,18 +40,18 @@ export function ReadAloudButton({ speech }: { speech: ReadAloud }) {
   );
 }
 
-/** Voices in the app's language first, then by name. */
-function sortVoices(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice[] {
-  const lang = (navigator.language || 'en').slice(0, 2).toLowerCase();
-  const mine = (v: SpeechSynthesisVoice): number => (v.lang.toLowerCase().startsWith(lang) ? 0 : 1);
-  return [...voices].sort((a, b) => mine(a) - mine(b) || a.name.localeCompare(b.name));
-}
+const ACCENTS = [
+  { accent: 'US', label: 'American English' },
+  { accent: 'UK', label: 'British English' },
+] as const;
 
 export function ReadAloudBar({ speech }: { speech: ReadAloud }) {
   const leader = useLeader()?.label ?? null;
   if (speech.status === 'idle' || !speech.at) return null;
-  const playing = speech.status === 'playing';
+  const paused = speech.status === 'paused';
+  const loading = speech.status === 'loading';
   const { block, of } = speech.at;
+  const engine = engineText(speech.info?.engine ?? null);
   return (
     <div className="read-aloud-bar" role="region" aria-label="Read aloud">
       <IconButton
@@ -64,10 +63,10 @@ export function ReadAloudBar({ speech }: { speech: ReadAloud }) {
         disabled={block === 0}
       />
       <IconButton
-        aria-label={playing ? 'Pause' : 'Resume'}
-        title={withKeys(playing ? 'Pause' : 'Resume', leaderKeys(leader, 'p'))}
+        aria-label={paused ? 'Resume' : 'Pause'}
+        title={withKeys(paused ? 'Resume' : 'Pause', leaderKeys(leader, 'p'))}
         size="sm"
-        icon={playing ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+        icon={paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
         onClick={speech.toggle}
       />
       <IconButton
@@ -78,9 +77,15 @@ export function ReadAloudBar({ speech }: { speech: ReadAloud }) {
         onClick={() => speech.skip(1)}
         disabled={block >= of - 1}
       />
-      <span className="small muted read-aloud-at" aria-live="off">
+      <span className="small muted read-aloud-at" aria-live="off" title={engine ?? undefined}>
         {block + 1} of {of}
       </span>
+      {loading && (
+        <span className="small muted read-aloud-loading" role="status">
+          <span className="spinner" aria-hidden="true" />{' '}
+          {speech.info?.engine ? 'Preparing…' : 'Starting the voice…'}
+        </span>
+      )}
       <span className="spacer" />
       <Select
         aria-label="Speed"
@@ -99,14 +104,17 @@ export function ReadAloudBar({ speech }: { speech: ReadAloud }) {
         aria-label="Voice"
         title="Voice"
         wrapperClassName="read-aloud-voice"
-        value={speech.prefs.voice ?? ''}
-        onChange={(e) => speech.setVoice(e.target.value || null)}
+        value={speech.prefs.voice}
+        onChange={(e) => speech.setVoice(e.target.value as VoiceId)}
       >
-        <option value="">System default</option>
-        {sortVoices(speech.voices).map((v) => (
-          <option key={v.voiceURI} value={v.voiceURI}>
-            {v.name} ({v.lang})
-          </option>
+        {ACCENTS.map((a) => (
+          <optgroup key={a.accent} label={a.label}>
+            {VOICES.filter((v) => v.accent === a.accent).map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name} ({v.gender})
+              </option>
+            ))}
+          </optgroup>
         ))}
       </Select>
       <IconButton
@@ -117,5 +125,51 @@ export function ReadAloudBar({ speech }: { speech: ReadAloud }) {
         onClick={speech.stop}
       />
     </div>
+  );
+}
+
+/** The first time: what the download is, and its progress. */
+export function ReadAloudOffer({ speech }: { speech: ReadAloud }) {
+  if (!speech.offer) return null;
+  const size = formatMB(speech.info?.bytes ?? 0);
+  const d = speech.downloading;
+  return (
+    <Dialog
+      titleId="read-aloud-offer"
+      title="Download a voice for reading aloud?"
+      onClose={speech.dismiss}
+      backdropCloses={false}
+      footer={
+        <>
+          <Button onClick={speech.dismiss}>{d ? 'Cancel download' : 'Not now'}</Button>
+          <Button variant="primary" onClick={speech.download} disabled={!!d}>
+            {d ? 'Downloading…' : `Download (${size})`}
+          </Button>
+        </>
+      }
+    >
+      <p>
+        Algo reads articles with Kokoro, an open-source voice model that runs on this computer. It
+        is downloaded once from Hugging Face ({size}). After that, reading aloud works offline, and
+        nothing you read leaves the computer.
+      </p>
+      <p className="small muted">
+        It uses the graphics card when that is faster than the processor. You can remove the
+        download in Settings → Library.
+      </p>
+      {d && (
+        <div className="read-aloud-progress">
+          <progress
+            max={d.total || 1}
+            value={d.received}
+            aria-label="Voice download"
+            aria-valuetext={`${formatMB(d.received)} of ${formatMB(d.total)}`}
+          />
+          <span className="small muted">
+            {formatMB(d.received)} of {formatMB(d.total)}
+          </span>
+        </div>
+      )}
+    </Dialog>
   );
 }

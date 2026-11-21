@@ -67,6 +67,8 @@ export default defineConfig({
           'storage-check': src('main/storage/check.ts'),
           // `npm run e2e` (library.e2e.ts): the app with a local image-host stand-in.
           'e2e-main': src('main/e2e-main.ts'),
+          // Read aloud (T38): the Kokoro engine's utility process.
+          'tts-worker': src('main/tts/worker.ts'),
         },
       },
     },

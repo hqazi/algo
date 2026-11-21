@@ -66,6 +66,9 @@ export const INVOKE_CHANNELS = [
   'library:load-images',
   'library:image-cache',
   'library:clear-image-cache',
+  'tts:status',
+  'tts:speak',
+  'tts:remove',
   'updates:status',
   'updates:check',
   'updates:download',
@@ -78,6 +81,7 @@ export const STREAM_CHANNELS = [
   'intake:events',
   'updates:watch',
   'exec:pull',
+  'tts:download',
   'library:watch',
   'library:offline',
 ] as const;

@@ -3,6 +3,7 @@
  * (`security-check.ts`), so the check runs exactly what ships.
  */
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import {
   app,
@@ -13,6 +14,7 @@ import {
   protocol,
   session,
   shell,
+  utilityProcess,
 } from 'electron';
 import { isoNow } from '@algo/core';
 import { EXEC_SCHEME_PRIVILEGES } from './exec/host-window';
@@ -43,6 +45,8 @@ import { electronCrypto } from './secrets/electron-crypto';
 import type { AppStorage } from './storage';
 import { DEFAULT_MODEL, openTutor, type AppTutor } from './tutor';
 import { openUpdater, registerUpdateHandlers, type UpdateService } from './updater';
+import { ModelStore, registerTtsHandlers, TtsHost } from './tts';
+import type { FetchFn as TtsFetch } from './tts/model';
 import {
   APP_SCHEME_PRIVILEGES,
   guardAllWebContents,
@@ -65,6 +69,8 @@ export interface TestHooks {
   imageDownload?: (url: string, signal?: AbortSignal) => Promise<Downloaded>;
   /** Called with the real path of every file the library asset route serves. */
   onAssetServed?: (path: string) => void;
+  /** Replaces the read-aloud model download's `fetch` (a local stand-in for Hugging Face). */
+  ttsFetch?: TtsFetch;
 }
 let testHooks: TestHooks = {};
 export function setTestHooks(hooks: TestHooks): void {
@@ -86,9 +92,6 @@ export function beforeReady(hooks: SetupHooks = {}): void {
   // --no-sandbox (development as root only) skips it; every window still sets
   // `sandbox: true` itself.
   if (!app.commandLine.hasSwitch('no-sandbox')) app.enableSandbox();
-  // Read aloud in the Library (T37, D-58): Chromium on Linux reaches the
-  // system's voices only through speech-dispatcher, and only with this switch.
-  if (process.platform === 'linux') app.commandLine.appendSwitch('enable-speech-dispatcher');
   // Electron takes one call for every custom scheme: the UI's and the
   // execution host's (T07; the executor is wired to IPC in T08).
   protocol.registerSchemesAsPrivileged([APP_SCHEME_PRIVILEGES, EXEC_SCHEME_PRIVILEGES]);
@@ -323,6 +326,29 @@ export async function startPractice(
       return true;
     },
   });
+  // Read aloud with Kokoro (T38): the model is downloaded on request; the
+  // engine runs in a utility process, started on the first chunk.
+  const ttsStore = new ModelStore({
+    cacheDir: storage.paths.cache,
+    ...(testHooks.ttsFetch ? { fetch: testHooks.ttsFetch } : {}),
+  });
+  const forced = process.env['ALGO_TTS_DEVICE'];
+  const ttsHost = new TtsHost({
+    modelDir: ttsStore.dir,
+    // Shipped outside the asar (native code); in development, from node_modules.
+    ortPath: app.isPackaged
+      ? join(process.resourcesPath, 'onnxruntime-node')
+      : createRequire(import.meta.url).resolve('onnxruntime-node'),
+    force: forced === 'cpu' || forced === 'gpu' ? forced : undefined,
+    fork: (config) =>
+      utilityProcess.fork(join(mainDir, 'tts-worker.js'), [], {
+        serviceName: 'Algo read aloud',
+        env: { ...process.env, ALGO_TTS_CONFIG: JSON.stringify(config) },
+        stdio: 'inherit',
+      }),
+    log: (m) => console.warn(m),
+  });
+  registerTtsHandlers(router, { store: ttsStore, host: ttsHost, log: (m) => console.warn(m) });
   // Updates (T13): only installed builds have an updater.
   const updates = await openUpdater({
     packaged: app.isPackaged,
@@ -338,6 +364,7 @@ export async function startPractice(
     intake,
     updates,
     dispose: () => {
+      ttsHost.stop();
       updates.stop();
       void tutor.close();
       practice.dispose();

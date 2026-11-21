@@ -20,7 +20,7 @@ import { WriteArticle } from '../library/WriteArticle';
 import { ArticleChatPane } from '../library/chat/ArticleChatPane';
 import { PassageLayer } from '../library/chat/PassageLayer';
 import { useArticleChats } from '../library/chat/useArticleChats';
-import { ReadAloudBar, ReadAloudButton } from '../library/ReadAloudBar';
+import { ReadAloudBar, ReadAloudButton, ReadAloudOffer } from '../library/ReadAloudBar';
 import { Reader } from '../library/Reader';
 import { useReadAloud } from '../library/useReadAloud';
 import './library.css';
@@ -140,10 +140,10 @@ export function LibraryPage({ article }: { article: string | null }) {
     </>
   );
 
-  // Read aloud (T37): leader keys while an article is open.
+  // Read aloud (T37, T38): leader keys while an article is open.
   const reading = speech.status !== 'idle';
   useLeaderBindings(
-    article && speech.available
+    article && speech.installed !== null
       ? [
           {
             keys: ['p'],
@@ -182,6 +182,7 @@ export function LibraryPage({ article }: { article: string | null }) {
         layer={(body, html) => <PassageLayer body={body} html={html} chats={chats} onAsk={onAsk} />}
       />
       <ReadAloudBar speech={speech} />
+      <ReadAloudOffer speech={speech} />
     </div>
   ) : (
     <div className="lib-placeholder">

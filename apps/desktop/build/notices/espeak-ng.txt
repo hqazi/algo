@@ -1,0 +1,22 @@
+eSpeak NG (in phonemizer.js)
+
+Read aloud (T38) turns text into phonemes with eSpeak NG, compiled to
+WebAssembly and packaged as the `phonemizer` npm package (1.2.1, by Xenova),
+which is bundled unmodified into the read-aloud utility process
+(app.asar, out/main/tts-worker.js).
+
+phonemizer.js is published under the Apache License 2.0:
+https://github.com/xenova/phonemizer.js
+
+eSpeak NG, which it contains, is licensed under the GNU General Public
+License, version 3 or later: https://www.gnu.org/licenses/gpl-3.0.html
+Source code: https://github.com/espeak-ng/espeak-ng
+
+The text normalization in src/main/tts/text.ts is ported from kokoro-js
+1.2.1 (Apache License 2.0, by hexgrad and Xenova):
+https://github.com/hexgrad/kokoro/tree/main/kokoro.js
+
+Not shipped with the app: the Kokoro-82M model and voices (Apache License
+2.0, https://huggingface.co/hexgrad/Kokoro-82M), which the app downloads
+from https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX when you
+first read aloud.

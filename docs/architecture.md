@@ -13,8 +13,10 @@ flowchart LR
     UI["<b>UI window</b><br/>React · CodeMirror 6<br/><i>sandboxed renderer</i>"]
     Main["<b>Main process</b> (Node)<br/>IPC handlers · storage · secrets<br/>tutor backends · executors · updater"]
     Host["<b>Execution host</b><br/>hidden window, no network<br/>Pyodide in a Web Worker per job"]
+    Voice["<b>Read-aloud process</b><br/>utility process<br/>Kokoro on ONNX Runtime (GPU or CPU)"]
     UI -- "typed IPC<br/>(preload bridge, zod-validated)" --> Main
     Main -- "MessagePort" --> Host
+    Main -- "text → samples" --> Voice
   end
   Core[["packages/core<br/>pure logic: problems, grading,<br/>recommender, tools, prompts"]]
   Main --- Core
@@ -34,6 +36,11 @@ flowchart LR
 - **The execution host** is a hidden, sandboxed, network-blocked window that
   runs Python in [Pyodide](https://pyodide.org). The user's Python and any
   code the model writes run only here.
+- **The read-aloud process** (`main/tts/`) is an Electron utility process,
+  started on the first chunk the reader asks for and stopped when idle. It
+  runs the Kokoro voice model with onnxruntime-node, on the GPU when that
+  is faster, and only turns text into audio samples. The model is
+  downloaded once, on request, by the main process.
 - **`packages/core`** is pure TypeScript with no Electron or Node-only
   imports: problem schema and validation, test comparison, the recommender and
   levels, the hint ladder, tutor tools and the system prompt. Storage,
@@ -105,5 +112,6 @@ turns (see `apps/desktop/e2e/fake-tutor*.json`).
 | Solutions | `workspace/<slug>/solution.<ext>`, plain files the user can edit |
 | New problems, explanations, tutor-written articles | Folders in the data directory |
 | Downloaded article images | `cache/article-images/` (not exported) |
+| The read-aloud voice model | `cache/kokoro-v1.0/` (not exported) |
 
 See [SPEC §4](SPEC.md#4-data-and-settings) for the details.

@@ -632,6 +632,7 @@ language).
 | Library: an article instructs the tutor (v3) | Delimited untrusted data; article-mode tools read only the open article; no file, network or code tools (15.5). |
 | Library: a reply carries data out through an image URL (v3) | Chat never renders images; only references in the article file are ever downloaded (15.4, 15.5). |
 | Library: passages sent to the AI provider (v3) | Stated once before the first article message (15.5). Nothing is sent while only reading. |
+| Read aloud: a tampered voice model (v3) | Downloaded by the main process only, on request, from one pinned Hugging Face revision; `https`, redirects only to Hugging Face hosts; each file's SHA-256 checked before use (15.6). The engine runs in a utility process; the renderer only sends text and receives samples. |
 | Malicious update | Updates only from the project's GitHub Releases over HTTPS; signed builds (11) verified by the OS/updater. |
 
 ## 11. Packaging and updates
@@ -698,7 +699,8 @@ tutor, several chats per article, each tied to a passage. Decisions: D-37
 The app **reads** Markdown folders the user chooses, typically an Obsidian
 vault (or part of one) filled by the Obsidian Web Clipper. It **never writes
 to them** and **never fetches a web page**: clipping is the user's browser's
-job. The only network use is downloading images an article links to (15.4).
+job. The only network use is downloading images an article links to (15.4)
+and, once and on request, the read-aloud voice model (15.6).
 
 - `library.folders` (4.3) lists the chosen folders, added with the OS folder
   picker in Settings → Library. Removing a folder removes its index rows and
@@ -864,21 +866,42 @@ A **Library** page in the main navigation, three resizable panes:
 - **Right:** this article's threads (title, passage snippet, last message
   date) and the open thread. Collapsible.
 
-**Read aloud** (T37, D-58): a button in the reader's header reads the
-article with the Web Speech API, so the operating system's voices, offline
-(on Linux through speech-dispatcher; the app starts Chromium with
-`--enable-speech-dispatcher`). It starts at the top, or at the block holding
-a non-empty selection. Blocks are headings, paragraphs, list items, quote
-lines, table cells and definition terms; code blocks, image placeholders
-and buttons are skipped; long blocks are spoken in sentence chunks of at
-most 240 characters. The block being read is highlighted and scrolled into
-view. A bar at the reader's foot has previous/next block, pause/resume,
-position, speed (0.75–2×), voice and stop; speed and voice are kept in the
-renderer's `localStorage` (they belong to this computer's voices, so they
-are not in `settings.json` or the export). Another article or leaving the
-page stops reading. Leader keys `p` (start, pause, resume), `n`, `b`, `x`.
-With no speech engine or no voice the button is disabled, its tooltip
-saying why. Nothing is sent anywhere.
+**Read aloud** (T37, T38, D-58, D-59): a button in the reader's header
+reads the article with **Kokoro** (Kokoro-82M v1.0, Apache-2.0), an
+open-source neural voice that runs on this computer. It starts at the top,
+or at the block holding a non-empty selection. Blocks are headings,
+paragraphs, list items, quote lines, table cells and definition terms; code
+blocks, image placeholders and buttons are skipped; long blocks are spoken in
+sentence chunks of at most 240 characters. The block being read is
+highlighted and scrolled into view. A bar at the reader's foot has
+previous/next block, pause/resume (pause stops the sound where it is),
+position, speed (0.75–2×), voice (28 English voices, American and British)
+and stop; speed and voice are kept in the renderer's `localStorage` (UI
+state of this computer, not in `settings.json` or the export). Another
+article or leaving the page stops reading. Leader keys `p` (start, pause,
+resume), `n`, `b`, `x`.
+
+- **The model** is not shipped: the first Read aloud offers to download it
+  (324 MB: the full-precision ONNX model and the voices) from one pinned
+  revision of `onnx-community/Kokoro-82M-v1.0-ONNX` on Hugging Face. Only
+  the main process downloads; `https` only, redirects only to
+  `huggingface.co` or `*.hf.co`, every file checked against a SHA-256 written
+  in the app; into `<data>/cache/kokoro-v1.0/` (not exported; "reset
+  everything" removes it). Settings → Library shows it and has **Remove**.
+- **The engine** runs in an Electron utility process, started on the first
+  chunk and stopped after 5 idle minutes: eSpeak NG (WebAssembly, the
+  `phonemizer` package) turns text into phonemes, ONNX Runtime
+  (`onnxruntime-node`, shipped native, outside the asar) runs the model. The
+  renderer sends text chunks over IPC (`tts:speak`) and gets mono 24 kHz
+  samples back, which it plays with Web Audio; the next chunk is made while
+  one plays.
+- **GPU or CPU**: on first use both are timed on the same sentence and the
+  GPU (ONNX Runtime's WebGPU provider: Vulkan, Metal or Direct3D 12;
+  DirectML first on Windows) is kept only if at least 1.2 times as fast; the
+  choice is remembered with the model. Any GPU failure falls back to the
+  CPU. Settings → Library says where it runs and how much faster than real
+  time.
+- Nothing the learner reads leaves the computer.
 
 Settings → **Library**: folders (add, remove, open in file manager), images
 (`on-open` / `ask`), image cache size and **Clear**, and a line saying the app
@@ -886,7 +909,7 @@ reads these folders and never changes them.
 
 ### 15.7 Not in v3
 
-Writing to the vault, fetching pages by URL, cloud or downloaded neural
-voices for read aloud, a browser extension, an
+Writing to the vault, fetching pages by URL, cloud voices or languages
+other than English for read aloud, a browser extension, an
 in-app browser, groups kept by the app, highlights and annotations stored in
 the note, note embeds, SVG, math, and articles counting towards topic levels.

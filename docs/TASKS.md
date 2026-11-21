@@ -92,6 +92,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T35 | Collapsible panes and pane shortcuts | design | 1d | T34 | done |
 | T36 | Leader key (tmux-style) for pane actions | design | 1d | T35 | done |
 | T37 | Library: read articles aloud | v3 | 1d | T22, T36 | done |
+| T38 | Read aloud with Kokoro (GPU when faster) | v3 | 2d | T37 | done |
 
 ## Order
 
@@ -2675,3 +2676,55 @@ system's own voices, offline, the paragraph being read highlighted.
   the narrow (tabs) layout; screenshots in `docs/assets/` not retaken; the
   other e2e files not run.
 
+### T38 — Read aloud with Kokoro (GPU when faster)
+
+- Milestone: v3
+- Spec: §15.6 (read aloud), §10
+- Size: 2d
+- Depends on: T37
+- Owns: `main/tts/`, `shared/tts.ts`, the `tts:*` channels, `library/useReadAloud.ts`, `library/ReadAloudBar.tsx`, `library/read-aloud-text.ts`, the read-aloud row in `SettingsLibrary.tsx`, `e2e/read-aloud.e2e.ts`, the onnxruntime-node entries in `electron-builder.yml`, `build/notices/{onnxruntime,espeak-ng}.txt`
+
+**Goal.** The system voices sound poor (T37). Read with Kokoro, an
+open-source neural voice, on this computer, using the GPU when it makes
+Kokoro faster.
+
+**Acceptance.**
+- [x] Kokoro-82M v1.0 speaks the reader's chunks; the bar, highlight and leader keys of T37 keep working; 28 English voices, speed 0.75–2×.
+- [x] The model is downloaded once, on request, with its size stated; pinned revision, SHA-256 checked, main process only; Settings → Library shows it and removes it.
+- [x] The engine runs outside the main process; GPU (WebGPU / DirectML) only when timed faster than the CPU, else CPU; failures fall back to the CPU.
+- [x] Packaged builds ship the native runtime for their platform only.
+- [x] Tests (main and renderer); a real-model e2e; guide, SPEC, DECISIONS, CHANGELOG updated.
+
+**Notes.** (2026-11-21)
+- **Built.** `main/tts/`: `model.ts` (the pinned files and the checked,
+  shared download), `text.ts` (kokoro-js's normalization and phonemes,
+  ported; eSpeak NG from `phonemizer`), `engine.ts` (sessions, device
+  choice by timing, inputs), `worker.ts` (the utility process), `host.ts`
+  (starts it, matches replies, stops it when idle), `index.ts` (channels
+  `tts:status`, `tts:speak`, `tts:remove`, stream `tts:download`).
+  Renderer: `useReadAloud` now plays samples with Web Audio, prefetches
+  the next chunk, pauses mid-sentence, offers the download
+  (`ReadAloudOffer`); old stored system-voice prefs fall back to Heart.
+  `beforeReady` no longer adds `--enable-speech-dispatcher`. `e2e-main`
+  serves the model from a local folder when `ALGOTUTOR_E2E_TTS_DIR` is
+  set. D-59 (D-58's voice replaced).
+- **Checked.** typecheck, lint, `npm test` (1209 passed, 12 skipped; 36
+  new or rewritten). The port gives the same phonemes as kokoro-js on test
+  sentences (both accents). `npm run e2e:read-aloud` in the built app
+  (xvfb), real model: offer, download through the app's checked download,
+  real speech played (first chunk 1.7 s long, peak 0.6), highlight, pause,
+  the next paragraph, Settings shows "Runs on the CPU, 3.6× faster than
+  real time", Remove, no page request off the app; screenshots looked at.
+  Device choice with a software Vulkan driver installed: WebGPU 0.2×, CPU
+  3.9×, CPU kept; forced to the GPU it runs (slowly). A packaged Linux
+  build (fuses on) loads onnxruntime from its resources and speaks.
+  `check:security` and `library.e2e` pass.
+- **Not done / not tested.** No real GPU here: GPU speed, DirectML and
+  Metal are untested, and so is whether the WebGPU provider finds a real
+  GPU on Linux desktops. Not built or run on macOS or Windows (signing of
+  the native library on macOS untested). The first start times both
+  devices: about 30 s on this container with a software GPU; on a machine
+  without one the GPU fails at once. **eSpeak NG is GPL-3.0** inside an
+  Apache-2.0-labelled package (D-59 VERIFY): decide before a release.
+  English only. Guide screenshots not retaken; dark mode and the narrow
+  layout not looked at.

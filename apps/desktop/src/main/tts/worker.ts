@@ -1,0 +1,67 @@
+/**
+ * The read-aloud utility process (T38, D-59): an Electron `utilityProcess`
+ * started by `host.ts` when the reader first needs speech. It loads
+ * onnxruntime-node from the path main passes (the app ships it outside the
+ * asar, `<resources>/onnxruntime-node`) and answers one message per chunk.
+ *
+ *   main → here:  { id, text, voice, speed }
+ *   here → main:  { id, audio } | { id, error } and, once loaded, { engine }
+ */
+import { createRequire } from 'node:module';
+import { phonemize } from 'phonemizer';
+import type { TtsDevice, VoiceId } from '../../shared/tts';
+import { Engine, type EngineInfo, type Ort } from './engine';
+
+export interface WorkerConfig {
+  ortPath: string;
+  modelDir: string;
+  force?: TtsDevice | undefined;
+}
+
+export type WorkerRequest = { id: number; text: string; voice: VoiceId; speed: number };
+export type WorkerReply =
+  | { id: number; audio: Float32Array<ArrayBuffer> }
+  | { id: number; error: string }
+  | { engine: EngineInfo }
+  | { log: string };
+
+interface ParentPort {
+  on(event: 'message', listener: (e: { data: unknown }) => void): void;
+  postMessage(message: unknown): void;
+}
+
+const port = (process as unknown as { parentPort?: ParentPort }).parentPort;
+const raw = process.env['ALGO_TTS_CONFIG'];
+
+if (port && raw) {
+  const config = JSON.parse(raw) as WorkerConfig;
+  const ort = createRequire(import.meta.url)(config.ortPath) as Ort & {
+    env: { versions?: { node?: string } };
+  };
+  const engine = new Engine({
+    ort,
+    dir: config.modelDir,
+    phonemize,
+    choiceKey: `ort-${ort.env.versions?.node ?? '?'}-${process.platform}-${process.arch}`,
+    force: config.force,
+    log: (m) => port.postMessage({ log: m } satisfies WorkerReply),
+  });
+  let announced = false;
+  port.on('message', ({ data }) => {
+    const req = data as WorkerRequest;
+    engine.speak(req.text, req.voice, req.speed).then(
+      (audio) => {
+        if (!announced && engine.current) {
+          announced = true;
+          port.postMessage({ engine: engine.current } satisfies WorkerReply);
+        }
+        port.postMessage({ id: req.id, audio } satisfies WorkerReply);
+      },
+      (e: unknown) =>
+        port.postMessage({
+          id: req.id,
+          error: e instanceof Error ? e.message : String(e),
+        } satisfies WorkerReply),
+    );
+  });
+}

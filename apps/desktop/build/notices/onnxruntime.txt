@@ -1,0 +1,12 @@
+ONNX Runtime
+
+Read aloud (T38) runs the Kokoro voice model with ONNX Runtime's Node.js
+binding: the `onnxruntime-node` and `onnxruntime-common` npm packages
+(1.31.1), shipped unmodified in the app's resources (onnxruntime-node/),
+with the native library for this platform only.
+
+Copyright (c) Microsoft Corporation. Licensed under the MIT License:
+https://github.com/microsoft/onnxruntime/blob/main/LICENSE
+
+Source code and third-party notices:
+https://github.com/microsoft/onnxruntime

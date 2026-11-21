@@ -24,6 +24,7 @@ import * as I from './intake';
 import * as U from './updates';
 import * as L from './library';
 import * as A from './article-chat';
+import * as V from './tts';
 
 export {
   INVOKE_CHANNELS,
@@ -190,6 +191,18 @@ export const invokeChannels = {
   'library:image-cache': { request: z.undefined(), response: L.imageCacheResponse },
   /** Clears the linked-image cache; then its size. */
   'library:clear-image-cache': { request: z.undefined(), response: L.imageCacheResponse },
+
+  // ---- read aloud with Kokoro (T38, SPEC §15.6)
+  /** Whether the voice model is downloaded, its size, and where the engine runs once started. */
+  'tts:status': { request: z.undefined(), response: V.ttsStatus },
+  /**
+   * One chunk of an article, spoken: mono samples at 24 kHz. The first call
+   * starts the engine. Refused: `not_installed`, `failed` (the engine could
+   * not run; the message says why).
+   */
+  'tts:speak': { request: V.speakRequest, response: V.speakResponse },
+  /** Deletes the downloaded model and voices. Refused: `busy` while downloading. */
+  'tts:remove': { request: z.undefined(), response: V.ttsStatus },
   /**
    * T25: the tutor writes an article on a topic (level, length) and saves it
    * in the app's own `articles/generated/`; resolves when it is indexed.
@@ -285,6 +298,16 @@ export const streamChannels = {
   },
   /** Pull / Update the runner image in a runtime (T18): its output lines, then the outcome. */
   'exec:pull': { request: S.runtimeRequest, event: S.pullEvent, result: S.pullResult },
+  /**
+   * Downloads the Kokoro model and voices (T38) from Hugging Face, checked
+   * against pinned hashes; progress in bytes. A second caller follows the
+   * same download; cancel stops it once every caller has. Refused: `failed`.
+   */
+  'tts:download': {
+    request: z.undefined(),
+    event: V.downloadProgress,
+    result: V.downloadResult,
+  },
 } as const;
 
 export type InvokeChannel = keyof typeof invokeChannels;

@@ -42,6 +42,8 @@ First version of the desktop app, the successor to
   Settings): the leader, then `[` `]` to hide the side panes, `z` to hide
   both, `h` `l` `o` `1`–`3` to move between panes, `t` `j` `k` `r` `s` for
   the tests, editor, Run and Submit, and `?` for the list.
-- Read aloud in the Library: the article in the system's own voices,
-  offline, with the paragraph being read highlighted; pause, skip, speed
-  and voice (leader `p` `n` `b` `x`).
+- Read aloud in the Library, with Kokoro, an open-source neural voice that
+  runs on your computer (downloaded once, 324 MB, on first use; on the GPU
+  when that is faster): the paragraph being read highlighted; pause, skip,
+  speed and 28 English voices (leader `p` `n` `b` `x`). Nothing you read
+  leaves the computer.
