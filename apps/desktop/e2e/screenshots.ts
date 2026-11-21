@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 /**
- * `npm run screenshots`: the README and docs screenshots
+ * `npm run screenshots`: the README and docs screenshots (practice, explanation,
+ * home, problems, progress, settings, library, practice-dark)
  * (`docs/assets/screenshots/`), taken from the built app with a scripted
  * tutor (`e2e/fake-tutor-screens.json`), a fresh data folder and a small
  * Library vault written here. Nothing calls an AI provider or the network.
@@ -174,9 +175,21 @@ try {
   await page.getByRole('button', { name: 'Close' }).click();
   await idle(page);
 
+  // ---- Home with the problem in progress, and the problem list
+  await page.getByRole('link', { name: 'Home', exact: true }).click();
+  await page.getByRole('heading', { name: 'Practice' }).waitFor();
+  await page.getByRole('link', { name: 'Resume' }).waitFor();
+  await page.getByTestId('home-reason').waitFor();
+  await shot(page, 'home');
+  await page.getByRole('link', { name: 'Problems', exact: true }).click();
+  await page.getByRole('heading', { name: 'Problems' }).waitFor();
+  await page.getByRole('link', { name: 'Longest Stretch Without Repeats' }).waitFor();
+  await shot(page, 'problems');
+
   // ---- progress
   await page.getByRole('link', { name: 'Progress', exact: true }).click();
   await page.getByRole('heading', { name: 'Progress' }).waitFor();
+  await page.getByRole('link', { name: 'Longest Stretch Without Repeats' }).waitFor();
   await shot(page, 'progress');
 
   // ---- the Library: add the vault, read an article, ask about a passage
@@ -185,6 +198,9 @@ try {
       Promise.resolve({ canceled: false, filePaths: [dir] });
   }, vault);
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await page.getByRole('heading', { name: 'Tutor', level: 2 }).waitFor();
+  await page.getByTestId('tutor-status-line').getByText(/^On/).waitFor();
+  await shot(page, 'settings');
   await page.getByRole('button', { name: 'Add folder…' }).click();
   await page
     .getByText(/4 articles/)
