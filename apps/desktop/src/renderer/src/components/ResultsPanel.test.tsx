@@ -171,4 +171,28 @@ describe('ResultsPanel', () => {
     rerender(<ResultsPanel report={null} kind={null} />);
     expect(screen.getByText(/Submit runs every test/)).toBeTruthy();
   });
+
+  it('collapses to its first line with the hide button (T35)', () => {
+    let collapsed = false;
+    const onToggle = () => {
+      collapsed = !collapsed;
+    };
+    const { rerender } = render(
+      <ResultsPanel report={report} kind="run" examples={examples} onToggle={onToggle} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Hide test results' }));
+    expect(collapsed).toBe(true);
+    rerender(
+      <ResultsPanel report={report} kind="run" examples={examples} collapsed onToggle={onToggle} />,
+    );
+    // The summary stays; the rows and the hidden-tests note go.
+    expect(screen.getByTestId('summary').textContent).toBe('2/5 passed');
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    expect(screen.queryByText(/hidden tests failed/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show test results' })).toBeTruthy();
+    // Before a run, and while running, the note line keeps the button.
+    rerender(<ResultsPanel report={null} kind={null} busy="run" collapsed onToggle={onToggle} />);
+    expect(screen.getByText('Running visible tests…')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Show test results' })).toBeTruthy();
+  });
 });

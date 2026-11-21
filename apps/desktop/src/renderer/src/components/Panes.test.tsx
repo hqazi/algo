@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-/** Panes (T29): a shared header per pane, 1px dividers resizable by keyboard. */
+/** Panes (T29): a shared header per pane, 1px dividers resizable by keyboard; collapsing and pane keys (T35). */
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -95,5 +95,80 @@ describe('Panes', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it('collapses a side pane to a rail and back, keeping its content mounted', () => {
+    function Counter() {
+      const [n, setN] = useState(0);
+      return <button onClick={() => setN(n + 1)}>count {n}</button>;
+    }
+    const panes: [Pane, Pane, Pane] = [{ ...PANES[0], content: <Counter /> }, PANES[1], PANES[2]];
+    const { container } = render(
+      <Panes panes={panes} storageKey="t" initialSizes={[30, 40, 30]} />,
+    );
+    const grid = container.querySelector('.panes') as HTMLElement;
+    fireEvent.click(screen.getByRole('button', { name: 'count 0' }));
+    // The middle pane has no collapse button; the side panes do, own header or not.
+    expect(screen.queryByRole('button', { name: 'Hide Middle' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Hide Right' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Left' }));
+    expect(grid.style.gridTemplateColumns).toBe('var(--pane-rail-w) 1px 40fr 1px 30fr');
+    // Only the divider beside an open pane resizes.
+    expect(screen.getAllByRole('separator')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'count 1' })).toBeNull(); // hidden
+    expect(JSON.parse(localStorage.getItem('t-collapsed')!)).toEqual([true, false]);
+    fireEvent.click(screen.getByRole('button', { name: 'Show Left' }));
+    expect(grid.style.gridTemplateColumns).toBe('30fr 1px 40fr 1px 30fr');
+    expect(screen.getByRole('button', { name: 'count 1' })).toBeTruthy(); // state kept
+  });
+
+  it('toggles the side panes with Ctrl+B and Ctrl+Alt+B', () => {
+    const { container } = render(
+      <Panes panes={PANES} storageKey="t" initialSizes={[30, 40, 30]} />,
+    );
+    const grid = container.querySelector('.panes') as HTMLElement;
+    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    expect(grid.style.gridTemplateColumns).toBe('var(--pane-rail-w) 1px 40fr 1px 30fr');
+    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true, altKey: true });
+    expect(grid.style.gridTemplateColumns).toBe(
+      'var(--pane-rail-w) 1px 40fr 1px var(--pane-rail-w)',
+    );
+    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    expect(grid.style.gridTemplateColumns).toBe('30fr 1px 40fr 1px var(--pane-rail-w)');
+    // A key the focused control already handled (the editor's) is left alone.
+    const handled = new KeyboardEvent('keydown', { code: 'KeyB', ctrlKey: true, cancelable: true });
+    handled.preventDefault();
+    window.dispatchEvent(handled);
+    expect(grid.style.gridTemplateColumns).toBe('30fr 1px 40fr 1px var(--pane-rail-w)');
+  });
+
+  it('goes to a pane with Ctrl+1/2/3 (opening it) and moves between them with F6', () => {
+    const panes: [Pane, Pane, Pane] = [
+      PANES[0],
+      { ...PANES[1], content: <textarea aria-label="Draft" /> },
+      PANES[2],
+    ];
+    render(<Panes panes={panes} storageKey="t" />);
+    const region = (name: string) => screen.getByRole('region', { name });
+    fireEvent.keyDown(window, { code: 'Digit2', key: '2', ctrlKey: true });
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Draft' }));
+    // Collapsing the pane with focus hands it to the middle pane.
+    fireEvent.keyDown(window, { code: 'Digit1', key: '1', ctrlKey: true });
+    expect(region('Left').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(window, { code: 'KeyB', key: 'b', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Show Left' })).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Draft' }));
+    // Ctrl+1 opens it again.
+    fireEvent.keyDown(window, { code: 'Digit1', key: '1', ctrlKey: true });
+    expect(screen.queryByRole('button', { name: 'Show Left' })).toBeNull();
+    expect(region('Left').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(window, { key: 'F6' });
+    expect(region('Middle').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(window, { key: 'F6' });
+    expect(region('Right').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(window, { key: 'F6' });
+    expect(region('Left').contains(document.activeElement)).toBe(true);
+    fireEvent.keyDown(window, { key: 'F6', shiftKey: true });
+    expect(region('Right').contains(document.activeElement)).toBe(true);
   });
 });

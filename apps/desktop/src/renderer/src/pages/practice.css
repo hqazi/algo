@@ -183,13 +183,47 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-.results-summary.summary-pass svg,
+.results-summary.summary-pass > svg,
 .results-summary.summary-pass strong {
   color: var(--pass);
 }
-.results-summary.summary-fail svg,
+.results-summary.summary-fail > svg,
 .results-summary.summary-fail strong {
   color: var(--fail);
+}
+/* The note row with the hide button (the summary bar holds it after a run). */
+.results-bar {
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-2);
+}
+.results-bar .results-note {
+  flex: 1;
+  min-width: 0;
+}
+.results-toggle {
+  flex: none;
+}
+/* Collapsed (Ctrl/Cmd+J): one line, so the editor gets the height. */
+.practice .results.collapsed {
+  flex: none;
+  min-height: 0;
+  overflow: hidden;
+}
+.results.collapsed .results-summary {
+  border-bottom: 0;
+}
+.results.collapsed .results-note {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-block: var(--space-2);
+}
+.results.collapsed .results-spinner {
+  display: inline-block;
+  vertical-align: -1px;
+  margin-right: var(--space-2);
 }
 .results-time {
   font-size: 12px;

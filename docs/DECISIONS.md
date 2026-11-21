@@ -1942,3 +1942,23 @@ left a choice.
   problem dialog's suggestion uses the same text.
 - **Settings → Tutor status** rewrites main's "… in Settings …" reason to
   "… below …" on that page only (`reasonHere`); elsewhere it is unchanged.
+
+**D-56 Collapsible panes and pane shortcuts** (2026-11-21, T35)
+
+- **Which panes.** The side panes on multi-pane pages (left and right) and
+  Practice's test results. The middle pane (editor, reader) never
+  collapses: it is what the room is for. Narrow layout shows one pane at a
+  time, so it ignores the collapsed state.
+- **Keys follow VS Code**: Ctrl/Cmd+B primary side bar, Ctrl/Cmd+Alt+B the
+  secondary one, Ctrl/Cmd+J the bottom panel, Ctrl/Cmd+1–3 editor groups.
+  F6 is the usual "next pane" key in desktop apps. Matching uses `e.code`
+  (Alt changes `e.key` on macOS). A key event a focused control already
+  handled (`defaultPrevented`) is left alone, as with Run/Submit, so the
+  Vim (page up) and Emacs (back one character) meanings of Ctrl+B win in
+  the editor on Windows and Linux; F6 and the buttons still work there.
+- **Mounted while collapsed.** The pane's content stays in the tree,
+  hidden, so a chat draft, the open thread and the editor survive, as for
+  the narrow tabs (D-55).
+- **Collapse button via context.** `Panes` provides the control and
+  `PaneHeader` draws the button, so panes that draw their own header (the
+  Tutor, the Library's chats) get it without new props.

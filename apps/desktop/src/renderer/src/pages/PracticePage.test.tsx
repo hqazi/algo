@@ -22,6 +22,7 @@ let bridge: FakeBridge;
 const SLUG = 'pair-with-target';
 
 beforeEach(() => {
+  localStorage.clear();
   bridge = baseHandlers(new FakeBridge())
     .on('problems:get', () => DETAIL)
     .on('workspace:get', () => WORKSPACE)
@@ -141,6 +142,20 @@ describe('PracticePage', () => {
     expect(bridge.channels().indexOf('problems:start')).toBeLessThan(
       bridge.channels().indexOf('runs:run'),
     );
+  });
+
+  it('Ctrl+J hides and shows the test results, remembered; the Tutor pane collapses', async () => {
+    await open();
+    expect(screen.getByRole('button', { name: 'Hide test results' })).toBeTruthy();
+    fireEvent.keyDown(window, { code: 'KeyJ', key: 'j', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Show test results' })).toBeTruthy();
+    expect(localStorage.getItem('results-collapsed')).toBe('true');
+    fireEvent.keyDown(window, { code: 'KeyJ', key: 'j', ctrlKey: true });
+    expect(screen.getByRole('button', { name: 'Hide test results' })).toBeTruthy();
+    // The Tutor draws its own header and still gets the collapse button.
+    fireEvent.click(screen.getByRole('button', { name: 'Hide Tutor' }));
+    expect(screen.getByRole('button', { name: 'Show Tutor' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide Problem' })).toBeTruthy();
   });
 
   it('saves as you type, and before a run', async () => {

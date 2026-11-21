@@ -87,6 +87,7 @@
   /* App frame (T29): main/window.ts uses the same title bar height. */
   --titlebar-h: 44px;
   --pane-header-h: 44px;
+  --pane-rail-w: 36px;
   color-scheme: light;
 }
 
@@ -830,6 +831,59 @@ legend {
   font-weight: 600;
   letter-spacing: 0;
   color: var(--text);
+}
+/* The pane's own wrapper, so a collapsed pane keeps its content mounted. */
+.pane-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.pane:focus,
+.pane-body:focus {
+  outline: none;
+}
+.pane-body:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent-ring);
+}
+.pane-collapse {
+  margin-left: auto;
+}
+/* A collapsed side pane: a thin rail with its icon and title, top down. */
+.pane-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration) var(--ease),
+    color var(--duration) var(--ease);
+}
+.pane-rail:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.pane-rail:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--accent-ring);
+}
+.pane-rail-title {
+  writing-mode: vertical-rl;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.divider-line {
+  background: var(--border);
 }
 .gutter {
   position: relative;

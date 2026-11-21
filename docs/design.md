@@ -123,6 +123,14 @@ JetBrains Mono.
   `--surface`, separated by 1px dividers that are the resize handles
   (wider hit area, accent on hover/drag). Each pane has a header of one
   height (40–44px) with its title and its actions as ghost or icon buttons.
+- **Collapsing (T35).** The side panes end their header with a panel icon
+  button that folds the pane into a 36px rail (`--pane-rail-w`): the
+  open-panel icon and the title written top to bottom, the whole rail a
+  button. The pane stays mounted, so drafts survive. The divider beside a
+  rail is a plain line. On Practice the results fold to their first line
+  (summary or note) with a panel-bottom icon button at its end. Shortcuts:
+  Ctrl/Cmd+B left, Ctrl/Cmd+Alt+B right, Ctrl/Cmd+J results, Ctrl/Cmd+1–3
+  and F6/Shift+F6 to move between panes.
 - **Narrow windows.** Under 1100px the nav shows icons only (names in the
   tooltip). Under 900px multi-pane pages show one pane at a time with tabs
   above; switching layouts keeps each pane's state. The window's minimum

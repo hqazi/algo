@@ -89,6 +89,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T32 | Library refresh | design | 2d | T30 | done |
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | done |
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | done |
+| T35 | Collapsible panes and pane shortcuts | design | 1d | T34 | done |
 
 ## Order
 
@@ -2542,3 +2543,45 @@ screenshot, and bring the guide in step.
   Under 900px Settings' section list wraps above the sections and is not
   sticky. The Settings screenshot shows the "no system keyring" warning,
   as xvfb has none. Comfort per area is still a select per group (T33).
+
+### T35 — Collapsible panes and pane shortcuts
+
+- Milestone: design
+- Spec: §8 (behaviour unchanged); look in [`design.md`](design.md) → App frame
+- Size: 1d
+- Depends on: T34
+- Owns: `components/Panes.tsx`, `components/PaneHeader.tsx`, `components/pane-control.ts`, `components/ResultsPanel.tsx`, their tests, pane and results CSS, `docs/guide/getting-started.md`
+
+**Goal.** Give the editor and the reader room: the side panes (Problem and
+Tutor; Articles and Chats) and the test results can be hidden, by button
+and by keyboard, and the keyboard moves between panes.
+
+**Acceptance.**
+- [x] Each side pane's header ends with a collapse button (also in panes that draw their own header, the Tutor and the Library's chats); a collapsed pane is a thin rail that opens it again. State is remembered per page; content stays mounted (drafts survive).
+- [x] The Practice results fold to their first line with a button at its end.
+- [x] Ctrl/Cmd+B and Ctrl/Cmd+Alt+B toggle the left and right panes, Ctrl/Cmd+J the results; Ctrl/Cmd+1–3 go to a pane (opening it); F6/Shift+F6 cycle. Keys a focused control already handled are left alone.
+- [x] Tests; guide, design.md and CHANGELOG updated.
+
+**Notes.** (2026-11-21)
+- **Built.** `Panes` keeps a `<storageKey>-collapsed` pair in
+  `localStorage`; a collapsed side pane is a `--pane-rail-w` (36px) grid
+  column holding a rail button, with the pane's content kept in a hidden
+  `.pane-inner`. The divider beside a rail is a plain line. `PaneHeader`
+  reads a `PaneControlContext` from `Panes` and appends the collapse
+  button, so own-header panes need no change. Going to a pane focuses its
+  editor or text box, else its scrolling body; collapsing the pane with
+  focus moves focus to the middle pane. Narrow (tabs) layout ignores
+  collapsing; there Ctrl/Cmd+1–3 and F6 switch tabs. `ResultsPanel` takes
+  `collapsed`/`onToggle`; Practice stores `results-collapsed`. The results
+  summary's pass/fail colour now targets only its own icon (`> svg`).
+  `PracticePage.test` clears `localStorage` before each test. D-56.
+- **Checked.** typecheck, lint, `npm test` (1161 passed, 12 skipped). In
+  the built app (xvfb): Ctrl+B from the editor, Ctrl+Alt+B, Ctrl+J,
+  Ctrl+3 (focus to the chat box), Ctrl+1 (reopens Problem), F6 (to the
+  editor), with screenshots looked at. `practice.e2e` and `library.e2e`
+  pass.
+- **Not done.** The Library page was not looked at in the built app (unit
+  tests cover the shared `Panes`); dark mode not looked at; screenshots in
+  `docs/assets/` not retaken (the default layout is unchanged, bar a small
+  icon at the end of each side pane's header and the results line); the
+  other e2e files not run. Home's tutor card is not collapsible (it is a card, not a pane).

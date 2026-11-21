@@ -4,10 +4,24 @@
  * are the resize handles (drag, or focus and press the arrow keys). Each pane
  * gets a `PaneHeader` with its title and `actions`, unless its content draws
  * its own (`header: false`).
+ *
+ * The side panes collapse to a thin rail (T35): the button at the end of their
+ * header, or Ctrl/Cmd+B (left) and Ctrl/Cmd+Alt+B (right). Ctrl/Cmd+1, 2 and 3
+ * go to a pane (opening it if collapsed); F6 and Shift+F6 move between them.
+ * A collapsed pane stays mounted, so its state (a chat draft) survives.
  */
-import { useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
+import { PanelLeftOpen, PanelRightOpen } from 'lucide-react';
 import { useMedia, useStored } from '../lib/hooks';
 import { PaneHeader } from './PaneHeader';
+import { isMod, PaneControlContext, shortcutLabel, type PaneControl } from './pane-control';
 
 export interface Pane {
   id: string;
@@ -24,12 +38,25 @@ function PaneBody({ pane }: { pane: Pane }) {
   return (
     <>
       <PaneHeader title={pane.title}>{pane.actions}</PaneHeader>
-      <div className="pane-body">{pane.content}</div>
+      <div className="pane-body" tabIndex={-1}>
+        {pane.content}
+      </div>
     </>
   );
 }
 
 const MIN = 15; // percent
+
+/** Where focus goes in a pane: its text box or editor, else the scrolling body. */
+function focusInto(section: HTMLElement): void {
+  const target =
+    section.querySelector<HTMLElement>('.cm-content, textarea:not(:disabled)') ??
+    section.querySelector<HTMLElement>('.pane-body') ??
+    section;
+  target.focus();
+}
+
+type Collapsed = [left: boolean, right: boolean];
 
 export function Panes({
   panes,
@@ -41,17 +68,85 @@ export function Panes({
   panes: [Pane, Pane, Pane];
   tab?: string;
   onTab?: (id: string) => void;
-  /** Where the sizes are remembered (each page its own). */
+  /** Where the sizes are remembered (each page its own); collapsed panes under `<key>-collapsed`. */
   storageKey?: string;
   initialSizes?: [number, number, number];
 }) {
   const narrow = useMedia('(max-width: 899px)');
   const [sizes, setSizes] = useStored<[number, number, number]>(storageKey, initialSizes);
+  const [stored, setCollapsed] = useStored<Collapsed>(`${storageKey}-collapsed`, [false, false]);
+  // Stacked tabs show one pane at a time: nothing is collapsed there.
+  const collapsed: Collapsed = narrow ? [false, false] : stored;
   const [localTab, setLocalTab] = useState(panes[1].id);
   const active = tab ?? localTab;
   const setTab = onTab ?? setLocalTab;
   const box = useRef<HTMLDivElement>(null);
+  const sections = useRef<(HTMLElement | null)[]>([null, null, null]);
   const [dragging, setDragging] = useState<0 | 1 | null>(null);
+  // Focus waits for the pane to open (and the tab to switch) before moving in.
+  const [pendingFocus, setPendingFocus] = useState<number | null>(null);
+
+  const isCollapsed = (index: number): boolean =>
+    index === 0 ? collapsed[0] : index === 2 ? collapsed[1] : false;
+
+  function setSide(side: 0 | 1, value: boolean): void {
+    const next: Collapsed = [...stored];
+    next[side] = value;
+    setCollapsed(next);
+  }
+
+  function collapse(index: 0 | 2): void {
+    const section = sections.current[index];
+    // Focus would be lost to the page: move it to the middle pane.
+    if (section?.contains(document.activeElement)) setPendingFocus(1);
+    setSide(index === 0 ? 0 : 1, true);
+  }
+
+  function goTo(index: number): void {
+    if (narrow) setTab(panes[index]!.id);
+    else if (index !== 1 && isCollapsed(index)) setSide(index === 0 ? 0 : 1, false);
+    setPendingFocus(index);
+  }
+
+  useEffect(() => {
+    if (pendingFocus === null) return;
+    const section = sections.current[pendingFocus];
+    if (section) focusInto(section);
+    setPendingFocus(null);
+  }, [pendingFocus, stored, narrow, active]);
+
+  // Latest state for the window listener.
+  const toggle = (index: 0 | 2): void => (isCollapsed(index) ? goTo(index) : collapse(index));
+  const keys = useRef({ toggle, goTo, narrow });
+  keys.current = { toggle, goTo, narrow };
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent): void => {
+      if (e.defaultPrevented) return;
+      const k = keys.current;
+      if (e.code === 'KeyB' && !k.narrow && (isMod(e) || isMod(e, { alt: true }))) {
+        e.preventDefault();
+        k.toggle(e.altKey ? 2 : 0);
+        return;
+      }
+      const digit = /^Digit([1-3])$/.exec(e.code);
+      if (digit && isMod(e)) {
+        e.preventDefault();
+        k.goTo(Number(digit[1]) - 1);
+        return;
+      }
+      if (e.key === 'F6' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        const here = sections.current.findIndex((s) => s?.contains(document.activeElement));
+        const from = here < 0 ? (e.shiftKey ? 0 : 2) : here;
+        k.goTo((from + (e.shiftKey ? 2 : 1)) % 3);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Fractions of the space the open panes share (100 when none is collapsed).
+  const openTotal = sizes.reduce((sum, s, i) => (isCollapsed(i) ? sum : sum + s), 0);
 
   function drag(index: 0 | 1) {
     return (e: PointerEvent<HTMLDivElement>) => {
@@ -62,7 +157,7 @@ export function Panes({
       const start = [...sizes] as [number, number, number];
       const x0 = e.clientX;
       const move = (ev: globalThis.PointerEvent) => {
-        const delta = ((ev.clientX - x0) / rect.width) * 100;
+        const delta = ((ev.clientX - x0) / rect.width) * openTotal;
         const next = [...start] as [number, number, number];
         const pair = start[index] + start[(index + 1) as 1 | 2];
         next[index] = Math.min(pair - MIN, Math.max(MIN, start[index] + delta));
@@ -95,36 +190,78 @@ export function Panes({
     };
   }
 
-  const gutter = (index: 0 | 1) => (
-    <div
-      className={dragging === index ? 'gutter dragging' : 'gutter'}
-      role="separator"
-      aria-orientation="vertical"
-      aria-valuenow={Math.round(sizes[index])}
-      aria-valuemin={MIN}
-      aria-valuemax={100 - MIN}
-      tabIndex={0}
-      aria-label="Resize"
-      onPointerDown={drag(index)}
-      onKeyDown={key(index)}
-    />
-  );
+  const gutter = (index: 0 | 1) =>
+    // Beside a collapsed pane the divider is a plain line: there is nothing to resize.
+    isCollapsed(index === 0 ? 0 : 2) ? (
+      <div className="divider-line" aria-hidden="true" />
+    ) : (
+      <div
+        className={dragging === index ? 'gutter dragging' : 'gutter'}
+        role="separator"
+        aria-orientation="vertical"
+        aria-valuenow={Math.round(sizes[index])}
+        aria-valuemin={MIN}
+        aria-valuemax={100 - MIN}
+        tabIndex={0}
+        aria-label="Resize"
+        onPointerDown={drag(index)}
+        onKeyDown={key(index)}
+      />
+    );
+
+  const shortcuts = { left: shortcutLabel('B'), right: shortcutLabel('B', { alt: true }) };
 
   // One tree for both layouts, so crossing 900px keeps each pane's state
-  // (editor, drafts, open chats): only the tabs and gutters come and go.
+  // (editor, drafts, open chats): only the tabs, gutters and rails come and go.
   const section = (index: 0 | 1 | 2) => {
     const p = panes[index];
+    const side = index === 0 ? 'left' : index === 2 ? 'right' : null;
+    const shut = isCollapsed(index);
+    const control: PaneControl | null =
+      side && !narrow
+        ? {
+            side,
+            title: p.title,
+            shortcut: shortcuts[side],
+            collapse: () => collapse(index as 0 | 2),
+          }
+        : null;
+    const Open = side === 'right' ? PanelRightOpen : PanelLeftOpen;
     return (
       <section
         key={p.id}
-        className="pane"
+        ref={(el) => {
+          sections.current[index] = el;
+        }}
+        className={shut ? 'pane collapsed' : 'pane'}
         aria-label={p.title}
+        tabIndex={-1}
         {...(narrow ? { role: 'tabpanel', hidden: active !== p.id } : {})}
       >
-        <PaneBody pane={p} />
+        {shut && side && (
+          <button
+            type="button"
+            className="pane-rail"
+            aria-label={`Show ${p.title}`}
+            aria-expanded={false}
+            title={`Show ${p.title} (${shortcuts[side]})`}
+            onClick={() => goTo(index)}
+          >
+            <Open size={16} aria-hidden="true" />
+            <span className="pane-rail-title">{p.title}</span>
+          </button>
+        )}
+        <div className="pane-inner" hidden={shut}>
+          <PaneControlContext.Provider value={control}>
+            <PaneBody pane={p} />
+          </PaneControlContext.Provider>
+        </div>
       </section>
     );
   };
+
+  const column = (index: 0 | 1 | 2) =>
+    isCollapsed(index) ? 'var(--pane-rail-w)' : `${sizes[index]}fr`;
 
   return (
     <div
@@ -133,7 +270,7 @@ export function Panes({
       style={
         narrow
           ? undefined
-          : { gridTemplateColumns: `${sizes[0]}fr 1px ${sizes[1]}fr 1px ${sizes[2]}fr` }
+          : { gridTemplateColumns: `${column(0)} 1px ${column(1)} 1px ${column(2)}` }
       }
     >
       {narrow ? (

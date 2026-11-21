@@ -5,9 +5,20 @@
  * start open with input, expected and got in a compact grid. Hidden cases show
  * category and status only (the main process never sends more for them, and
  * the IPC contract refuses more).
+ *
+ * It collapses to its first line (T35): the button at the end of that line,
+ * or Ctrl/Cmd+J on the Practice page.
  */
-import { useState } from 'react';
-import { ChevronRight, CircleCheck, CircleX } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import {
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  PanelBottomClose,
+  PanelBottomOpen,
+} from 'lucide-react';
+import { shortcutLabel } from './pane-control';
+import { IconButton } from './ui';
 import type { CaseView, ExampleView, ReportView } from '../../../shared/practice';
 import { args, STATUS_LABEL, withExamples } from '../lib/format';
 
@@ -18,6 +29,10 @@ export interface ResultsProps {
   examples?: ExampleView[];
   busy?: 'run' | 'submit' | 'give_up' | null;
   error?: string | null;
+  /** Shows only the first line (the summary or note). */
+  collapsed?: boolean;
+  /** Given: the first line ends with a hide/show button. */
+  onToggle?: () => void;
 }
 
 /** "negative-numbers" → "negative numbers". */
@@ -151,33 +166,60 @@ function seconds(ms: number): string {
   return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} s`;
 }
 
-export function ResultsPanel({ report, kind, examples = [], busy, error }: ResultsProps) {
+function Toggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  const label = collapsed ? 'Show test results' : 'Hide test results';
+  return (
+    <IconButton
+      className="results-toggle"
+      size="sm"
+      aria-label={label}
+      title={`${label} (${shortcutLabel('J')})`}
+      icon={
+        collapsed ? <PanelBottomOpen aria-hidden="true" /> : <PanelBottomClose aria-hidden="true" />
+      }
+      onClick={onToggle}
+    />
+  );
+}
+
+export function ResultsPanel({
+  report,
+  kind,
+  examples = [],
+  busy,
+  error,
+  collapsed = false,
+  onToggle,
+}: ResultsProps) {
+  const className = collapsed ? 'results collapsed' : 'results';
+  const toggle = onToggle ? <Toggle collapsed={collapsed} onToggle={onToggle} /> : null;
+  const note = (p: ReactNode) => (
+    <section className={className} aria-live="polite">
+      <div className="results-bar">
+        {p}
+        {toggle}
+      </div>
+    </section>
+  );
   if (busy)
-    return (
-      <section className="results" aria-live="polite">
-        <p className="results-note muted">
-          <span className="results-spinner" aria-hidden="true" />
-          {BUSY_TEXT[busy]}
-        </p>
-      </section>
+    return note(
+      <p className="results-note muted">
+        <span className="results-spinner" aria-hidden="true" />
+        {BUSY_TEXT[busy]}
+      </p>,
     );
   if (error)
-    return (
-      <section className="results" aria-live="polite">
-        <p className="results-note error-text" role="alert">
-          {error}
-        </p>
-      </section>
+    return note(
+      <p className="results-note error-text" role="alert">
+        {error}
+      </p>,
     );
-  if (!report) {
-    return (
-      <section className="results" aria-live="polite">
-        <p className="results-note muted">
-          Run checks the visible examples; Submit runs every test, including hidden ones.
-        </p>
-      </section>
+  if (!report)
+    return note(
+      <p className="results-note muted">
+        Run checks the visible examples; Submit runs every test, including hidden ones.
+      </p>,
     );
-  }
   // Failing tests first (each group keeps its order): they are what to look at.
   const all = withExamples(report.cases, examples);
   const cases = [
@@ -188,7 +230,7 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
   const categories = [...new Set(hiddenFailed.map((c) => words(c.category || 'test')))];
   const Icon = report.all_passed ? CircleCheck : CircleX;
   return (
-    <section className="results" aria-live="polite">
+    <section className={className} aria-live="polite">
       <div className={`results-summary ${report.all_passed ? 'summary-pass' : 'summary-fail'}`}>
         <Icon size={16} aria-hidden="true" />
         <strong data-testid="summary">
@@ -199,8 +241,9 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
         {report.duration_ms > 0 && (
           <span className="results-time faint">{seconds(report.duration_ms)}</span>
         )}
+        {toggle}
       </div>
-      {report.run_error && (
+      {!collapsed && report.run_error && (
         <div className="run-error" role="alert" data-testid="run-error">
           <p className="error-text">
             <strong>{RUN_ERROR_TEXT[report.run_error.kind] ?? 'The tests could not run.'}</strong>
@@ -208,7 +251,7 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
           <pre className="code-block">{report.run_error.message}</pre>
         </div>
       )}
-      {hiddenFailed.length > 0 && (
+      {!collapsed && hiddenFailed.length > 0 && (
         <p className="results-hidden muted small">
           {hiddenFailed.length === 1
             ? '1 hidden test failed'
@@ -217,11 +260,13 @@ export function ResultsPanel({ report, kind, examples = [], busy, error }: Resul
           covers.
         </p>
       )}
-      <ul className="cases">
-        {cases.map((c) => (
-          <CaseRow key={`${c.id}:${c.status}`} c={c} />
-        ))}
-      </ul>
+      {!collapsed && (
+        <ul className="cases">
+          {cases.map((c) => (
+            <CaseRow key={`${c.id}:${c.status}`} c={c} />
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

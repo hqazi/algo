@@ -20,6 +20,7 @@ import { Editor } from '../components/Editor';
 import { ExplanationList } from '../explanation/ExplanationList';
 import { Markdown } from '../components/Markdown';
 import { Panes } from '../components/Panes';
+import { isMod } from '../components/pane-control';
 import { ResultsPanel } from '../components/ResultsPanel';
 import { Dialog } from '../components/Dialog';
 import {
@@ -34,6 +35,7 @@ import {
 import { invoke, isRefusal, stream } from '../ipc';
 import { errorText, useApp } from '../lib/app-context';
 import { args, PROBLEM_STATUS_LABEL, titleCase } from '../lib/format';
+import { useStored } from '../lib/hooks';
 import { hasExamplesSection, statementForApp } from '../lib/markdown';
 import { splitConstraints } from './practice-statement';
 import './practice.css';
@@ -71,6 +73,8 @@ export function PracticePage({ slug }: { slug: string }) {
   const [reference, setReference] = useState<string | null>(null);
   const [onDisk, setOnDisk] = useState<string | null>(null);
   const [tab, setTab] = useState('code');
+  const [resultsCollapsed, setResultsCollapsed] = useStored('results-collapsed', false);
+  const toggleResults = (): void => setResultsCollapsed(!resultsCollapsed);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const chat = useChatStore();
   const tutor = useTutorStatus(chat);
@@ -371,13 +375,22 @@ export function PracticePage({ slug }: { slug: string }) {
   }
 
   // Page-wide shortcuts (the editor handles its own and marks them handled).
+  // Ctrl/Cmd+J hides or shows the test results (T35); Panes has the pane keys.
   const runRef = useRef(execute);
+  const toggleRef = useRef(toggleResults);
   useEffect(() => {
     runRef.current = execute;
+    toggleRef.current = toggleResults;
   });
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.defaultPrevented || !(e.ctrlKey || e.metaKey) || e.key !== 'Enter') return;
+      if (e.defaultPrevented) return;
+      if (e.code === 'KeyJ' && isMod(e)) {
+        e.preventDefault();
+        toggleRef.current();
+        return;
+      }
+      if (!(e.ctrlKey || e.metaKey) || e.key !== 'Enter') return;
       e.preventDefault();
       void runRef.current(e.shiftKey ? 'submit' : 'run');
     };
@@ -593,6 +606,8 @@ export function PracticePage({ slug }: { slug: string }) {
         examples={detail.examples}
         busy={busy}
         error={runError}
+        collapsed={resultsCollapsed}
+        onToggle={toggleResults}
       />
     </div>
   );

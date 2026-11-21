@@ -46,6 +46,25 @@ Panes can be resized by dragging the thin lines between them, or by focusing
 a line with Tab and pressing the arrow keys. In a window narrower than 900px
 the three panes become tabs (**Problem**, **Code**, **Tutor**).
 
+The side panes (**Problem** and **Tutor**) can be hidden to give the editor
+room: the panel button at the right of a pane's header folds it into a thin
+strip at the edge, and clicking the strip brings it back. The test results
+fold to their summary line the same way, with the button at the end of that
+line. The app remembers what you hid. On the Library page the **Articles**
+and **Chats** panes fold the same way.
+
+| Shortcut (Cmd instead of Ctrl on macOS) | What it does |
+|---|---|
+| Ctrl+B | Hide or show the left pane (Problem, Articles) |
+| Ctrl+Alt+B | Hide or show the right pane (Tutor, Chats) |
+| Ctrl+J | Hide or show the test results |
+| Ctrl+1, Ctrl+2, Ctrl+3 | Go to the left, middle or right pane (showing it if hidden): the editor, the chat box, or the pane's text |
+| F6, Shift+F6 | Go to the next or previous pane |
+
+With the Vim or Emacs editor keymap on Windows or Linux, Ctrl+B in the
+editor keeps its editor meaning (a page up in Vim, back one character in
+Emacs); use F6 to leave the editor first, or click the panel button.
+
 **Keyboard.** Everything can be reached with Tab. In the code editor Tab
 indents; press **Escape** and then **Tab** to move on to the results and the
 tutor (or Ctrl+M to switch Tab between indenting and moving focus).

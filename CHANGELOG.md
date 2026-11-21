@@ -34,3 +34,7 @@ First version of the desktop app, the successor to
   tutor.
 - A new logo and app icon; the README is a front page and the user guide
   lives in [`docs/guide/`](docs/guide/installation.md).
+- Collapsible panes: on Practice and Library the side panes fold into a
+  thin rail and the test results to their summary line, remembered per
+  page. Shortcuts: Ctrl/Cmd+B and Ctrl/Cmd+Alt+B for the side panes,
+  Ctrl/Cmd+J for the results, Ctrl/Cmd+1–3 and F6 to move between panes.
