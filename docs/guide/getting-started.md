@@ -68,6 +68,7 @@ page you are on.
 | `t` | Practice: hide or show the test results |
 | `j` or ↓ / `k` or ↑ | Practice: go to the test results / the code editor |
 | `r` / `s` | Practice: Run / Submit |
+| `p` / `n` / `b` / `x` | Library: read aloud (start, pause, resume) / next / previous paragraph / stop |
 | `?` | List the actions |
 
 Going to a pane puts you in its editor or chat box, or on its text. The

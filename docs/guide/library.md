@@ -49,6 +49,27 @@ offline:
 Image downloads are restricted: `https` only, never to your local network,
 with size and time limits. The page itself never contacts a website.
 
+## Listening to an article
+
+**Read aloud** (the speaker button in the Reader's header) reads the
+article to you with your computer's own voices. It starts at the top, or
+at the paragraph you have selected text in. The paragraph being read is
+highlighted and kept in view; code blocks and images are skipped.
+
+While it reads, a bar at the bottom of the reader has **Previous
+paragraph**, **Pause**/**Resume**, **Next paragraph**, where it is, the
+**speed** (0.75× to 2×), the **voice** and **Stop**. Speed and voice are
+remembered on this computer. Opening another article or leaving the
+Library stops it. With the [leader key](getting-started.md), `p` starts,
+pauses and resumes, `n` and `b` move a paragraph forward and back, and `x`
+stops.
+
+The voices are the system's, so the text never leaves your computer.
+macOS and Windows come with voices (add more in the system's speech or
+language settings). On Linux the app uses **speech-dispatcher**; if the
+button is greyed out, install it and a voice, for example
+`sudo apt install speech-dispatcher espeak-ng`, then restart the app.
+
 ## Chatting about a passage
 
 Select some text and click **Ask about this**, or use the **Ask** button
@@ -72,8 +93,8 @@ the cursor in its question box, and a marker appears in the margin beside it.
   article shows "file missing" and its chats remain until you delete them.
 
 The first time you send a message about an article, the app tells you that
-the passage and outline are sent to the tutor's provider. Reading never sends
-anything.
+the passage and outline are sent to the tutor's provider. Reading, and
+reading aloud, never send anything.
 
 ## Articles written by the tutor
 

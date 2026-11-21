@@ -864,12 +864,29 @@ A **Library** page in the main navigation, three resizable panes:
 - **Right:** this article's threads (title, passage snippet, last message
   date) and the open thread. Collapsible.
 
+**Read aloud** (T37, D-58): a button in the reader's header reads the
+article with the Web Speech API, so the operating system's voices, offline
+(on Linux through speech-dispatcher; the app starts Chromium with
+`--enable-speech-dispatcher`). It starts at the top, or at the block holding
+a non-empty selection. Blocks are headings, paragraphs, list items, quote
+lines, table cells and definition terms; code blocks, image placeholders
+and buttons are skipped; long blocks are spoken in sentence chunks of at
+most 240 characters. The block being read is highlighted and scrolled into
+view. A bar at the reader's foot has previous/next block, pause/resume,
+position, speed (0.75–2×), voice and stop; speed and voice are kept in the
+renderer's `localStorage` (they belong to this computer's voices, so they
+are not in `settings.json` or the export). Another article or leaving the
+page stops reading. Leader keys `p` (start, pause, resume), `n`, `b`, `x`.
+With no speech engine or no voice the button is disabled, its tooltip
+saying why. Nothing is sent anywhere.
+
 Settings → **Library**: folders (add, remove, open in file manager), images
 (`on-open` / `ask`), image cache size and **Clear**, and a line saying the app
 reads these folders and never changes them.
 
 ### 15.7 Not in v3
 
-Writing to the vault, fetching pages by URL, a browser extension, an
+Writing to the vault, fetching pages by URL, cloud or downloaded neural
+voices for read aloud, a browser extension, an
 in-app browser, groups kept by the app, highlights and annotations stored in
 the note, note embeds, SVG, math, and articles counting towards topic levels.

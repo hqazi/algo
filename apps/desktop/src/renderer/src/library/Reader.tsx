@@ -25,11 +25,13 @@ export interface ReaderProps {
   version?: number;
   /** T24: drawn over the reader (margin markers), given the rendered body. */
   layer?: (body: HTMLElement | null, html: string) => ReactNode;
+  /** T37: the rendered body and its HTML, after each render of it (read aloud). */
+  onBody?: (body: HTMLElement | null, html: string) => void;
   /** T24: the article as loaded (`null` while loading or on error). */
   onArticle?: (article: ArticleView | null) => void;
 }
 
-export function Reader({ id, version = 0, layer, onArticle }: ReaderProps) {
+export function Reader({ id, version = 0, layer, onBody, onArticle }: ReaderProps) {
   const app = useApp();
   const [article, setArticle] = useState<ArticleView | null>(null);
   const [body, setBody] = useState<HTMLDivElement | null>(null);
@@ -64,6 +66,8 @@ export function Reader({ id, version = 0, layer, onArticle }: ReaderProps) {
     () => onArticle?.(article && article.id === id ? article : null),
     [article, id, onArticle],
   );
+
+  useEffect(() => onBody?.(body, html), [body, html, onBody]);
 
   function openLink(href: string): void {
     void invoke('library:open-link', { url: href }).catch((e: unknown) =>

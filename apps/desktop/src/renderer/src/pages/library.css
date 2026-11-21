@@ -511,3 +511,55 @@
     animation: none;
   }
 }
+
+/* ---- read aloud (T37): the block being read, and the bar kept at the
+   bottom of the reader pane while it is on (at the pane's foot when the
+   article is short). */
+.library-page .lib-reading {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.library-page .lib-reading > .reader {
+  width: 100%;
+}
+.library-page .article-body .speaking {
+  background: var(--accent-subtle);
+  box-shadow: 0 0 0 4px var(--accent-subtle);
+  border-radius: 2px;
+  transition:
+    background var(--duration) var(--ease),
+    box-shadow var(--duration) var(--ease);
+}
+.library-page .read-aloud-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  padding: 6px var(--space-3);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.library-page .read-aloud-at {
+  margin-left: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
+.library-page .read-aloud-rate {
+  width: 5.5em;
+}
+.library-page .read-aloud-voice {
+  max-width: 16rem;
+}
+.library-page .read-aloud-voice select {
+  width: 100%;
+  text-overflow: ellipsis;
+}
+@media (prefers-reduced-motion: reduce) {
+  .library-page .article-body .speaking {
+    transition: none;
+  }
+}

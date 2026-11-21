@@ -86,6 +86,9 @@ export function beforeReady(hooks: SetupHooks = {}): void {
   // --no-sandbox (development as root only) skips it; every window still sets
   // `sandbox: true` itself.
   if (!app.commandLine.hasSwitch('no-sandbox')) app.enableSandbox();
+  // Read aloud in the Library (T37, D-58): Chromium on Linux reaches the
+  // system's voices only through speech-dispatcher, and only with this switch.
+  if (process.platform === 'linux') app.commandLine.appendSwitch('enable-speech-dispatcher');
   // Electron takes one call for every custom scheme: the UI's and the
   // execution host's (T07; the executor is wired to IPC in T08).
   protocol.registerSchemesAsPrivileged([APP_SCHEME_PRIVILEGES, EXEC_SCHEME_PRIVILEGES]);

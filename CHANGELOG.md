@@ -42,3 +42,6 @@ First version of the desktop app, the successor to
   Settings): the leader, then `[` `]` to hide the side panes, `z` to hide
   both, `h` `l` `o` `1`–`3` to move between panes, `t` `j` `k` `r` `s` for
   the tests, editor, Run and Submit, and `?` for the list.
+- Read aloud in the Library: the article in the system's own voices,
+  offline, with the paragraph being read highlighted; pause, skip, speed
+  and voice (leader `p` `n` `b` `x`).

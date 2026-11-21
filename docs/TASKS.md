@@ -91,7 +91,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | done |
 | T35 | Collapsible panes and pane shortcuts | design | 1d | T34 | done |
 | T36 | Leader key (tmux-style) for pane actions | design | 1d | T35 | done |
-| T37 | Library: read articles aloud | v3 | 1d | T22, T36 | in-progress |
+| T37 | Library: read articles aloud | v3 | 1d | T22, T36 | done |
 
 ## Order
 
@@ -2641,11 +2641,37 @@ let go, then one key.
 system's own voices, offline, the paragraph being read highlighted.
 
 **Acceptance.**
-- [ ] A **Read aloud** button in the Reader's header starts reading from the top, or from the paragraph holding the selection; a bar at the bottom of the reader has back, play/pause, forward, stop, speed and voice.
-- [ ] The block being read is highlighted and kept in view; headings, paragraphs, list items, quotes and table cells are read, code blocks and image placeholders skipped.
-- [ ] Uses the Web Speech API (system voices; nothing leaves the computer); disabled with a reason when no voice is available. Voice and speed are remembered on this computer.
-- [ ] Stops when the article changes or the page is left; leader `p` play/pause, `x` stop, `n`/`b` next/back paragraph.
-- [ ] Tests; guide, SPEC §15.6, CHANGELOG updated.
+- [x] A **Read aloud** button in the Reader's header starts reading from the top, or from the paragraph holding the selection; a bar at the bottom of the reader has back, play/pause, forward, stop, speed and voice.
+- [x] The block being read is highlighted and kept in view; headings, paragraphs, list items, quotes and table cells are read, code blocks and image placeholders skipped.
+- [x] Uses the Web Speech API (system voices; nothing leaves the computer); disabled with a reason when no voice is available. Voice and speed are remembered on this computer.
+- [x] Stops when the article changes or the page is left; leader `p` play/pause, `x` stop, `n`/`b` next/back paragraph.
+- [x] Tests; guide, SPEC §15.6, CHANGELOG updated.
 
-**Notes.**
+**Notes.** (2026-11-21)
+- **Built.** `speech.ts` finds the blocks in the rendered body (own text
+  only, so a list item's sub-list is read as its own items) and chunks
+  them; `useReadAloud` (on `LibraryPage`, keyed by the article) speaks one
+  utterance per chunk with a generation guard against stale end/error
+  events, highlights with the `speaking` class, re-finds blocks when the
+  body renders again (images loaded, a rescan) keeping its place.
+  `ReadAloudButton` in the Reader pane's header, `ReadAloudBar` sticky at
+  the foot of the reader pane (a new `.lib-reading` flex wrapper so it sits
+  at the bottom of short articles). `Reader` gained an `onBody` prop.
+  Linux: `--enable-speech-dispatcher` in `beforeReady` (wiring outside
+  Owns: `main/setup.ts`). D-58; SPEC §15.6 and §15.7.
+- **Checked.** typecheck, lint, `npm test` (1180 passed, 12 skipped; 16
+  new). In the built app (xvfb, Linux container with no speech engine):
+  the switch is on, `speechSynthesis` exists with 0 voices and the button
+  is disabled with the install hint. With a fake engine injected into the
+  page: reading from the top, code block skipped, highlight and bar
+  (screenshots looked at), pause then leader `p` resumes the same block,
+  the bar goes at the end. `library.e2e` passes.
+- **Not done / not tested.** Never heard with a real voice: no speech
+  engine here, and not tried on macOS or Windows, so voice quality, the
+  real engines' event order on cancel, and whether speech-dispatcher voices
+  appear with the switch on a Linux desktop are untested. No word-level
+  highlight (`onboundary` is unreliable across engines). No click to
+  start at a paragraph (only the selection). Not looked at in dark mode or
+  the narrow (tabs) layout; screenshots in `docs/assets/` not retaken; the
+  other e2e files not run.
 

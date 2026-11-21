@@ -1988,3 +1988,34 @@ left a choice.
   window losing focus cancel.
 - **T35's Ctrl/Cmd+B and Ctrl/Cmd+Alt+B are gone** (Ctrl+B is the leader);
   Ctrl/Cmd+J, Ctrl/Cmd+1–3 and F6 stay as direct keys.
+
+**D-58 Read aloud with the system's voices** (2026-11-21, T37)
+
+- **Web Speech API, not a cloud or bundled voice.** Asked for: text to
+  speech for Library articles. `speechSynthesis` in the renderer uses the
+  operating system's voices (macOS, Windows SAPI/OneCore, Linux
+  speech-dispatcher): no dependency, no key, offline, and the Library's
+  promise that reading sends nothing still holds. Cloud voices (sound
+  better) would need another key, network access from main and a privacy
+  notice; a bundled neural model (Piper, Kokoro) adds tens of megabytes and
+  a WASM or native runtime. Either can come later behind the same bar.
+- **Linux needs a switch.** Chromium reaches speech-dispatcher only with
+  `--enable-speech-dispatcher`; `beforeReady` adds it on Linux. Without
+  speech-dispatcher and a voice the list stays empty and the button says
+  what to install.
+- **One utterance per chunk.** Blocks (headings, paragraphs, list items,
+  cells) are read one by one, long ones in sentence chunks of at most 240
+  characters: Chromium engines can stop part way through long utterances,
+  the highlight follows the block, and a new speed or voice applies at
+  once (the chunk is spoken again). Code blocks are skipped: read out,
+  symbols are noise.
+- **Pause is cancel.** `speechSynthesis.pause()` is unreliable on Linux and
+  with some Windows voices; pause cancels and remembers the chunk, resume
+  speaks it again. Each utterance carries a generation number so the end
+  or error event of a cancelled one is ignored.
+- **Speed and voice in `localStorage`.** Voice ids differ per computer, so
+  they are UI state like pane sizes, not settings to export.
+- **Leader keys** `p` (start, pause, resume), `n`/`b` (next, back; tmux's
+  next/previous window), `x` (stop; tmux's kill). Only while an article is
+  open and a voice exists.
+

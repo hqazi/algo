@@ -10,6 +10,7 @@ import { PenLine, RefreshCw, Search } from 'lucide-react';
 import type { AnchorView } from '../../../shared/article-chat';
 import type { ArticleView, TreeView } from '../../../shared/library';
 import { Link } from '../components/Link';
+import { useLeaderBindings } from '../components/leader';
 import { Panes } from '../components/Panes';
 import { IconButton } from '../components/ui';
 import { invoke, stream } from '../ipc';
@@ -19,7 +20,9 @@ import { WriteArticle } from '../library/WriteArticle';
 import { ArticleChatPane } from '../library/chat/ArticleChatPane';
 import { PassageLayer } from '../library/chat/PassageLayer';
 import { useArticleChats } from '../library/chat/useArticleChats';
+import { ReadAloudBar, ReadAloudButton } from '../library/ReadAloudBar';
 import { Reader } from '../library/Reader';
+import { useReadAloud } from '../library/useReadAloud';
 import './library.css';
 
 export function LibraryPage({ article }: { article: string | null }) {
@@ -33,6 +36,7 @@ export function LibraryPage({ article }: { article: string | null }) {
   const chats = useArticleChats(article);
   const [missing, setMissing] = useState(false);
   const onArticle = useCallback((a: ArticleView | null) => setMissing(!!a?.missing), []);
+  const speech = useReadAloud(article);
   const { ask } = chats;
   const onAsk = useCallback(
     (anchor: AnchorView) => {
@@ -136,13 +140,49 @@ export function LibraryPage({ article }: { article: string | null }) {
     </>
   );
 
+  // Read aloud (T37): leader keys while an article is open.
+  const reading = speech.status !== 'idle';
+  useLeaderBindings(
+    article && speech.available
+      ? [
+          {
+            keys: ['p'],
+            label: reading ? 'Pause or resume reading aloud' : 'Read aloud',
+            group: 'Read aloud',
+            run: speech.toggle,
+          },
+          ...(reading
+            ? [
+                {
+                  keys: ['n'],
+                  label: 'Next paragraph',
+                  group: 'Read aloud',
+                  run: () => speech.skip(1),
+                },
+                {
+                  keys: ['b'],
+                  label: 'Previous paragraph',
+                  group: 'Read aloud',
+                  run: () => speech.skip(-1),
+                },
+                { keys: ['x'], label: 'Stop reading aloud', group: 'Read aloud', run: speech.stop },
+              ]
+            : []),
+        ]
+      : [],
+  );
+
   const middle = article ? (
-    <Reader
-      id={article}
-      version={version}
-      onArticle={onArticle}
-      layer={(body, html) => <PassageLayer body={body} html={html} chats={chats} onAsk={onAsk} />}
-    />
+    <div className="lib-reading">
+      <Reader
+        id={article}
+        version={version}
+        onArticle={onArticle}
+        onBody={speech.attach}
+        layer={(body, html) => <PassageLayer body={body} html={html} chats={chats} onAsk={onAsk} />}
+      />
+      <ReadAloudBar speech={speech} />
+    </div>
   ) : (
     <div className="lib-placeholder">
       <p className="muted">Choose an article to read.</p>
@@ -166,7 +206,17 @@ export function LibraryPage({ article }: { article: string | null }) {
         initialSizes={[24, 52, 24]}
         panes={[
           { id: 'articles', title: 'Articles', content: left, actions: leftActions },
-          { id: 'reader', title: 'Reader', content: middle },
+          {
+            id: 'reader',
+            title: 'Reader',
+            content: middle,
+            actions: article ? (
+              <>
+                <span className="spacer" />
+                <ReadAloudButton speech={speech} />
+              </>
+            ) : undefined,
+          },
           {
             id: 'chats',
             title: 'Chats',
