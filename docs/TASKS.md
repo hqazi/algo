@@ -88,7 +88,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T31 | Home dashboard, Problems and Progress refresh | design | 2d | T29 | done |
 | T32 | Library refresh | design | 2d | T30 | done |
 | T33 | Onboarding, Settings and dialogs refresh | design | 2d | T29 | done |
-| T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | in-progress |
+| T34 | Design pass, screenshots and user guide | design | 1d | T30, T31, T32, T33 | done |
 
 ## Order
 
@@ -2466,10 +2466,79 @@ date formatter used by every page that shows dates.
 screenshot, and bring the guide in step.
 
 **Acceptance.**
-- [ ] Every page reviewed in light and dark at 1440×880 and at the minimum window size; inconsistencies fixed (spacing, radii, button variants, empty states, focus rings).
-- [ ] Keyboard-only walk through the main flows (onboarding, practice, library, settings) works; focus visible everywhere.
-- [ ] `screenshots.ts` also captures Home, Problems and Settings; all screenshots retaken; README and guide updated to the new look and any moved controls.
-- [ ] `design.md` updated where the built app differs from the plan.
-- [ ] All checks and e2e pass.
+- [x] Every page reviewed in light and dark at 1440×880 and at the minimum window size; inconsistencies fixed (spacing, radii, button variants, empty states, focus rings).
+- [x] Keyboard-only walk through the main flows (onboarding, practice, library, settings) works; focus visible everywhere.
+- [x] `screenshots.ts` also captures Home, Problems and Settings; all screenshots retaken; README and guide updated to the new look and any moved controls.
+- [x] `design.md` updated where the built app differs from the plan.
+- [x] All checks and e2e pass.
 
-**Notes.**
+**Notes.** (2026-11-21)
+- **Built.** A pass over every page plus the review's punch list.
+  *Narrow layout:* under 900px every pane of Practice and Library showed at
+  once (`.pane`'s `display: flex` beat `hidden`); a global `[hidden]` rule
+  fixes it, and `Panes` renders one tree for both layouts so crossing 900px
+  keeps the editor, drafts and open chats. *Minimum window size* 800×600
+  (there was none). *Dates:* `when()` and Home's `ago()` removed; Home,
+  Progress, explanation versions ("Latest · just now", full date tooltip)
+  and the Library chats use `RelativeTime`/`relativeDate`/`fullDate`.
+  *Progress:* Active problems and Recent attempts by title (from
+  `problems:list`), relative times, Active problems as a table on a card
+  like Recent attempts. *Next problem toast:* "Next problem: <title>.
+  <Reason>." (capitalised with `reasonText`; the New problem dialog's
+  suggestion uses it too). *Dialogs:* Give up and Reference on the shared
+  `Dialog` (close icon; Keep trying keeps the focus; Reference has no extra
+  Close button). *Dark disabled primary:* `--accent-disabled` at 55%
+  opacity (Save and test, Send). *Settings → Tutor status* says "below"
+  instead of "in Settings" (`pages/settings-text.ts`). *Focus:* the code
+  editor shows a ring; choice cards use the shared `--focus` outline; Ask
+  moves the focus to the question box; the provider notice's Send takes
+  the focus and returns it. *Dead CSS* removed from `styles.css` (old
+  `.problem-table`, `.filters`, `.topic-*`, the T22 Library rules, `.kv`,
+  `.summary`, `.case-note`, `.diff-*`, status/level/outcome classes,
+  `.pill`, `.nav-button`, `button.big`, `.badge-crash`, `.lib-write`); the
+  few properties `pages/library.css` still relied on moved there; the
+  screens were compared pixel by pixel before and after (no change).
+  `e2e/screenshots.ts` also takes home, problems and settings; all eight
+  images retaken. Guide (getting-started: title bar, Home, Problems icons,
+  narrow tabs, keyboard and the editor's Escape-then-Tab, Settings
+  sections and scroll-spy; library: title bar, focus after Ask), README
+  (Home, Problems, Settings images) and `design.md` (token table with
+  `--accent-fg`, `--accent-disabled`, `--focus`, `--accent-ring`; focus
+  rules; narrow windows; onboarding's last button; Settings scroll-spy and
+  Appearance; dates; Progress tables) brought in step.
+- **Decisions.** D-55.
+- **Wiring / files touched.** Renderer: `App.tsx`, `components/Panes.tsx`,
+  `components/Editor.tsx` (focus ring), `explanation/version.ts`,
+  `ExplanationList.tsx`, `ExplanationViewer.tsx`, `intake/NewProblemDialog.tsx`,
+  `library/chat/ArticleChatPane.tsx`, `lib/format.ts` (`when` removed),
+  `pages/HomePage.tsx`, `ProgressPage.tsx`, `PracticePage.tsx`,
+  `SettingsTutor.tsx`, `settings-text.ts` (new), `dashboard.ts`,
+  `styles.css`, `chat/chat.css`, `pages/library.css`, `onboarding.css`,
+  `progress.css`; tests for each. Main: `main/window.ts` (`minWidth`,
+  `minHeight`) and its test. e2e: `practice`, `v1`, `settings` find a
+  problem on Progress by link target, not slug text.
+- **Checked.** `npm run typecheck`; `npm run lint` (clean); `npm test` (84
+  files, 1156 passed, 12 skipped); `npm run validate:content` (50
+  problems); `xvfb-run -a npm run e2e` (all six suites `failures: []`);
+  `npx vitest run scripts/docs-links.test.ts` (20 passed); the security
+  check by hand (`electron out/main/security-check.js --no-sandbox` under
+  xvfb, `failures: []`). `npm run format:check` reports only files under
+  the untracked `.claude/worktrees/` (old agent checkouts, not part of the
+  repo); every tracked file passes. A scratch tour (not committed) took
+  onboarding, Home (fresh and in progress), Problems, Practice (fresh, More
+  menu, Give up, after Submit), the explanation, Progress, New problem,
+  four Settings sections and the Library (tree, reader, notice, chat,
+  threads, Write form) in light and dark at 1440×880 and 800×600, all
+  looked at. A scratch keyboard walk (not committed) went onboarding →
+  Home → Problems → Practice (Run with Ctrl+Enter, leaving the editor with
+  Escape then Tab, More menu, Hint chip, composer) → Settings (Add
+  folder…, every control) → Library (tree, heading Ask, notice, chat) in
+  both themes, checking a focus indicator on each stop.
+- **Not done / not tested.** Seen on Linux under xvfb only: macOS
+  (traffic lights, ⌘ shortcut text) and Windows not seen; not checked in a
+  packaged build. The keyboard walk's focus check is a heuristic (outline
+  or box-shadow) plus screenshots: the date input's internal segments and
+  the menu items (a filled row, by design) were not flagged as rings.
+  Under 900px Settings' section list wraps above the sections and is not
+  sticky. The Settings screenshot shows the "no system keyring" warning,
+  as xvfb has none. Comfort per area is still a select per group (T33).
