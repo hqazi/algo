@@ -896,7 +896,10 @@ resume), `n`, `b`, `x`.
   passes them to the engine process, where ONNX Runtime (`onnxruntime-node`,
   shipped native, outside the asar) runs the model. The renderer sends text
   chunks over IPC (`tts:speak`) and gets mono 24 kHz samples back, which it
-  plays with Web Audio; the next chunk is made while one plays.
+  plays with Web Audio. Like a video player it buffers: while a chunk plays,
+  the next three are made, one request at a time (so a skip waits behind at
+  most one chunk), and the start of the current and previous paragraph are
+  kept, so skipping either way is usually instant.
 - **CPU or GPU**: the CPU by default. Settings → Library → **Use the GPU**
   (`library.readAloudGpu`, off) runs it on the GPU instead, through ONNX
   Runtime's WebGPU provider (Vulkan, Metal or Direct3D 12; DirectML first

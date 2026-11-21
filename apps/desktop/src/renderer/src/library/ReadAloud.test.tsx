@@ -2,7 +2,7 @@
 /**
  * Read aloud (T37, T38, SPEC §15.6) on the Library page, with a fake engine
  * (`tts:speak`) and a fake Web Audio: start from the top or the selection,
- * highlight, the next chunk asked for while one plays, pause and resume
+ * highlight, the next chunks buffered while one plays, pause and resume
  * where it was, skip, speed and voice (remembered), stop on another
  * article, and the first-time download.
  */
@@ -213,15 +213,15 @@ async function ready(): Promise<void> {
 }
 
 describe('Read aloud', () => {
-  it('reads block by block from the top, skipping code, and asks for the next chunk early', async () => {
+  it('reads block by block from the top, skipping code, and buffers the next chunks', async () => {
     setup('a1');
     await ready();
     fireEvent.click(screen.getByRole('button', { name: 'Read aloud' }));
     await hear('Steps');
     expect(lit()).toEqual(['Steps']);
     expect(screen.getByRole('region', { name: 'Read aloud' }).textContent).toContain('1 of 3');
-    // The next chunk is made while this one plays.
-    await waitFor(() => expect(said).toEqual(['Steps', 'Halve the range.']));
+    // The next chunks are made while this one plays.
+    await waitFor(() => expect(said).toEqual(['Steps', 'Halve the range.', 'Sorted input.']));
 
     finish();
     await hear('Halve the range.');
@@ -234,6 +234,60 @@ describe('Read aloud', () => {
     expect(lit()).toEqual([]);
     // Each chunk was made once.
     expect(said).toEqual(['Steps', 'Halve the range.', 'Sorted input.']);
+  });
+
+  it('keeps a few chunks ahead, one request at a time, and the paragraph starts behind', async () => {
+    const paras = Array.from({ length: 8 }, (_, i) => `Para ${i + 1}.`);
+    // Each request is held until released, to see how many are in flight.
+    const held: (() => void)[] = [];
+    let inFlight = 0;
+    let most = 0;
+    setup('a1', (b) =>
+      b
+        .on('library:article', ({ id }) =>
+          article(id, ['# Steps', '', ...paras.flatMap((p) => [p, ''])].join('\n')),
+        )
+        .on('tts:speak', ({ text, voice, speed }) => {
+          asks.push({ text, voice, speed });
+          said.push(text);
+          const n = said.length - 1;
+          inFlight++;
+          most = Math.max(most, inFlight);
+          return new Promise((resolve) =>
+            held.push(() => {
+              inFlight--;
+              resolve({ audio: Float32Array.of(n, 0, 0) });
+            }),
+          );
+        }),
+    );
+    await ready();
+    const release = async (): Promise<void> => {
+      await waitFor(() => expect(held.length).toBeGreaterThan(0));
+      await act(async () => held.shift()?.());
+    };
+    fireEvent.click(screen.getByRole('button', { name: 'Read aloud' }));
+    await release();
+    await hear('Steps');
+    // Three chunks ahead, each asked for once the one before is ready.
+    for (let i = 0; i < 3; i++) await release();
+    await waitFor(() => expect(said).toEqual(['Steps', 'Para 1.', 'Para 2.', 'Para 3.']));
+    expect(most).toBe(1);
+
+    // Moving on tops the buffer up by one.
+    finish();
+    await hear('Para 1.');
+    await release();
+    await waitFor(() => expect(said.at(-1)).toBe('Para 4.'));
+    expect(held).toEqual([]);
+
+    // Skipping into the buffer, and back to the paragraph before, makes nothing again.
+    fireEvent.click(screen.getByRole('button', { name: 'Next paragraph' }));
+    await hear('Para 2.');
+    fireEvent.click(screen.getByRole('button', { name: 'Previous paragraph' }));
+    await hear('Para 1.');
+    expect(said.filter((t) => t === 'Para 1.' || t === 'Para 2.')).toEqual(['Para 1.', 'Para 2.']);
+    expect(most).toBe(1);
   });
 
   it('starts at the selected text', async () => {
@@ -291,7 +345,9 @@ describe('Read aloud', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Read aloud' }));
     await hear('Steps');
     fireEvent.change(screen.getByRole('combobox', { name: 'Speed' }), { target: { value: '1.5' } });
-    await waitFor(() => expect(asks.at(-1)).toMatchObject({ text: 'Steps', speed: 1.5 }));
+    await waitFor(() =>
+      expect(asks.filter((a) => a.text === 'Steps').at(-1)).toMatchObject({ speed: 1.5 }),
+    );
     const voice = screen.getByRole('combobox', { name: 'Voice' });
     const groups = Array.from(voice.querySelectorAll('optgroup')).map((g) => g.label);
     expect(groups).toEqual(['American English', 'British English']);

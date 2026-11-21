@@ -2,9 +2,12 @@
  * Read aloud (T37, T38, SPEC §15.6, D-58, D-59): the reader's text spoken by
  * Kokoro, an open-source neural voice that runs on this computer. Main turns
  * each chunk (`speech.ts`) into audio (`tts:speak`); this plays it with Web
- * Audio and asks for the next chunk while the current one plays, so there is
- * no gap. Pause suspends the audio where it is. The block being read gets
- * the `speaking` class and is kept in view.
+ * Audio and, like a video player, keeps a buffer: while a chunk plays, the
+ * next `AHEAD` are made one after another (one request at a time, so a skip
+ * waits behind at most one chunk), and the start of this paragraph and the
+ * one before are kept, so skipping back is instant too (T41). Pause
+ * suspends the audio where it is; the buffer keeps filling while paused.
+ * The block being read gets the `speaking` class and is kept in view.
  *
  * The voice model is downloaded once, when the learner first starts reading
  * and agrees (`offer` → `download`). Voice and speed are UI preferences of
@@ -33,6 +36,9 @@ export interface ReadAloudPrefs {
 }
 
 export const RATES = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
+
+/** How many chunks after the one playing are made ahead of time. */
+export const AHEAD = 3;
 
 export interface ReadAloud {
   /** The voice model is downloaded (null until known). */
@@ -98,6 +104,25 @@ function following(blocks: SpeechBlock[], p: Place): Place | null {
   return p.block + 1 < blocks.length ? { block: p.block + 1, chunk: 0 } : null;
 }
 
+/** The `n` chunks after `p`, in order (fewer near the end). */
+function ahead(blocks: SpeechBlock[], p: Place, n: number): Place[] {
+  const out: Place[] = [];
+  let at: Place | null = p;
+  while (out.length < n && (at = following(blocks, at))) out.push(at);
+  return out;
+}
+
+/**
+ * The places whose audio is kept while `p` plays: it, the `AHEAD` after it,
+ * and the starts of its paragraph and the one before (where the skip
+ * buttons go).
+ */
+function kept(blocks: SpeechBlock[], p: Place): Place[] {
+  const back = [{ block: p.block, chunk: 0 }];
+  if (p.block > 0) back.push({ block: p.block - 1, chunk: 0 });
+  return [p, ...ahead(blocks, p, AHEAD), ...back];
+}
+
 /** `key` changes (the open article) stop reading. */
 export function useReadAloud(key: string | null): ReadAloud {
   const app = useApp();
@@ -114,7 +139,7 @@ export function useReadAloud(key: string | null): ReadAloud {
   const lit = useRef<HTMLElement | null>(null);
   const ctx = useRef<AudioContext | null>(null);
   const source = useRef<AudioBufferSourceNode | null>(null);
-  // Audio by place (and voice and speed): the chunk playing and the next.
+  // Audio by place (and voice and speed): the places in `kept`.
   const cache = useRef(new Map<string, Promise<AudioBuffer>>());
   const dl = useRef<Stream<unknown> | null>(null);
   // Each chunk played carries the generation it started in; an older one's
@@ -199,6 +224,27 @@ export function useReadAloud(key: string | null): ReadAloud {
     return a;
   }, []);
 
+  /**
+   * Makes the chunks after `p` in order, one at a time, until `AHEAD` are
+   * ready; stops when generation `mine` ends (the next chunk plays, a skip,
+   * stop), as the next chunk's own fill takes over from where this got to.
+   */
+  const fill = useCallback(
+    async (p: Place, pr: ReadAloudPrefs, mine: number): Promise<void> => {
+      for (const at of ahead(blocks.current, p, AHEAD)) {
+        if (mine !== gen.current) return;
+        const a = audioFor(at, pr);
+        if (!a) return;
+        try {
+          await a;
+        } catch {
+          return; // Reported when it is played.
+        }
+      }
+    },
+    [audioFor],
+  );
+
   // The chunk's end plays the next through a ref (no self-reference).
   const again = useRef<(p: Place) => void>(() => undefined);
   const play = useCallback(
@@ -214,9 +260,8 @@ export function useReadAloud(key: string | null): ReadAloud {
       const mine = gen.current;
       const pr = live.current.prefs;
       settle(lit.current === b.el ? undefined : p.block, 'loading', p);
-      // Keep only this chunk's audio and the next's.
-      const next = following(blocks.current, p);
-      const keep = new Set([placeKey(p, pr), ...(next ? [placeKey(next, pr)] : [])]);
+      // Keep only the buffer around this chunk.
+      const keep = new Set(kept(blocks.current, p).map((w) => placeKey(w, pr)));
       for (const k of cache.current.keys()) if (!keep.has(k)) cache.current.delete(k);
       const audio = audioFor(p, pr);
       if (!audio) return;
@@ -239,8 +284,8 @@ export function useReadAloud(key: string | null): ReadAloud {
           source.current = s;
           s.start();
           if (live.current.status === 'loading') settle(undefined, 'playing', p);
-          // While this plays, the next chunk is made.
-          if (next) audioFor(next, pr)?.catch(() => undefined);
+          // While this plays, the buffer fills.
+          void fill(p, pr, mine);
           // The first chunk started the engine: learn where it runs.
           if (!engineSeen.current) {
             engineSeen.current = true;
@@ -257,7 +302,7 @@ export function useReadAloud(key: string | null): ReadAloud {
         },
       );
     },
-    [halt, settle, audioFor, app, refresh],
+    [halt, settle, audioFor, fill, app, refresh],
   );
 
   useEffect(() => {

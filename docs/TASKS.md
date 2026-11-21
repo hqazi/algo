@@ -95,6 +95,7 @@ Statuses: `todo`, `in-progress`, `blocked`, `done`.
 | T38 | Read aloud with Kokoro (GPU when faster) | v3 | 2d | T37 | done |
 | T39 | Read aloud: CPU by default, GPU as a setting | v3 | 0.5d | T38 | done |
 | T40 | Read aloud: download eSpeak NG instead of shipping it | v3 | 0.5d | T39 | done |
+| T41 | Read aloud: buffer chunks ahead | v3 | 0.25d | T40 | done |
 
 ## Order
 
@@ -2805,3 +2806,35 @@ Don't ship it: download it with the voice and run it on its own.
   install from T38 (not released) is offered the whole download again,
   though only eSpeak's 1.3 MB is fetched. Not a lawyer's opinion: if the
   app is ever sold or relicensed, have one look.
+
+### T41 — Read aloud: buffer chunks ahead
+
+- Milestone: v3
+- Spec: §15.6 (read aloud)
+- Size: 0.25d
+- Depends on: T40
+- Owns: `renderer/src/library/useReadAloud.ts`, `renderer/src/library/ReadAloud.test.tsx`
+
+**Goal.** Only one chunk was made ahead, and only once the current one
+started, so on a slow CPU a pause could open between chunks and a skip
+always waited for the engine. Buffer like a video player.
+
+**Acceptance.**
+- [x] While a chunk plays, the next three (`AHEAD`) are made, one request at a time.
+- [x] The starts of the current and previous paragraph stay buffered; skipping to them, or forward into the buffer, makes nothing again.
+- [x] Audio outside that window is dropped (memory stays at a few chunks).
+- [x] Tests: buffer depth, one request in flight, skip into the buffer and back.
+
+**Notes.** (2026-11-21)
+- **Built.** `useReadAloud.ts`: `fill` walks the `AHEAD` chunks after the
+  one playing, awaiting each before asking for the next, and stops when the
+  generation changes (the next chunk's own fill carries on). `kept` is the
+  cache window. SPEC §15.6 updated. No change in main: the engine already
+  answers one request at a time, which is why the renderer keeps only one
+  in flight.
+- **Checked.** typecheck, lint, `npm test`. The new tests fail with
+  `AHEAD = 1`.
+- **Not done / not tested.** Not tried by ear with the real model (no e2e
+  run). A request already sent is not cancelled on a skip, so a skip still
+  waits behind at most one chunk (as before); cancelling queued requests in
+  the engine would need an IPC change. The bar shows no buffered indicator.
